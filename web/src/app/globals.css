@@ -1,26 +1,198 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* Light mode tokens */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    /* Accent */
+    --coral: #d85a30;
+    --coral-hover: #c24e28;
+    --coral-subtle: #faece7;
+
+    /* Relational */
+    --teal: #1d9e75;
+    --teal-hover: #178a64;
+    --teal-subtle: #e1f5ee;
+
+    /* Canvas */
+    --canvas-bg: #f9f9f8;
+    --canvas-dot: #ddddd9;
+    --canvas-cross: #ddddd9;
+
+    /* Node surfaces */
+    --node-bg: #ffffff;
+    --node-border: #e5e5e3;
+    --node-header-bg: #fafaf9;
+    --node-row-border: #f0f0ee;
+
+    /* Text */
+    --text-primary: #141413;
+    --text-secondary: #6b6b68;
+    --text-tertiary: #a0a09c;
+
+    /* UI surfaces */
+    --surface-1: #ffffff;
+    --surface-2: #f9f9f8;
+    --surface-3: #f0f0ee;
+    --border: #e5e5e3;
+    --border-strong: #d0d0ce;
+
+    /* Badge — gray variant */
+    --badge-gray-bg: #f0f0ee;
+    --badge-gray-text: #5f5e5a;
+
+    /* Badge — teal variant */
+    --badge-teal-bg: #e1f5ee;
+    --badge-teal-text: #0f6e56;
+
+    /* Badge — coral variant */
+    --badge-coral-bg: #faece7;
+    --badge-coral-text: #a03d1e;
+
+    /* Edge */
+    --edge-color: #1d9e75;
+    --edge-selected: #d85a30;
+
+    /* Minimap */
+    --minimap-bg: #f0f0ee;
+    --minimap-node: #d0d0ce;
+    --minimap-mask: rgba(240, 240, 238, 0.85);
+
+    /* Scrollbar */
+    --scrollbar-track: #f0f0ee;
+    --scrollbar-thumb: #d0d0ce;
+
+    /* Radius */
+    --radius-sm: 4px;
+    --radius-md: 6px;
+    --radius-lg: 8px;
+    --radius-xl: 10px;
+  }
+
+  /* Dark mode tokens */
+  .dark {
+    /* Accent — same coral, no change */
+    --coral: #d85a30;
+    --coral-hover: #e0673c;
+    --coral-subtle: #2a1a12;
+
+    /* Relational */
+    --teal: #5dcaa5;
+    --teal-hover: #6ed4b0;
+    --teal-subtle: #0a3528;
+
+    /* Canvas */
+    --canvas-bg: #111110;
+    --canvas-dot: #2a2a28;
+    --canvas-cross: #2a2a28;
+
+    /* Node surfaces */
+    --node-bg: #1e1e1c;
+    --node-border: #2e2e2c;
+    --node-header-bg: #252523;
+    --node-row-border: #262624;
+
+    /* Text */
+    --text-primary: #f0efea;
+    --text-secondary: #8a8a86;
+    --text-tertiary: #606060;
+
+    /* UI surfaces */
+    --surface-1: #1e1e1c;
+    --surface-2: #141413;
+    --surface-3: #252523;
+    --border: #2e2e2c;
+    --border-strong: #3a3a38;
+
+    /* Badge — gray variant */
+    --badge-gray-bg: #272725;
+    --badge-gray-text: #a0a09c;
+
+    /* Badge — teal variant */
+    --badge-teal-bg: #0a3528;
+    --badge-teal-text: #5dcaa5;
+
+    /* Badge — coral variant */
+    --badge-coral-bg: #2a1a12;
+    --badge-coral-text: #e8845e;
+
+    /* Edge */
+    --edge-color: #5dcaa5;
+    --edge-selected: #d85a30;
+
+    /* Minimap */
+    --minimap-bg: #1a1a18;
+    --minimap-node: #3a3a38;
+    --minimap-mask: rgba(20, 20, 19, 0.85);
+
+    /* Scrollbar */
+    --scrollbar-track: #1e1e1c;
+    --scrollbar-thumb: #3a3a38;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+  }
+
+  html {
+    font-size: 14px;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background-color: var(--surface-2);
+    color: var(--text-primary);
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    line-height: 1.5;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--scrollbar-track);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  /* React Flow overrides — defer to our token system */
+  .react-flow__background {
+    background-color: var(--canvas-bg) !important;
+  }
+  .react-flow__minimap {
+    background-color: var(--minimap-bg) !important;
+  }
+
+  .react-flow__edge-path {
+    stroke: var(--edge-color) !important;
+    stroke-width: 1.5px;
+  }
+
+  .react-flow__edge.selected .react-flow__edge-path {
+    stroke: var(--edge-selected) !important;
+  }
+
+  .react-flow__handle {
+    width: 8px;
+    height: 8px;
+    background: var(--teal) !important;
+    border: 2px solid var(--node-bg) !important;
+    border-radius: 9999px;
+  }
+
+  .react-flow__handle.source {
+    right: -5px;
+  }
+  .react-flow__handle.target {
+    left: -5px;
+  }
 }
