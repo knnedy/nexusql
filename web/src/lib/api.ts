@@ -4,6 +4,7 @@ import type {
   CreateProjectRequest,
   CreateProjectResponse,
   HealthResponse,
+  OrmExportResponse,
   ProjectsResponse,
   RowsResponse,
   SchemaResponse,
@@ -84,12 +85,12 @@ export const api = {
 
   // ORM export
   export: {
-    prisma(): Promise<{ schema: string }> {
-      return request<{ schema: string }>("/api/export/prisma");
+    prisma(): Promise<OrmExportResponse> {
+      return request<OrmExportResponse>("/api/export/prisma");
     },
 
-    drizzle(): Promise<{ schema: string }> {
-      return request<{ schema: string }>("/api/export/drizzle");
+    drizzle(): Promise<OrmExportResponse> {
+      return request<OrmExportResponse>("/api/export/drizzle");
     },
   },
 } as const;
