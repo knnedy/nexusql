@@ -34,6 +34,8 @@ export type FieldType =
 
 export type BadgeVariant = "teal" | "coral" | "gray";
 
+export type OrmTarget = "prisma" | "drizzle";
+
 // Maps a FieldType to its visual badge variant on the canvas node.
 export const FIELD_TYPE_BADGE_MAP: Record<string, BadgeVariant> = {
   // Teal — relational / structural identity types
@@ -113,7 +115,6 @@ export interface RowsResponse {
   rows: Record<string, unknown>[];
 }
 
-// Project
 export interface Project {
   id: string;
   name: string;
@@ -123,7 +124,6 @@ export interface Project {
   lastOpenedAt: string;
 }
 
-// API response shapes for projects
 export interface ProjectsResponse {
   projects: Project[];
 }
@@ -135,6 +135,12 @@ export interface CreateProjectRequest {
 
 export interface CreateProjectResponse {
   project: Project;
+}
+
+// ORM export
+export interface OrmExportResponse {
+  target: OrmTarget;
+  schema: string;
 }
 
 // Canvas-specific derived types
