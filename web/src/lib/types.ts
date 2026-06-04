@@ -113,6 +113,30 @@ export interface RowsResponse {
   rows: Record<string, unknown>[];
 }
 
+// Project
+export interface Project {
+  id: string;
+  name: string;
+  uri: string;
+  provider: DatabaseProvider;
+  createdAt: string;
+  lastOpenedAt: string;
+}
+
+// API response shapes for projects
+export interface ProjectsResponse {
+  projects: Project[];
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  uri: string;
+}
+
+export interface CreateProjectResponse {
+  project: Project;
+}
+
 // Canvas-specific derived types
 export interface TableNodeData {
   table: Table;
