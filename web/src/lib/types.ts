@@ -71,7 +71,6 @@ export interface ProviderMeta {
   label: string;
   uriPlaceholder: string;
   uriPrefixes: string[];
-  available: boolean;
 }
 
 export const PROVIDERS: ProviderMeta[] = [
@@ -80,21 +79,18 @@ export const PROVIDERS: ProviderMeta[] = [
     label: "PostgreSQL",
     uriPlaceholder: "postgres://user:pass@localhost:5432/dbname",
     uriPrefixes: ["postgres://", "postgresql://"],
-    available: true,
-  },
-  {
-    id: "sqlite",
-    label: "SQLite",
-    uriPlaceholder: "sqlite:///absolute/path/to/file.db",
-    uriPrefixes: ["sqlite://"],
-    available: true,
   },
   {
     id: "mysql",
     label: "MySQL",
     uriPlaceholder: "mysql://user:pass@localhost:3306/dbname",
     uriPrefixes: ["mysql://"],
-    available: false,
+  },
+  {
+    id: "sqlite",
+    label: "SQLite",
+    uriPlaceholder: "sqlite:///absolute/path/to/file.db",
+    uriPrefixes: ["sqlite://"],
   },
 ] as const;
 

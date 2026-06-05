@@ -48,6 +48,10 @@
     --badge-coral-bg: #faece7;
     --badge-coral-text: #a03d1e;
 
+    /* Badge — blue variant */
+    --badge-blue-bg: #e7f4fd;
+    --badge-blue-text: #1e5e8e;
+
     /* Edge */
     --edge-color: #1d9e75;
     --edge-selected: #d85a30;
@@ -114,6 +118,10 @@
     /* Badge — coral variant */
     --badge-coral-bg: #2a1a12;
     --badge-coral-text: #e8845e;
+
+    /* Badge — blue variant a blue take inspiration from teal */
+    --badge-blue-bg: #1e2f3f;
+    --badge-blue-text: #6eb8e0;
 
     /* Edge */
     --edge-color: #5dcaa5;
