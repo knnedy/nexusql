@@ -1,4 +1,4 @@
-export type DatabaseProvider = "postgres" | "sqlite";
+export type DatabaseProvider = "postgres" | "sqlite" | "mysql";
 
 export type FieldType =
   // Numeric
@@ -64,6 +64,40 @@ export const FIELD_TYPE_BADGE_MAP: Record<string, BadgeVariant> = {
   bytea: "gray",
 } as const;
 
+// Provider metadata — drives the provider card grid on the connection page.
+// Set available: false for providers not yet supported by the Go backend.
+export interface ProviderMeta {
+  id: DatabaseProvider;
+  label: string;
+  uriPlaceholder: string;
+  uriPrefixes: string[];
+  available: boolean;
+}
+
+export const PROVIDERS: ProviderMeta[] = [
+  {
+    id: "postgres",
+    label: "PostgreSQL",
+    uriPlaceholder: "postgres://user:pass@localhost:5432/dbname",
+    uriPrefixes: ["postgres://", "postgresql://"],
+    available: true,
+  },
+  {
+    id: "sqlite",
+    label: "SQLite",
+    uriPlaceholder: "sqlite:///absolute/path/to/file.db",
+    uriPrefixes: ["sqlite://"],
+    available: true,
+  },
+  {
+    id: "mysql",
+    label: "MySQL",
+    uriPlaceholder: "mysql://user:pass@localhost:3306/dbname",
+    uriPrefixes: ["mysql://"],
+    available: false,
+  },
+] as const;
+
 // Schema structures
 export interface Field {
   name: string;
@@ -96,6 +130,7 @@ export interface HealthResponse {
 
 export interface ConnectRequest {
   uri: string;
+  provider: DatabaseProvider;
 }
 
 export interface ConnectResponse {
@@ -115,6 +150,7 @@ export interface RowsResponse {
   rows: Record<string, unknown>[];
 }
 
+// Project
 export interface Project {
   id: string;
   name: string;
@@ -131,6 +167,7 @@ export interface ProjectsResponse {
 export interface CreateProjectRequest {
   name: string;
   uri: string;
+  provider: DatabaseProvider;
 }
 
 export interface CreateProjectResponse {
