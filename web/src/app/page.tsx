@@ -100,7 +100,7 @@ export default function HomePage() {
     <>
       <TopNav />
 
-      <main className="flex flex-col items-center justify-center min-h-screen px-4 pt-16 bg-canvas-bg">
+      <main className="flex flex-col items-center justify-center min-h-screen pb-8 px-4 pt-16 bg-canvas-bg">
         <div className="w-full max-w-md flex flex-col gap-6">
           {/* Hero */}
           <div className="text-center">

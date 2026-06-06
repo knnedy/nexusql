@@ -177,12 +177,12 @@ export interface OrmExportResponse {
 }
 
 // Canvas-specific derived types
-export interface TableNodeData {
+export interface TableNodeData extends Record<string, unknown> {
   table: Table;
   provider: DatabaseProvider;
   isSelected: boolean;
 }
 
-export interface RelationEdgeData {
+export interface RelationEdgeData extends Record<string, unknown> {
   relation: Relation;
 }
