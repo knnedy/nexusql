@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
@@ -60,6 +60,13 @@ function TopNav() {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
 
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
+
   return (
     <nav
       className="fixed top-0 inset-x-0 z-40 flex items-center justify-between px-5 h-12"
@@ -116,7 +123,9 @@ function TopNav() {
             e.currentTarget.style.background = "var(--surface-2)";
           }}
           aria-label="Toggle theme">
-          {resolvedTheme === "dark" ? (
+          {!mounted ? (
+            <div className="w-3.75 h-3.75" />
+          ) : resolvedTheme === "dark" ? (
             <Sun size={15} aria-hidden />
           ) : (
             <Moon size={15} aria-hidden />
