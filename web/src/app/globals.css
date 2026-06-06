@@ -1,5 +1,58 @@
 @import "tailwindcss";
 
+@theme {
+  /* Accent */
+  --color-coral: var(--coral);
+  --color-coral-hover: var(--coral-hover);
+  --color-coral-subtle: var(--coral-subtle);
+
+  /* Relational */
+  --color-teal: var(--teal);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-subtle: var(--teal-subtle);
+
+  /* Canvas */
+  --color-canvas-bg: var(--canvas-bg);
+
+  /* Node surfaces */
+  --color-node-bg: var(--node-bg);
+  --color-node-border: var(--node-border);
+  --color-node-header-bg: var(--node-header-bg);
+  --color-node-row-border: var(--node-row-border);
+
+  /* Text */
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+
+  /* Surfaces */
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  /* Badges */
+  --color-badge-gray-bg: var(--badge-gray-bg);
+  --color-badge-gray-text: var(--badge-gray-text);
+  --color-badge-teal-bg: var(--badge-teal-bg);
+  --color-badge-teal-text: var(--badge-teal-text);
+  --color-badge-coral-bg: var(--badge-coral-bg);
+  --color-badge-coral-text: var(--badge-coral-text);
+  --color-badge-blue-bg: var(--badge-blue-bg);
+  --color-badge-blue-text: var(--badge-blue-text);
+
+  /* Edge */
+  --color-edge-color: var(--edge-color);
+  --color-edge-selected: var(--edge-selected);
+
+  /* Font families */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+}
+
 /* Light mode tokens */
 @layer base {
   :root {
@@ -119,7 +172,7 @@
     --badge-coral-bg: #2a1a12;
     --badge-coral-text: #e8845e;
 
-    /* Badge — blue variant a blue take inspiration from teal */
+    /* Badge — blue variant */
     --badge-blue-bg: #1e2f3f;
     --badge-blue-text: #6eb8e0;
 
