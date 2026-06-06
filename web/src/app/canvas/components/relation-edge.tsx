@@ -4,7 +4,7 @@ import { memo, useState } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
-  getBezierPath,
+  getSmoothStepPath,
   type EdgeProps,
   type Edge,
 } from "@xyflow/react";
@@ -23,13 +23,14 @@ function RelationEdge({
 }: EdgeProps<Edge<RelationEdgeData>>) {
   const [hovered, setHovered] = useState(false);
 
-  const [edgePath, labelX, labelY] = getBezierPath({
+  const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
     sourceY,
     sourcePosition,
     targetX,
     targetY,
     targetPosition,
+    borderRadius: 8,
   });
 
   const strokeColor = selected ? "var(--edge-selected)" : "var(--edge-color)";
@@ -58,7 +59,6 @@ function RelationEdge({
         }}
       />
 
-      {/* Constraint name label, shown on hover or select state */}
       {showLabel && (
         <EdgeLabelRenderer>
           <div
