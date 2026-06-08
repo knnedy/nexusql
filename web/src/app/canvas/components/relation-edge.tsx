@@ -30,7 +30,8 @@ function RelationEdge({
     targetX,
     targetY,
     targetPosition,
-    borderRadius: 8,
+    borderRadius: 12,
+    offset: 40,
   });
 
   const strokeColor = selected ? "var(--edge-selected)" : "var(--edge-color)";
@@ -38,7 +39,6 @@ function RelationEdge({
 
   return (
     <>
-      {/* Invisible wider path for easier hover/click targeting */}
       <path
         d={edgePath}
         fill="none"

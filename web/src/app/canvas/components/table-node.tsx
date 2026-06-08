@@ -45,14 +45,13 @@ function FieldRow({ field, tableId }: { field: Field; tableId: string }) {
   const isKey = field.isPrimaryKey || field.isForeignKey;
 
   return (
-    <div className="relative flex items-center gap-2 px-3 py-1.5 border-t-[0.5px] border-node-row-border group">
+    <div className="relative flex items-center gap-2 px-3 py-1.5 border-t-[0.5px] border-node-row-border">
       {field.isPrimaryKey && (
         <Handle
           type="target"
           position={Position.Left}
           id={`${handleId}__target`}
           className="w-2! h-2! bg-teal! border-2! border-node-bg! rounded-full!"
-          style={{ left: -5 }}
         />
       )}
 
@@ -62,7 +61,6 @@ function FieldRow({ field, tableId }: { field: Field; tableId: string }) {
           position={Position.Right}
           id={`${handleId}__source`}
           className="w-2! h-2! bg-teal! border-2! border-node-bg! rounded-full!"
-          style={{ right: -5 }}
         />
       )}
 

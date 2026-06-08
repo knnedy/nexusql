@@ -15,16 +15,16 @@ import {
   type Node,
   type Edge,
 } from "@xyflow/react";
-import { SmartStepEdge } from "@tisoap/react-flow-smart-edge";
 import "@xyflow/react/dist/style.css";
 import { buildCanvasGraph } from "@/lib/canvas-utils";
 import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
 import type { TableNodeData, RelationEdgeData } from "@/lib/types";
 import TableNode from "./table-node";
+import RelationEdge from "./relation-edge";
 
 // Stable references outside component
 const nodeTypes: NodeTypes = { tableNode: TableNode };
-const edgeTypes: EdgeTypes = { relationEdge: SmartStepEdge };
+const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
 
 export default function DiagramCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
