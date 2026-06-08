@@ -1,120 +1,138 @@
-import dagre from "@dagrejs/dagre";
+import ELK, {
+  type ElkNode,
+  type ElkExtendedEdge,
+} from "elkjs/lib/elk.bundled.js";
 import type { Edge, Node } from "@xyflow/react";
 import type {
+  DatabaseProvider,
+  RelationEdgeData,
   SchemaResponse,
   TableNodeData,
-  RelationEdgeData,
-  DatabaseProvider,
 } from "./types";
 
-// Node dimensions which match the TableNode size exactly
-const NODE_WIDTH = 240;
-const NODE_HEIGHT_BASE = 40; // header height
-const NODE_HEIGHT_PER_ROW = 32; // height per field row
+const NODE_WIDTH = 260;
+const NODE_HEIGHT_BASE = 44;
+const NODE_HEIGHT_PER_ROW = 34;
 
-// Dagre layout direction
-const LAYOUT_DIRECTION = "TB"; // top to bottom
-const RANK_SEPARATION = 80;
-const NODE_SEPARATION = 60;
-
-function getNodeHeight(fieldCount: number): number {
+export function getNodeHeight(fieldCount: number): number {
   return NODE_HEIGHT_BASE + fieldCount * NODE_HEIGHT_PER_ROW;
 }
 
-// Converts a SchemaResponse into raw React Flow nodes with no position.
-// Positions are assigned by applyDagreLayout.
-function schemaToNodes(
+const ELK_LAYOUT_OPTIONS = {
+  "elk.algorithm": "layered",
+  "elk.direction": "RIGHT",
+  "elk.layered.spacing.nodeNodeBetweenLayers": "120",
+  "elk.spacing.nodeNode": "80",
+  "elk.edgeRouting": "ORTHOGONAL",
+  "elk.layered.nodePlacement.strategy": "SIMPLE",
+  "elk.portConstraints": "FIXED_SIDE",
+};
+
+const elk = new ELK();
+
+function buildPorts(
+  fields: SchemaResponse["tables"][number]["fields"],
+  tableName: string,
+) {
+  return fields.flatMap((field, index) => {
+    const topOffset =
+      NODE_HEIGHT_BASE + index * NODE_HEIGHT_PER_ROW + NODE_HEIGHT_PER_ROW / 2;
+    const ports = [];
+
+    if (field.isPrimaryKey) {
+      ports.push({
+        id: `${tableName}__${field.name}__target`,
+        layoutOptions: { "port.side": "WEST" },
+        y: topOffset,
+        x: 0,
+        width: 8,
+        height: 8,
+      });
+    }
+
+    if (field.isForeignKey) {
+      ports.push({
+        id: `${tableName}__${field.name}__source`,
+        layoutOptions: { "port.side": "EAST" },
+        y: topOffset,
+        x: NODE_WIDTH,
+        width: 8,
+        height: 8,
+      });
+    }
+
+    return ports;
+  });
+}
+
+function buildElkGraph(schema: SchemaResponse): {
+  elkGraph: ElkNode;
+  rfEdges: Edge<RelationEdgeData>[];
+} {
+  const elkNodes: ElkNode[] = schema.tables.map((table) => ({
+    id: table.name,
+    width: NODE_WIDTH,
+    height: getNodeHeight(table.fields.length),
+    ports: buildPorts(table.fields, table.name),
+    layoutOptions: { portConstraints: "FIXED_SIDE" },
+  }));
+
+  const elkEdges: ElkExtendedEdge[] = schema.relations.map((relation) => ({
+    id: relation.constraintName,
+    sources: [`${relation.sourceTable}__${relation.sourceField}__source`],
+    targets: [`${relation.targetTable}__${relation.targetField}__target`],
+  }));
+
+  const rfEdges: Edge<RelationEdgeData>[] = schema.relations.map(
+    (relation) => ({
+      id: relation.constraintName,
+      source: relation.sourceTable,
+      target: relation.targetTable,
+      sourceHandle: `${relation.sourceTable}__${relation.sourceField}__source`,
+      targetHandle: `${relation.targetTable}__${relation.targetField}__target`,
+      type: "relationEdge",
+      data: { relation },
+    }),
+  );
+
+  return {
+    elkGraph: {
+      id: "root",
+      layoutOptions: ELK_LAYOUT_OPTIONS,
+      children: elkNodes,
+      edges: elkEdges,
+    },
+    rfEdges,
+  };
+}
+
+export async function buildCanvasGraph(
   schema: SchemaResponse,
   provider: DatabaseProvider,
-): Node<TableNodeData>[] {
-  return schema.tables.map((table) => ({
-    id: table.name,
-    type: "tableNode",
-    position: { x: 0, y: 0 },
-    data: {
-      table,
-      provider,
-      isSelected: false,
+): Promise<{ nodes: Node<TableNodeData>[]; edges: Edge<RelationEdgeData>[] }> {
+  const { elkGraph, rfEdges } = buildElkGraph(schema);
+  const layouted = await elk.layout(elkGraph);
+
+  const nodes: Node<TableNodeData>[] = (layouted.children ?? []).map(
+    (elkNode) => {
+      const table = schema.tables.find((t) => t.name === elkNode.id)!;
+      return {
+        id: elkNode.id,
+        type: "tableNode",
+        position: { x: elkNode.x ?? 0, y: elkNode.y ?? 0 },
+        data: { table, provider, isSelected: false },
+      };
     },
-  }));
+  );
+
+  return { nodes, edges: rfEdges };
 }
 
-// Converts a SchemaResponse into React Flow edges.
-// Each edge connects a FK field handle to a PK field handle.
-function schemaToEdges(schema: SchemaResponse): Edge<RelationEdgeData>[] {
-  return schema.relations.map((relation) => ({
-    id: relation.constraintName,
-    source: relation.sourceTable,
-    target: relation.targetTable,
-    sourceHandle: `${relation.sourceTable}__${relation.sourceField}__source`,
-    targetHandle: `${relation.targetTable}__${relation.targetField}__target`,
-    type: "relationEdge",
-    data: { relation },
-  }));
-}
-
-// Runs the dagre layout algorithm over a set of nodes and edges.
-// Returns a new nodes array with calculated (x, y) positions.
-function applyDagreLayout(
-  nodes: Node<TableNodeData>[],
-  edges: Edge<RelationEdgeData>[],
-): Node<TableNodeData>[] {
-  const graph = new dagre.graphlib.Graph();
-
-  graph.setDefaultEdgeLabel(() => ({}));
-  graph.setGraph({
-    rankdir: LAYOUT_DIRECTION,
-    ranksep: RANK_SEPARATION,
-    nodesep: NODE_SEPARATION,
-  });
-  // Register each node with its dimensions
-  nodes.forEach((node) => {
-    const height = getNodeHeight(node.data.table.fields.length);
-    graph.setNode(node.id, { width: NODE_WIDTH, height });
-  });
-
-  // Register each edge
-  edges.forEach((edge) => {
-    graph.setEdge(edge.source, edge.target);
-  });
-
-  dagre.layout(graph);
-
-  // Read back the calculated positions and center the nodes
-  return nodes.map((node) => {
-    const { x, y, width, height } = graph.node(node.id);
-    return {
-      ...node,
-      position: {
-        x: x - width / 2,
-        y: y - height / 2,
-      },
-    };
-  });
-}
-
-// Public API — converts a SchemaResponse into a positioned
-// React Flow node and edge set ready to pass to <ReactFlow />.
-export function buildCanvasGraph(
+export async function reapplyLayout(
   schema: SchemaResponse,
-  provider: import("./types").DatabaseProvider,
-): {
-  nodes: Node<TableNodeData>[];
-  edges: Edge<RelationEdgeData>[];
-} {
-  const rawNodes = schemaToNodes(schema, provider);
-  const edges = schemaToEdges(schema);
-  const nodes = applyDagreLayout(rawNodes, edges);
-  return { nodes, edges };
+  provider: DatabaseProvider,
+): Promise<{ nodes: Node<TableNodeData>[]; edges: Edge<RelationEdgeData>[] }> {
+  return buildCanvasGraph(schema, provider);
 }
 
-// Re-runs dagre on an existing set of nodes and edges.
-// Used when the user triggers the auto-layout button.
-export function reapplyLayout(
-  nodes: Node<TableNodeData>[],
-  edges: Edge<RelationEdgeData>[],
-): Node<TableNodeData>[] {
-  return applyDagreLayout(nodes, edges);
-}
-
-export { NODE_WIDTH, getNodeHeight };
+export { NODE_WIDTH };

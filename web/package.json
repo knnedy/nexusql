@@ -9,9 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@dagrejs/dagre": "^3.0.0",
     "@tanstack/react-query": "^5.101.0",
+    "@tisoap/react-flow-smart-edge": "^4.3.0",
     "@xyflow/react": "^12.11.0",
+    "elkjs": "^0.11.1",
     "lucide-react": "^1.17.0",
     "next": "16.2.7",
     "next-themes": "^0.4.6",
@@ -21,7 +22,6 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@tanstack/eslint-plugin-query": "^5.101.0",
-    "@types/dagre": "^0.7.54",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
@@ -29,6 +29,5 @@
     "eslint-config-next": "16.2.7",
     "tailwindcss": "^4",
     "typescript": "^5"
-  },
-  "packageManager": "pnpm@11.5.1+sha512.93f7b57422ea7068257235b4c16eb60762eb68e1dc23723199cc739043ea9be2c4143274a399d8c6defa2b1176226d9ca1c4b63482d6200c1a8fbaa78c1d1485"
+  }
 }

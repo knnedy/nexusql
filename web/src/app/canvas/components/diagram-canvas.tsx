@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useEffect, useState } from "react";
 import {
   ReactFlow,
   Background,
@@ -8,42 +8,51 @@ import {
   MiniMap,
   useNodesState,
   useEdgesState,
-  type OnNodesChange,
-  type OnEdgesChange,
   type NodeTypes,
   type EdgeTypes,
+  type OnNodesChange,
+  type OnEdgesChange,
+  type Node,
+  type Edge,
 } from "@xyflow/react";
+import { SmartStepEdge } from "@tisoap/react-flow-smart-edge";
 import "@xyflow/react/dist/style.css";
-import { buildCanvasGraph, reapplyLayout } from "@/lib/canvas-utils";
+import { buildCanvasGraph } from "@/lib/canvas-utils";
 import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
 import type { TableNodeData, RelationEdgeData } from "@/lib/types";
-import type { Node, Edge } from "@xyflow/react";
 import TableNode from "./table-node";
-import RelationEdge from "./relation-edge";
 
-// Stable references — defined outside component to prevent re-registration
-// on every render which causes React Flow to flash
+// Stable references outside component
 const nodeTypes: NodeTypes = { tableNode: TableNode };
-const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
+const edgeTypes: EdgeTypes = { relationEdge: SmartStepEdge };
 
 export default function DiagramCanvas() {
-  // Build the initial graph from mock schema
-  const initialGraph = useMemo(
-    () => buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER),
-    [],
-  );
-
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
-    initialGraph.nodes,
+    [],
   );
   const [edges, setEdges, onEdgesChange] = useEdgesState<
     Edge<RelationEdgeData>
-  >(initialGraph.edges);
+  >([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Re-runs dagre and updates node positions
-  const handleAutoLayout = useCallback(() => {
-    setNodes((current) => reapplyLayout(current, edges));
-  }, [edges, setNodes]);
+  useEffect(() => {
+    buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER).then(({ nodes, edges }) => {
+      setNodes(nodes);
+      setEdges(edges);
+      setIsLoading(false);
+    });
+  }, [setNodes, setEdges]);
+
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-5 h-5 rounded-full border-2 border-teal border-t-transparent animate-spin" />
+          <span className="text-sm text-text-tertiary">Arranging schema…</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full">
