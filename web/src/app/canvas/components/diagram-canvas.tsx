@@ -21,6 +21,7 @@ import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
 import type { TableNodeData, RelationEdgeData } from "@/lib/types";
 import TableNode from "./table-node";
 import RelationEdge from "./relation-edge";
+import CanvasToolbar from "./canvas-toolbar";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -55,6 +56,8 @@ export default function DiagramCanvas() {
 
   return (
     <div className="w-full h-full">
+      <CanvasToolbar />
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -76,7 +79,7 @@ export default function DiagramCanvas() {
         <MiniMap
           nodeColor="var(--border-strong)"
           maskColor="rgba(0, 0, 0, 0.25)"
-          className="!bg-node-bg !border-node-border"
+          className="bg-node-bg! border-node-border!"
           style={{
             borderRadius: "var(--radius-lg)",
           }}
