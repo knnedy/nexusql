@@ -67,15 +67,15 @@
     --teal-subtle: #e1f5ee;
 
     /* Canvas */
-    --canvas-bg: #f9f9f8;
-    --canvas-dot: #ddddd9;
-    --canvas-cross: #ddddd9;
+    --canvas-bg: #fcfbfa;
+    --canvas-dot: #72726c;
+    --canvas-cross: #72726c;
 
     /* Node surfaces */
     --node-bg: #ffffff;
-    --node-border: #e5e5e3;
-    --node-header-bg: #fafaf9;
-    --node-row-border: #f0f0ee;
+    --node-border: #d8d8d6;
+    --node-header-bg: #f4f3f0;
+    --node-row-border: #ebebea;
 
     /* Text */
     --text-primary: #141413;
@@ -139,14 +139,14 @@
 
     /* Canvas */
     --canvas-bg: #111110;
-    --canvas-dot: #2a2a28;
-    --canvas-cross: #2a2a28;
+    --canvas-dot: #4e4e4a;
+    --canvas-cross: #4e4e4a;
 
     /* Node surfaces */
     --node-bg: #1e1e1c;
-    --node-border: #2e2e2c;
+    --node-border: #363634;
     --node-header-bg: #252523;
-    --node-row-border: #262624;
+    --node-row-border: #2a2a28;
 
     /* Text */
     --text-primary: #f0efea;
@@ -225,10 +225,19 @@
     border-radius: 9999px;
   }
 
-  /* React Flow overrides — defer to our token system */
+  /* React Flow — strip default node chrome so our TableNode renders cleanly */
+  .react-flow__node {
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+
   .react-flow__background {
     background-color: var(--canvas-bg) !important;
   }
+
   .react-flow__minimap {
     background-color: var(--minimap-bg) !important;
   }
