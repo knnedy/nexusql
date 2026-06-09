@@ -185,4 +185,6 @@ export interface TableNodeData extends Record<string, unknown> {
 
 export interface RelationEdgeData extends Record<string, unknown> {
   relation: Relation;
+  sourceY?: number;
+  targetY?: number;
 }

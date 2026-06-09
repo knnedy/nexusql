@@ -96,7 +96,7 @@ function ProviderLabel({ provider }: { provider: DatabaseProvider }) {
 
   return (
     <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wider uppercase border border-black/2 dark:border-white/2 ${styles[provider]}`}>
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wider border border-black/2 dark:border-white/2 ${styles[provider]}`}>
       {provider}
     </span>
   );

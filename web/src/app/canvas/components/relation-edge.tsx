@@ -23,12 +23,16 @@ function RelationEdge({
 }: EdgeProps<Edge<RelationEdgeData>>) {
   const [hovered, setHovered] = useState(false);
 
+  // Use ELK-calculated Y positions when available for precise field-level routing
+  const resolvedSourceY = data?.sourceY ?? sourceY;
+  const resolvedTargetY = data?.targetY ?? targetY;
+
   const [edgePath, labelX, labelY] = getSmoothStepPath({
     sourceX,
-    sourceY,
+    sourceY: resolvedSourceY,
     sourcePosition,
     targetX,
-    targetY,
+    targetY: resolvedTargetY,
     targetPosition,
     borderRadius: 16,
     offset: 40,

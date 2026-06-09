@@ -22,7 +22,6 @@ import type { TableNodeData, RelationEdgeData } from "@/lib/types";
 import TableNode from "./table-node";
 import RelationEdge from "./relation-edge";
 
-// Stable references outside component
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
 
@@ -75,9 +74,12 @@ export default function DiagramCanvas() {
           color="var(--canvas-dot)"
         />
         <MiniMap
-          nodeColor="var(--minimap-node)"
-          maskColor="var(--minimap-mask)"
-          style={{ background: "var(--minimap-bg)" }}
+          nodeColor="var(--border-strong)"
+          maskColor="rgba(0, 0, 0, 0.25)"
+          className="!bg-node-bg !border-node-border"
+          style={{
+            borderRadius: "var(--radius-lg)",
+          }}
         />
       </ReactFlow>
     </div>

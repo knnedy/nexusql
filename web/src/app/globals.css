@@ -53,7 +53,6 @@
   --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
-/* Light mode tokens */
 @layer base {
   :root {
     /* Accent */
@@ -125,9 +124,8 @@
     --radius-xl: 10px;
   }
 
-  /* Dark mode tokens */
   .dark {
-    /* Accent — same coral, no change */
+    /* Accent */
     --coral: #d85a30;
     --coral-hover: #e0673c;
     --coral-subtle: #2a1a12;
@@ -225,7 +223,7 @@
     border-radius: 9999px;
   }
 
-  /* React Flow — strip default node chrome so our TableNode renders cleanly */
+  /* React Flow overrides */
   .react-flow__node {
     background: transparent !important;
     border: none !important;
@@ -239,7 +237,9 @@
   }
 
   .react-flow__minimap {
-    background-color: var(--minimap-bg) !important;
+    border: 0.5px solid var(--border) !important;
+    border-radius: var(--radius-lg) !important;
+    overflow: hidden !important;
   }
 
   .react-flow__edge-path {

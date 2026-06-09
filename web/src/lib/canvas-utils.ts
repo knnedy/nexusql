@@ -113,6 +113,17 @@ export async function buildCanvasGraph(
   const { elkGraph, rfEdges } = buildElkGraph(schema);
   const layouted = await elk.layout(elkGraph);
 
+  // Build a port position lookup from ELK's output
+  const portPositions = new Map<string, { x: number; y: number }>();
+  (layouted.children ?? []).forEach((elkNode) => {
+    (elkNode.ports ?? []).forEach((port) => {
+      portPositions.set(port.id, {
+        x: (elkNode.x ?? 0) + (port.x ?? 0),
+        y: (elkNode.y ?? 0) + (port.y ?? 0),
+      });
+    });
+  });
+
   const nodes: Node<TableNodeData>[] = (layouted.children ?? []).map(
     (elkNode) => {
       const table = schema.tables.find((t) => t.name === elkNode.id)!;
@@ -125,7 +136,21 @@ export async function buildCanvasGraph(
     },
   );
 
-  return { nodes, edges: rfEdges };
+  // Attach ELK-calculated port Y offsets to each edge
+  const edges: Edge<RelationEdgeData>[] = rfEdges.map((edge) => {
+    const sourcePos = portPositions.get(edge.sourceHandle ?? "");
+    const targetPos = portPositions.get(edge.targetHandle ?? "");
+    return {
+      ...edge,
+      data: {
+        ...edge.data!,
+        sourceY: sourcePos?.y,
+        targetY: targetPos?.y,
+      },
+    };
+  });
+
+  return { nodes, edges };
 }
 
 export async function reapplyLayout(
