@@ -85,8 +85,6 @@ export default function DiagramCanvas() {
       <CanvasSidebar
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        nodes={nodes}
-        edges={edges}
         onLayoutApply={handleLayoutApply}
       />
 
@@ -98,7 +96,11 @@ export default function DiagramCanvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{ padding: 0.2 }}
+        /* Increased padding ratio from 0.2 to 0.38 to account for floating header elements */
+        fitViewOptions={{
+          padding: 0.38,
+          includeHiddenNodes: false,
+        }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}>

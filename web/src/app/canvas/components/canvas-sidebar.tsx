@@ -1,95 +1,80 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import {
-  LayoutDashboard,
-  Download,
-  Code2,
-  Sun,
-  Moon,
-  X,
-  SlidersHorizontal,
-} from "lucide-react";
+import { LayoutGrid, ImageDown, Sun, Moon, X, Database } from "lucide-react";
+import { SiPrisma, SiDrizzle } from "react-icons/si";
 import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
 import { reapplyLayout } from "@/lib/canvas-utils";
-import type { Node, Edge } from "@xyflow/react";
-import type { TableNodeData, RelationEdgeData } from "@/lib/types";
+import type { Node } from "@xyflow/react";
+import type { TableNodeData } from "@/lib/types";
 
 interface CanvasSidebarProps {
   open: boolean;
   onClose: () => void;
-  nodes: Node<TableNodeData>[];
-  edges: Edge<RelationEdgeData>[];
   onLayoutApply: (nodes: Node<TableNodeData>[]) => void;
 }
 
-function SidebarButton({
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-text-tertiary px-2.5 mb-1.5 antialiased">
+      {label}
+    </p>
+  );
+}
+
+function SidebarItem({
+  iconWrapperClass,
   icon,
   label,
   description,
   onClick,
-  variant,
 }: {
+  iconWrapperClass: string;
   icon: React.ReactNode;
   label: string;
-  description?: string;
+  description: string;
   onClick: () => void;
-  variant?: "default" | "danger";
 }) {
   return (
     <button
       onClick={onClick}
-      className={[
-        "w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors cursor-pointer border-none",
-        variant === "danger"
-          ? "bg-transparent hover:bg-red-500/8 text-text-secondary hover:text-red-500"
-          : "bg-transparent hover:bg-surface-3 text-text-secondary hover:text-text-primary",
-      ].join(" ")}>
-      <div className="shrink-0">{icon}</div>
-      <div className="flex flex-col gap-0.5 min-w-0">
-        <span className="text-sm font-medium leading-none">{label}</span>
-        {description && (
-          <span className="text-xs text-text-tertiary leading-none mt-0.5">
-            {description}
-          </span>
-        )}
+      className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer border-none bg-transparent hover:bg-node-border/30 dark:hover:bg-node-border/20 active:scale-[0.98] group">
+      <div
+        className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3 transition-colors ${iconWrapperClass}`}>
+        {icon}
+      </div>
+      <div className="flex flex-col min-w-0 justify-center">
+        <span className="text-base font-semibold text-text-primary group-hover:text-text-primary transition-colors - antialiased">
+          {label}
+        </span>
+        <span className="text-[0.80rem] text-text-tertiary font-normal truncate mt-0.5">
+          {description}
+        </span>
       </div>
     </button>
   );
 }
 
-function SidebarSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
+function Divider() {
   return (
-    <div className="flex flex-col gap-1">
-      <p className="text-xs font-medium text-text-tertiary px-3 mb-1">
-        {title}
-      </p>
-      {children}
-    </div>
+    <div className="h-px bg-node-border/40 dark:bg-node-border/20 mx-2.5 my-1" />
   );
 }
 
 export default function CanvasSidebar({
   open,
   onClose,
-  nodes,
-  edges,
   onLayoutApply,
 }: CanvasSidebarProps) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   const handleAutoLayout = useCallback(async () => {
-    const { nodes: laid } = await reapplyLayout(MOCK_SCHEMA, MOCK_PROVIDER);
-    onLayoutApply(laid);
+    const { nodes } = await reapplyLayout(MOCK_SCHEMA, MOCK_PROVIDER);
+    onLayoutApply(nodes);
   }, [onLayoutApply]);
 
   function handleExportPng() {
@@ -106,77 +91,107 @@ export default function CanvasSidebar({
 
   return (
     <>
-      {/* Backdrop */}
-      {open && <div className="absolute inset-0 z-20" onClick={onClose} />}
+      {/* Translucent Backdrop Mask */}
+      {open && (
+        <div
+          className="absolute inset-0 z-20 bg-black/5 dark:bg-black/20 backdrop-blur-[1px] animate-in fade-in duration-200"
+          onClick={onClose}
+        />
+      )}
 
-      {/* Panel */}
+      {/* Main Panel Shell */}
       <div
         className={[
-          "absolute top-0 left-0 h-full z-30 flex flex-col bg-surface-1 border-r-[0.5px] border-border transition-all duration-200 ease-out",
-          open
-            ? "w-64 opacity-100"
-            : "w-0 opacity-0 pointer-events-none overflow-hidden",
+          "absolute top-0 left-0 h-full z-30 flex flex-col border-r border-node-border/80 dark:border-node-border/40 transition-all duration-200 ease-out overflow-hidden shadow-2xl dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)]",
+          "bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md",
+          open ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none",
         ].join(" ")}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b-[0.5px] border-border shrink-0">
-          <span className="text-sm font-semibold text-text-primary tracking-[-0.01em]">
-            Canvas
-          </span>
+        {/* Dynamic Headed Identity Workspace Container */}
+        <div className="flex items-center justify-between px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-7 h-7 rounded-lg bg-coral/10 text-coral flex items-center justify-center shrink-0 border border-coral/20">
+              <Database size={14} aria-hidden />
+            </div>
+            <div className="flex flex-col min-w-0 justify-center">
+              <span className="text-[12px] font-bold text-text-primary tracking-tight truncate antialiased">
+                {MOCK_SCHEMA.tables[0]?.schema === "public"
+                  ? "Local Dev"
+                  : MOCK_SCHEMA.tables[0]?.schema}
+              </span>
+              <span className="text-[9px] font-medium font-mono text-text-tertiary mt-0.5 uppercase tracking-wider">
+                {MOCK_PROVIDER} · {MOCK_SCHEMA.tables.length} tables
+              </span>
+            </div>
+          </div>
           <button
             onClick={onClose}
-            className="flex items-center justify-center w-6 h-6 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-3 transition-colors cursor-pointer border-none bg-transparent"
+            className="flex items-center justify-center w-6 h-6 rounded-md text-text-tertiary hover:text-text-primary hover:bg-node-border/40 transition-colors cursor-pointer border-none bg-transparent shrink-0"
             aria-label="Close sidebar">
-            <X size={13} aria-hidden />
+            <X size={12} aria-hidden />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="flex flex-col gap-5 p-3 flex-1 overflow-y-auto">
-          <SidebarSection title="Layout">
-            <SidebarButton
-              icon={<LayoutDashboard size={15} />}
+        {/* Sidebar Interior Scroller Layout */}
+        <div className="flex flex-col gap-3.5 p-2 flex-1 overflow-y-auto pt-4">
+          {/* Layout */}
+          <div className="flex flex-col gap-0.5">
+            <SectionLabel label="Layout" />
+            <SidebarItem
+              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
+              icon={<LayoutGrid size={14} aria-hidden />}
               label="Auto-layout"
-              description="Rearrange all tables cleanly"
+              description="Rearrange structural blocks"
               onClick={handleAutoLayout}
             />
-          </SidebarSection>
+          </div>
 
-          <SidebarSection title="Export">
-            <SidebarButton
-              icon={<Download size={15} />}
-              label="Export PNG"
-              description="Save canvas as an image"
+          <Divider />
+
+          {/* Exports */}
+          <div className="flex flex-col gap-0.5">
+            <SectionLabel label="Data Exports" />
+            <SidebarItem
+              iconWrapperClass="bg-badge-blue-bg/60 text-badge-blue-text dark:bg-badge-blue-bg/20 dark:text-blue-400"
+              icon={<ImageDown size={14} aria-hidden />}
+              label="Export Canvas View"
+              description="Save viewport to PNG format"
               onClick={handleExportPng}
             />
-            <SidebarButton
-              icon={<Code2 size={15} />}
-              label="Prisma schema"
-              description="Generate schema.prisma"
+            <SidebarItem
+              iconWrapperClass="bg-indigo-500/5 text-indigo-500 dark:bg-indigo-400/10 dark:text-indigo-400"
+              icon={<SiPrisma size={14} aria-hidden />}
+              label="Prisma Schema"
+              description="Generate schema.prisma model"
               onClick={handleExportPrisma}
             />
-            <SidebarButton
-              icon={<Code2 size={15} />}
-              label="Drizzle schema"
-              description="Generate schema.ts"
+            <SidebarItem
+              iconWrapperClass="bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400"
+              icon={<SiDrizzle size={14} aria-hidden />}
+              label="Drizzle Schema"
+              description="Compile executable TypeScript"
               onClick={handleExportDrizzle}
             />
-          </SidebarSection>
+          </div>
 
-          <SidebarSection title="Appearance">
-            <SidebarButton
+          <Divider />
+
+          {/* Theme */}
+          <div className="flex flex-col gap-0.5">
+            <SectionLabel label="Theme" />
+            <SidebarItem
+              iconWrapperClass="bg-surface-3 text-text-secondary dark:bg-surface-3/50"
               icon={
-                resolvedTheme === "dark" ? (
-                  <Sun size={15} />
+                isDark ? (
+                  <Sun size={14} aria-hidden />
                 ) : (
-                  <Moon size={15} />
+                  <Moon size={14} aria-hidden />
                 )
               }
-              label={resolvedTheme === "dark" ? "Light mode" : "Dark mode"}
-              onClick={() =>
-                setTheme(resolvedTheme === "dark" ? "light" : "dark")
-              }
+              label={isDark ? "Light Presentation" : "Dark Presentation"}
+              description="Invert appearance theme"
+              onClick={() => setTheme(isDark ? "light" : "dark")}
             />
-          </SidebarSection>
+          </div>
         </div>
       </div>
     </>
