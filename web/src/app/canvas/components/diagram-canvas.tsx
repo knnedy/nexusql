@@ -19,12 +19,18 @@ import "@xyflow/react/dist/style.css";
 import { SlidersHorizontal } from "lucide-react";
 import { buildCanvasGraph } from "@/lib/canvas-utils";
 import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
-import type { TableNodeData, RelationEdgeData } from "@/lib/types";
+import type {
+  TableNodeData,
+  RelationEdgeData,
+  Table,
+  DatabaseProvider,
+} from "@/lib/types";
 import TableNode from "./table-node";
 import RelationEdge from "./relation-edge";
 import CanvasToolbar from "./canvas-toolbar";
 import CanvasSidebar from "./canvas-sidebar";
 import ExportPreviewDrawer from "./export-preview-drawer";
+import TableInspectorPanel from "./table-inspector-panel";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -47,6 +53,21 @@ export default function DiagramCanvas() {
   const [activeExport, setActiveExport] = useState<
     "png" | "prisma" | "drizzle" | null
   >(null);
+
+  const [selectedTable, setSelectedTable] = useState<{
+    table: Table;
+    provider: DatabaseProvider;
+  } | null>(null);
+
+  const handleNodeClick = useCallback(
+    (_: React.MouseEvent, node: Node<TableNodeData>) => {
+      setSelectedTable({
+        table: node.data.table,
+        provider: node.data.provider,
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER).then(({ nodes, edges }) => {
@@ -106,6 +127,7 @@ export default function DiagramCanvas() {
       <ReactFlow
         nodes={nodes}
         edges={edges}
+        onNodeClick={handleNodeClick}
         onNodesChange={onNodesChange as OnNodesChange}
         onEdgesChange={onEdgesChange as OnEdgesChange}
         nodeTypes={nodeTypes}
@@ -123,6 +145,10 @@ export default function DiagramCanvas() {
           gap={20}
           size={1}
           color="var(--canvas-dot)"
+        />
+        <TableInspectorPanel
+          table={selectedTable?.table ?? null}
+          provider={selectedTable?.provider ?? null}
         />
         <MiniMap
           nodeColor={() => getCssVar("--minimap-node")}

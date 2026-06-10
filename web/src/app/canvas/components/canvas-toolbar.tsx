@@ -37,7 +37,7 @@ export default function CanvasToolbar() {
 
       {/* Provider Tagging Block */}
       <div className="px-3 py-2.5 flex items-center">
-        <span className="inline-flex items-center rounded-md bg-badge-teal-bg/15 dark:bg-badge-teal-bg/20 px-2 py-0.5 text-[9px] font-bold tracking-wider text-badge-teal-text dark:text-teal uppercase border border-black/[0.02] dark:border-white/[0.02] font-mono">
+        <span className="inline-flex items-center rounded-md bg-badge-teal-bg/15 dark:bg-badge-teal-bg/20 px-2 py-0.5 text-[9px] font-bold tracking-wider text-badge-teal-text dark:text-teal uppercase border border-black/2 dark:border-white/2 font-mono">
           {MOCK_PROVIDER}
         </span>
       </div>

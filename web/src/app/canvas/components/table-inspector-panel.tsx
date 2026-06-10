@@ -1,0 +1,206 @@
+"use client";
+
+import { Table2, Hash, Key, Link, Code2, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import type { Table, Field, DatabaseProvider } from "@/lib/types";
+import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
+
+interface TableInspectorPanelProps {
+  table: Table | null;
+  provider: DatabaseProvider | null;
+}
+
+type InspectorTab = "columns" | "ddl";
+
+function SectionLabel({ label }: { label: string }) {
+  return (
+    <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-text-tertiary px-3 mb-1.5 antialiased">
+      {label}
+    </p>
+  );
+}
+
+function NullabilityBadge({ nullable }: { nullable: boolean }) {
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wider border ${
+        nullable
+          ? "bg-badge-gray-bg/50 text-text-tertiary border-black/3 dark:border-white/3"
+          : "bg-coral/10 text-coral border-coral/20 dark:bg-coral/20"
+      }`}>
+      {nullable ? "null" : "not null"}
+    </span>
+  );
+}
+
+function TypeBadge({ type }: { type: string }) {
+  const variant = FIELD_TYPE_BADGE_MAP[type] ?? "gray";
+  const styles = {
+    teal: "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal",
+    coral:
+      "bg-badge-coral-bg/15 text-badge-coral-text dark:bg-badge-coral-bg/20 dark:text-coral",
+    gray: "bg-badge-gray-bg/50 text-badge-gray-text dark:bg-badge-gray-bg/20 dark:text-text-secondary",
+  } as const;
+
+  return (
+    <span
+      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wide border border-black/3 dark:border-white/3 ${styles[variant]}`}>
+      {type}
+    </span>
+  );
+}
+
+function FieldRow({ field }: { field: Field }) {
+  const isKey = field.isPrimaryKey || field.isForeignKey;
+
+  return (
+    <div className="flex items-center gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+      <div className="w-3.5 shrink-0 flex items-center justify-center">
+        {field.isPrimaryKey && <Key size={10} className="text-coral" />}
+        {field.isForeignKey && !field.isPrimaryKey && (
+          <Link size={10} className="text-teal" />
+        )}
+        {!isKey && <Hash size={10} className="text-text-tertiary/50" />}
+      </div>
+
+      <span
+        className={`text-[11px] flex-1 truncate font-mono tracking-tight ${
+          isKey ? "text-text-primary font-semibold" : "text-text-secondary/90"
+        }`}>
+        {field.name}
+      </span>
+
+      <div className="flex items-center gap-1.5 shrink-0">
+        <NullabilityBadge nullable={field.nullable} />
+        <TypeBadge type={field.type} />
+      </div>
+    </div>
+  );
+}
+
+function buildDdl(table: Table, provider: DatabaseProvider | null): string {
+  const schemaPrefix =
+    table.schema && table.schema !== "public" ? `"${table.schema}".` : "";
+
+  const lines = table.fields.map((f) => {
+    const parts: string[] = [`  "${f.name}"`, f.type.toUpperCase()];
+    if (f.isPrimaryKey) parts.push("PRIMARY KEY");
+    if (!f.nullable && !f.isPrimaryKey) parts.push("NOT NULL");
+    if (f.defaultValue) parts.push(`DEFAULT ${f.defaultValue}`);
+    return parts.join(" ");
+  });
+
+  const fkLines = table.fields
+    .filter((f) => f.isForeignKey)
+    .map(
+      (f) =>
+        `  FOREIGN KEY ("${f.name}") REFERENCES -- target table (${f.name})`,
+    );
+
+  const allLines = [...lines, ...fkLines];
+
+  return `CREATE TABLE ${schemaPrefix}"${table.name}" (\n${allLines.join(",\n")}\n);`;
+}
+
+function IdleState() {
+  return (
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+      <div className="w-9 h-9 rounded-xl bg-node-border/20 dark:bg-node-border/10 flex items-center justify-center">
+        <Table2 size={16} className="text-text-tertiary" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-[12px] font-semibold text-text-secondary antialiased">
+          No table selected
+        </span>
+        <span className="text-[11px] text-text-tertiary leading-relaxed">
+          Click any table on the canvas to inspect its structure
+        </span>
+      </div>
+      <div className="flex items-center gap-1.5 mt-1 text-text-tertiary/60">
+        <ChevronRight size={10} />
+        <span className="text-[10px] font-mono">select a node to begin</span>
+      </div>
+    </div>
+  );
+}
+
+export default function TableInspectorPanel({
+  table,
+  provider,
+}: TableInspectorPanelProps) {
+  const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
+
+  const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
+  const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
+
+  return (
+    <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
+        <div className="w-7 h-7 rounded-lg bg-node-border/20 flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3">
+          <Table2 size={13} className="text-text-secondary" />
+        </div>
+        <div className="flex flex-col min-w-0 justify-center">
+          <span className="text-[12px] font-bold text-text-primary tracking-tight truncate antialiased">
+            {table ? table.name : "Inspector"}
+          </span>
+          <span className="text-[9px] font-medium font-mono text-text-tertiary mt-0.5 uppercase tracking-wider">
+            {table
+              ? `${table.fields.length} fields · ${pkFields.length} pk · ${fkFields.length} fk`
+              : "table inspector"}
+          </span>
+        </div>
+      </div>
+
+      {!table ? (
+        <IdleState />
+      ) : (
+        <>
+          {/* Tabs */}
+          <div className="flex items-center gap-0.5 px-2.5 pt-3 pb-2 shrink-0">
+            {(["columns", "ddl"] as InspectorTab[]).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150 border-none cursor-pointer capitalize ${
+                  activeTab === tab
+                    ? "bg-node-border/40 dark:bg-node-border/30 text-text-primary"
+                    : "bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-node-border/20"
+                }`}>
+                {tab === "columns" ? (
+                  <Hash size={11} aria-hidden />
+                ) : (
+                  <Code2 size={11} aria-hidden />
+                )}
+                {tab}
+              </button>
+            ))}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto min-h-0">
+            {activeTab === "columns" && (
+              <div className="flex flex-col pt-1 pb-4">
+                <SectionLabel label="Fields" />
+                <div className="flex flex-col">
+                  {table.fields.map((field) => (
+                    <FieldRow key={field.name} field={field} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === "ddl" && (
+              <div className="p-3 flex flex-col gap-2">
+                <SectionLabel label="Create Statement" />
+                <div className="rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-3.5 font-mono text-[10.5px] text-zinc-300 whitespace-pre leading-relaxed select-text tracking-normal overflow-x-auto">
+                  {buildDdl(table, provider)}
+                </div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
