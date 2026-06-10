@@ -1,6 +1,14 @@
 "use client";
 
-import { Table2, Hash, Key, Link, Code2, ChevronRight } from "lucide-react";
+import {
+  Table2,
+  Hash,
+  Key,
+  Link,
+  Code2,
+  ChevronRight,
+  List,
+} from "lucide-react";
 import { useState } from "react";
 import type { Table, Field, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
@@ -10,7 +18,7 @@ interface TableInspectorPanelProps {
   provider: DatabaseProvider | null;
 }
 
-type InspectorTab = "columns" | "ddl";
+type InspectorTab = "columns" | "indexes" | "ddl";
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -78,6 +86,66 @@ function FieldRow({ field }: { field: Field }) {
   );
 }
 
+interface IndexEntry {
+  name: string;
+  kind: "PRIMARY KEY" | "FOREIGN KEY" | "UNIQUE" | "INDEX";
+  fields: string[];
+}
+
+function deriveIndexes(table: Table): IndexEntry[] {
+  const entries: IndexEntry[] = [];
+
+  const pkFields = table.fields.filter((f) => f.isPrimaryKey);
+  if (pkFields.length > 0) {
+    entries.push({
+      name: `pk_${table.name}`,
+      kind: "PRIMARY KEY",
+      fields: pkFields.map((f) => f.name),
+    });
+  }
+
+  table.fields
+    .filter((f) => f.isForeignKey)
+    .forEach((f) => {
+      entries.push({
+        name: `fk_${table.name}_${f.name}`,
+        kind: "FOREIGN KEY",
+        fields: [f.name],
+      });
+    });
+
+  return entries;
+}
+
+const INDEX_KIND_STYLES: Record<IndexEntry["kind"], string> = {
+  "PRIMARY KEY": "bg-coral/10 text-coral border-coral/20 dark:bg-coral/20",
+  "FOREIGN KEY":
+    "bg-badge-teal-bg/15 text-badge-teal-text border-badge-teal-text/10 dark:bg-badge-teal-bg/20 dark:text-teal dark:border-teal/20",
+  UNIQUE:
+    "bg-indigo-500/5 text-indigo-500 border-indigo-500/20 dark:bg-indigo-400/10 dark:text-indigo-400",
+  INDEX:
+    "bg-badge-gray-bg/50 text-badge-gray-text border-black/3 dark:border-white/3 dark:bg-badge-gray-bg/20",
+};
+
+function IndexRow({ entry }: { entry: IndexEntry }) {
+  return (
+    <div className="flex items-start gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+      <span
+        className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wider border shrink-0 mt-0.5 ${INDEX_KIND_STYLES[entry.kind]}`}>
+        {entry.kind}
+      </span>
+      <div className="flex flex-col min-w-0 gap-0.5">
+        <span className="text-[11px] font-mono text-text-primary truncate tracking-tight">
+          {entry.name}
+        </span>
+        <span className="text-[10px] font-mono text-text-tertiary truncate">
+          ({entry.fields.join(", ")})
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function buildDdl(table: Table, provider: DatabaseProvider | null): string {
   const schemaPrefix =
     table.schema && table.schema !== "public" ? `"${table.schema}".` : "";
@@ -92,14 +160,9 @@ function buildDdl(table: Table, provider: DatabaseProvider | null): string {
 
   const fkLines = table.fields
     .filter((f) => f.isForeignKey)
-    .map(
-      (f) =>
-        `  FOREIGN KEY ("${f.name}") REFERENCES -- target table (${f.name})`,
-    );
+    .map((f) => `  FOREIGN KEY ("${f.name}") REFERENCES -- target (${f.name})`);
 
-  const allLines = [...lines, ...fkLines];
-
-  return `CREATE TABLE ${schemaPrefix}"${table.name}" (\n${allLines.join(",\n")}\n);`;
+  return `CREATE TABLE ${schemaPrefix}"${table.name}" (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
 
 function IdleState() {
@@ -132,6 +195,13 @@ export default function TableInspectorPanel({
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
   const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
+  const indexes = table ? deriveIndexes(table) : [];
+
+  const tabs: { id: InspectorTab; icon: React.ReactNode; label: string }[] = [
+    { id: "columns", icon: <Hash size={11} aria-hidden />, label: "Columns" },
+    { id: "indexes", icon: <List size={11} aria-hidden />, label: "Indexes" },
+    { id: "ddl", icon: <Code2 size={11} aria-hidden />, label: "DDL" },
+  ];
 
   return (
     <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
@@ -158,21 +228,17 @@ export default function TableInspectorPanel({
         <>
           {/* Tabs */}
           <div className="flex items-center gap-0.5 px-2.5 pt-3 pb-2 shrink-0">
-            {(["columns", "ddl"] as InspectorTab[]).map((tab) => (
+            {tabs.map(({ id, icon, label }) => (
               <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150 border-none cursor-pointer capitalize ${
-                  activeTab === tab
+                key={id}
+                onClick={() => setActiveTab(id)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all duration-150 border-none cursor-pointer ${
+                  activeTab === id
                     ? "bg-node-border/40 dark:bg-node-border/30 text-text-primary"
                     : "bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-node-border/20"
                 }`}>
-                {tab === "columns" ? (
-                  <Hash size={11} aria-hidden />
-                ) : (
-                  <Code2 size={11} aria-hidden />
-                )}
-                {tab}
+                {icon}
+                {label}
               </button>
             ))}
           </div>
@@ -187,6 +253,23 @@ export default function TableInspectorPanel({
                     <FieldRow key={field.name} field={field} />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {activeTab === "indexes" && (
+              <div className="flex flex-col pt-1 pb-4">
+                <SectionLabel label="Indexes" />
+                {indexes.length === 0 ? (
+                  <p className="text-[11px] text-text-tertiary px-3 py-4">
+                    No indexes found for this table.
+                  </p>
+                ) : (
+                  <div className="flex flex-col">
+                    {indexes.map((entry) => (
+                      <IndexRow key={entry.name} entry={entry} />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
