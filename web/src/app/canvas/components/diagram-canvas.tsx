@@ -24,6 +24,7 @@ import type {
   RelationEdgeData,
   Table,
   DatabaseProvider,
+  Relation,
 } from "@/lib/types";
 import TableNode from "./table-node";
 import RelationEdge from "./relation-edge";
@@ -58,16 +59,35 @@ export default function DiagramCanvas() {
     table: Table;
     provider: DatabaseProvider;
   } | null>(null);
+  const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
+    null,
+  );
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TableNodeData>) => {
+      setSelectedRelation(null);
       setSelectedTable({
         table: node.data.table,
         provider: node.data.provider,
       });
+      setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
     },
-    [],
+    [setEdges],
   );
+
+  const handleEdgeClick = useCallback(
+    (_: React.MouseEvent, edge: Edge<RelationEdgeData>) => {
+      setSelectedTable(null);
+      if (edge.data?.relation) setSelectedRelation(edge.data.relation);
+      setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
+    },
+    [setNodes],
+  );
+
+  const handlePaneClick = useCallback(() => {
+    setSelectedTable(null);
+    setSelectedRelation(null);
+  }, []);
 
   useEffect(() => {
     buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER).then(({ nodes, edges }) => {
@@ -128,6 +148,8 @@ export default function DiagramCanvas() {
         nodes={nodes}
         edges={edges}
         onNodeClick={handleNodeClick}
+        onEdgeClick={handleEdgeClick}
+        onPaneClick={handlePaneClick}
         onNodesChange={onNodesChange as OnNodesChange}
         onEdgesChange={onEdgesChange as OnEdgesChange}
         nodeTypes={nodeTypes}
@@ -149,6 +171,7 @@ export default function DiagramCanvas() {
         <TableInspectorPanel
           table={selectedTable?.table ?? null}
           provider={selectedTable?.provider ?? null}
+          relation={selectedRelation}
         />
         <MiniMap
           nodeColor={() => getCssVar("--minimap-node")}

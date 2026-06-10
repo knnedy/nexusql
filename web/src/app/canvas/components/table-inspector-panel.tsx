@@ -8,14 +8,17 @@ import {
   Code2,
   ChevronRight,
   List,
+  ArrowRight,
 } from "lucide-react";
 import { useState } from "react";
-import type { Table, Field, DatabaseProvider } from "@/lib/types";
+import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
+import { MOCK_SCHEMA } from "@/lib/mock-schema";
 
 interface TableInspectorPanelProps {
   table: Table | null;
   provider: DatabaseProvider | null;
+  relation: Relation | null;
 }
 
 type InspectorTab = "columns" | "indexes" | "ddl";
@@ -62,7 +65,7 @@ function FieldRow({ field }: { field: Field }) {
   const isKey = field.isPrimaryKey || field.isForeignKey;
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+    <div className="flex items-center gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors">
       <div className="w-3.5 shrink-0 flex items-center justify-center">
         {field.isPrimaryKey && <Key size={10} className="text-coral" />}
         {field.isForeignKey && !field.isPrimaryKey && (
@@ -70,14 +73,12 @@ function FieldRow({ field }: { field: Field }) {
         )}
         {!isKey && <Hash size={10} className="text-text-tertiary/50" />}
       </div>
-
       <span
         className={`text-[11px] flex-1 truncate font-mono tracking-tight ${
           isKey ? "text-text-primary font-semibold" : "text-text-secondary/90"
         }`}>
         {field.name}
       </span>
-
       <div className="flex items-center gap-1.5 shrink-0">
         <NullabilityBadge nullable={field.nullable} />
         <TypeBadge type={field.type} />
@@ -129,7 +130,7 @@ const INDEX_KIND_STYLES: Record<IndexEntry["kind"], string> = {
 
 function IndexRow({ entry }: { entry: IndexEntry }) {
   return (
-    <div className="flex items-start gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/[0.01] dark:hover:bg-white/[0.01] transition-colors">
+    <div className="flex items-start gap-2.5 px-3 py-2.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors">
       <span
         className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-bold tracking-wider border shrink-0 mt-0.5 ${INDEX_KIND_STYLES[entry.kind]}`}>
         {entry.kind}
@@ -165,6 +166,101 @@ function buildDdl(table: Table, provider: DatabaseProvider | null): string {
   return `CREATE TABLE ${schemaPrefix}"${table.name}" (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
 
+function deriveCardinality(relation: Relation): {
+  label: string;
+  description: string;
+} {
+  const sourceTable = MOCK_SCHEMA.tables.find(
+    (t) => t.name === relation.sourceTable,
+  );
+  const sourceField = sourceTable?.fields.find(
+    (f) => f.name === relation.sourceField,
+  );
+
+  // Both sides PK+FK = many-to-many junction
+  const isManyToMany =
+    sourceTable?.fields.every((f) => f.isPrimaryKey && f.isForeignKey) ?? false;
+
+  if (isManyToMany)
+    return { label: "many-to-many", description: "Junction table" };
+  if (sourceField?.isPrimaryKey)
+    return { label: "one-to-one", description: "Unique reference" };
+  return { label: "many-to-one", description: "Foreign key reference" };
+}
+
+function RelationView({ relation }: { relation: Relation }) {
+  const { label, description } = deriveCardinality(relation);
+
+  const isSelfRef = relation.sourceTable === relation.targetTable;
+
+  return (
+    <div className="flex flex-col gap-4 p-3 pb-6">
+      {/* Constraint name */}
+      <div className="flex flex-col gap-1.5 pt-1">
+        <SectionLabel label="Constraint" />
+        <div className="mx-3 px-3 py-2.5 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
+          <span className="text-[11px] font-mono text-text-primary tracking-tight">
+            {relation.constraintName}
+          </span>
+        </div>
+      </div>
+
+      {/* Field mapping */}
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel label="Field Mapping" />
+        <div className="mx-3 flex items-center gap-2 px-3 py-3 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-text-tertiary mb-0.5">
+              source
+            </span>
+            <span className="text-[11px] font-mono text-coral font-semibold truncate">
+              {relation.sourceTable}
+            </span>
+            <span className="text-[10px] font-mono text-text-secondary truncate">
+              .{relation.sourceField}
+            </span>
+          </div>
+
+          <ArrowRight
+            size={14}
+            className="text-text-tertiary shrink-0"
+            aria-hidden
+          />
+
+          <div className="flex flex-col min-w-0 flex-1 items-end text-right">
+            <span className="text-[9px] font-bold uppercase tracking-wider text-text-tertiary mb-0.5">
+              target
+            </span>
+            <span className="text-[11px] font-mono text-teal font-semibold truncate">
+              {relation.targetTable}
+            </span>
+            <span className="text-[10px] font-mono text-text-secondary truncate">
+              .{relation.targetField}
+            </span>
+          </div>
+        </div>
+
+        {isSelfRef && (
+          <p className="text-[10px] text-text-tertiary font-mono px-3 mt-0.5">
+            ↻ self-referential
+          </p>
+        )}
+      </div>
+
+      {/* Cardinality */}
+      <div className="flex flex-col gap-1.5">
+        <SectionLabel label="Cardinality" />
+        <div className="mx-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
+          <span className="inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wider border bg-badge-teal-bg/15 text-badge-teal-text border-badge-teal-text/10 dark:bg-badge-teal-bg/20 dark:text-teal dark:border-teal/20">
+            {label}
+          </span>
+          <span className="text-[11px] text-text-tertiary">{description}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function IdleState() {
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
@@ -173,10 +269,10 @@ function IdleState() {
       </div>
       <div className="flex flex-col gap-1">
         <span className="text-[12px] font-semibold text-text-secondary antialiased">
-          No table selected
+          No table or relation selected
         </span>
         <span className="text-[11px] text-text-tertiary leading-relaxed">
-          Click any table on the canvas to inspect its structure
+          Click any table or relation on the canvas to inspect it
         </span>
       </div>
       <div className="flex items-center gap-1.5 mt-1 text-text-tertiary/60">
@@ -190,6 +286,7 @@ function IdleState() {
 export default function TableInspectorPanel({
   table,
   provider,
+  relation,
 }: TableInspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
 
@@ -203,30 +300,50 @@ export default function TableInspectorPanel({
     { id: "ddl", icon: <Code2 size={11} aria-hidden />, label: "DDL" },
   ];
 
+  const headerTitle = relation
+    ? relation.constraintName
+    : table
+      ? table.name
+      : "Inspector";
+
+  const headerSub = relation
+    ? `${relation.sourceTable} → ${relation.targetTable}`
+    : table
+      ? `${table.fields.length} fields · ${pkFields.length} pk · ${fkFields.length} fk`
+      : "table inspector";
+
+  const headerIcon = relation ? (
+    <Link size={13} className="text-teal" />
+  ) : (
+    <Table2 size={13} className="text-text-secondary" />
+  );
+
   return (
     <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
       {/* Header */}
       <div className="flex items-center gap-2.5 px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-node-border/20 flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3">
-          <Table2 size={13} className="text-text-secondary" />
+          {headerIcon}
         </div>
         <div className="flex flex-col min-w-0 justify-center">
           <span className="text-[12px] font-bold text-text-primary tracking-tight truncate antialiased">
-            {table ? table.name : "Inspector"}
+            {headerTitle}
           </span>
-          <span className="text-[9px] font-medium font-mono text-text-tertiary mt-0.5 uppercase tracking-wider">
-            {table
-              ? `${table.fields.length} fields · ${pkFields.length} pk · ${fkFields.length} fk`
-              : "table inspector"}
+          <span className="text-[9px] font-medium font-mono text-text-tertiary mt-0.5 uppercase tracking-wider truncate">
+            {headerSub}
           </span>
         </div>
       </div>
 
-      {!table ? (
+      {/* Body */}
+      {!table && !relation ? (
         <IdleState />
-      ) : (
+      ) : relation ? (
+        <div className="flex-1 overflow-y-auto min-h-0">
+          <RelationView relation={relation} />
+        </div>
+      ) : table ? (
         <>
-          {/* Tabs */}
           <div className="flex items-center gap-0.5 px-2.5 pt-3 pb-2 shrink-0">
             {tabs.map(({ id, icon, label }) => (
               <button
@@ -243,7 +360,6 @@ export default function TableInspectorPanel({
             ))}
           </div>
 
-          {/* Content */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === "columns" && (
               <div className="flex flex-col pt-1 pb-4">
@@ -283,7 +399,7 @@ export default function TableInspectorPanel({
             )}
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }
