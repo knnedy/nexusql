@@ -14,6 +14,8 @@ interface CanvasSidebarProps {
   open: boolean;
   onClose: () => void;
   onLayoutApply: (nodes: Node<TableNodeData>[]) => void;
+  onSelectExport: (type: "png" | "prisma" | "drizzle" | null) => void;
+  activeExport: "png" | "prisma" | "drizzle" | null;
 }
 
 function SectionLabel({ label }: { label: string }) {
@@ -30,23 +32,29 @@ function SidebarItem({
   label,
   description,
   onClick,
+  active,
 }: {
   iconWrapperClass: string;
   icon: React.ReactNode;
   label: string;
   description: string;
   onClick: () => void;
+  active?: boolean;
 }) {
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer border-none bg-transparent hover:bg-node-border/30 dark:hover:bg-node-border/20 active:scale-[0.98] group">
+      className={`w-full flex items-center gap-3 px-2.5 py-2 rounded-xl text-left transition-all duration-150 cursor-pointer border-none bg-transparent active:scale-[0.98] group ${
+        active
+          ? "bg-node-border/40 dark:bg-node-border/30"
+          : "hover:bg-node-border/30 dark:hover:bg-node-border/20"
+      }`}>
       <div
         className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3 transition-colors ${iconWrapperClass}`}>
         {icon}
       </div>
       <div className="flex flex-col min-w-0 justify-center">
-        <span className="text-base font-semibold text-text-primary group-hover:text-text-primary transition-colors - antialiased">
+        <span className="text-base font-semibold text-text-primary group-hover:text-text-primary transition-colors antialiased">
           {label}
         </span>
         <span className="text-[0.80rem] text-text-tertiary font-normal truncate mt-0.5">
@@ -67,6 +75,8 @@ export default function CanvasSidebar({
   open,
   onClose,
   onLayoutApply,
+  onSelectExport,
+  activeExport,
 }: CanvasSidebarProps) {
   const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
@@ -76,18 +86,6 @@ export default function CanvasSidebar({
     const { nodes } = await reapplyLayout(MOCK_SCHEMA, MOCK_PROVIDER);
     onLayoutApply(nodes);
   }, [onLayoutApply]);
-
-  function handleExportPng() {
-    // Phase 2 — implement canvas-to-image export
-  }
-
-  function handleExportPrisma() {
-    // Phase 2 — call api.export.prisma()
-  }
-
-  function handleExportDrizzle() {
-    // Phase 2 — call api.export.drizzle()
-  }
 
   return (
     <>
@@ -151,25 +149,34 @@ export default function CanvasSidebar({
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Data Exports" />
             <SidebarItem
+              active={activeExport === "png"}
               iconWrapperClass="bg-badge-blue-bg/60 text-badge-blue-text dark:bg-badge-blue-bg/20 dark:text-blue-400"
               icon={<ImageDown size={14} aria-hidden />}
               label="Export Canvas View"
               description="Save viewport to PNG format"
-              onClick={handleExportPng}
+              onClick={() =>
+                onSelectExport(activeExport === "png" ? null : "png")
+              }
             />
             <SidebarItem
+              active={activeExport === "prisma"}
               iconWrapperClass="bg-indigo-500/5 text-indigo-500 dark:bg-indigo-400/10 dark:text-indigo-400"
               icon={<SiPrisma size={14} aria-hidden />}
               label="Prisma Schema"
               description="Generate schema.prisma model"
-              onClick={handleExportPrisma}
+              onClick={() =>
+                onSelectExport(activeExport === "prisma" ? null : "prisma")
+              }
             />
             <SidebarItem
+              active={activeExport === "drizzle"}
               iconWrapperClass="bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400"
               icon={<SiDrizzle size={14} aria-hidden />}
               label="Drizzle Schema"
               description="Compile executable TypeScript"
-              onClick={handleExportDrizzle}
+              onClick={() =>
+                onSelectExport(activeExport === "drizzle" ? null : "drizzle")
+              }
             />
           </div>
 

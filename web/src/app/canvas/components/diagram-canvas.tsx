@@ -24,6 +24,7 @@ import TableNode from "./table-node";
 import RelationEdge from "./relation-edge";
 import CanvasToolbar from "./canvas-toolbar";
 import CanvasSidebar from "./canvas-sidebar";
+import ExportPreviewDrawer from "./export-preview-drawer";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -43,6 +44,9 @@ export default function DiagramCanvas() {
   >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [activeExport, setActiveExport] = useState<
+    "png" | "prisma" | "drizzle" | null
+  >(null);
 
   useEffect(() => {
     buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER).then(({ nodes, edges }) => {
@@ -72,7 +76,6 @@ export default function DiagramCanvas() {
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      {/* Sidebar trigger */}
       <button
         onClick={() => setSidebarOpen(true)}
         className="absolute top-4 left-4 z-10 flex items-center justify-center w-9 h-9 rounded-xl bg-surface-1 border-[0.5px] border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
@@ -84,8 +87,20 @@ export default function DiagramCanvas() {
 
       <CanvasSidebar
         open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
+        onClose={() => {
+          setSidebarOpen(false);
+          setActiveExport(null);
+        }}
         onLayoutApply={handleLayoutApply}
+        onSelectExport={(type) => setActiveExport(type)}
+        activeExport={activeExport}
+      />
+
+      <ExportPreviewDrawer
+        key={activeExport}
+        type={activeExport}
+        sidebarOpen={sidebarOpen}
+        onClose={() => setActiveExport(null)}
       />
 
       <ReactFlow
@@ -96,7 +111,6 @@ export default function DiagramCanvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        /* Increased padding ratio from 0.2 to 0.38 to account for floating header elements */
         fitViewOptions={{
           padding: 0.38,
           includeHiddenNodes: false,
