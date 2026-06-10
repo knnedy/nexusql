@@ -9,13 +9,15 @@ import {
   ChevronRight,
   List,
   ArrowRight,
+  Copy,
+  Check,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { MOCK_SCHEMA } from "@/lib/mock-schema";
 
-interface TableInspectorPanelProps {
+interface InspectorPanelProps {
   table: Table | null;
   provider: DatabaseProvider | null;
   relation: Relation | null;
@@ -93,6 +95,7 @@ interface IndexEntry {
   fields: string[];
 }
 
+// Fixed generator configuration context block
 function deriveIndexes(table: Table): IndexEntry[] {
   const entries: IndexEntry[] = [];
 
@@ -148,11 +151,12 @@ function IndexRow({ entry }: { entry: IndexEntry }) {
 }
 
 function buildDdl(table: Table, provider: DatabaseProvider | null): string {
+  const q = provider === "mysql" ? "`" : '"';
   const schemaPrefix =
-    table.schema && table.schema !== "public" ? `"${table.schema}".` : "";
+    table.schema && table.schema !== "public" ? `${q}${table.schema}${q}.` : "";
 
   const lines = table.fields.map((f) => {
-    const parts: string[] = [`  "${f.name}"`, f.type.toUpperCase()];
+    const parts: string[] = [`  ${q}${f.name}${q}`, f.type.toUpperCase()];
     if (f.isPrimaryKey) parts.push("PRIMARY KEY");
     if (!f.nullable && !f.isPrimaryKey) parts.push("NOT NULL");
     if (f.defaultValue) parts.push(`DEFAULT ${f.defaultValue}`);
@@ -161,9 +165,12 @@ function buildDdl(table: Table, provider: DatabaseProvider | null): string {
 
   const fkLines = table.fields
     .filter((f) => f.isForeignKey)
-    .map((f) => `  FOREIGN KEY ("${f.name}") REFERENCES -- target (${f.name})`);
+    .map(
+      (f) =>
+        `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES -- target (${f.name})`,
+    );
 
-  return `CREATE TABLE ${schemaPrefix}"${table.name}" (\n${[...lines, ...fkLines].join(",\n")}\n);`;
+  return `CREATE TABLE ${schemaPrefix}${q}${table.name}${q} (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
 
 function deriveCardinality(relation: Relation): {
@@ -177,25 +184,28 @@ function deriveCardinality(relation: Relation): {
     (f) => f.name === relation.sourceField,
   );
 
-  // Both sides PK+FK = many-to-many junction
   const isManyToMany =
     sourceTable?.fields.every((f) => f.isPrimaryKey && f.isForeignKey) ?? false;
 
   if (isManyToMany)
     return { label: "many-to-many", description: "Junction table" };
-  if (sourceField?.isPrimaryKey)
+
+  // source FK is also PK = one-to-one (e.g. profile.user_id → users.id)
+  if (sourceField?.isPrimaryKey && sourceField?.isForeignKey)
     return { label: "one-to-one", description: "Unique reference" };
-  return { label: "many-to-one", description: "Foreign key reference" };
+
+  return {
+    label: "many-to-one",
+    description: `Many ${relation.sourceTable} per ${relation.targetTable}`,
+  };
 }
 
 function RelationView({ relation }: { relation: Relation }) {
   const { label, description } = deriveCardinality(relation);
-
   const isSelfRef = relation.sourceTable === relation.targetTable;
 
   return (
-    <div className="flex flex-col gap-4 p-3 pb-6">
-      {/* Constraint name */}
+    <div className="flex flex-col gap-4 p-3 pb-6 animate-in fade-in duration-150">
       <div className="flex flex-col gap-1.5 pt-1">
         <SectionLabel label="Constraint" />
         <div className="mx-3 px-3 py-2.5 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
@@ -205,7 +215,6 @@ function RelationView({ relation }: { relation: Relation }) {
         </div>
       </div>
 
-      {/* Field mapping */}
       <div className="flex flex-col gap-1.5">
         <SectionLabel label="Field Mapping" />
         <div className="mx-3 flex items-center gap-2 px-3 py-3 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
@@ -220,13 +229,11 @@ function RelationView({ relation }: { relation: Relation }) {
               .{relation.sourceField}
             </span>
           </div>
-
           <ArrowRight
             size={14}
             className="text-text-tertiary shrink-0"
             aria-hidden
           />
-
           <div className="flex flex-col min-w-0 flex-1 items-end text-right">
             <span className="text-[9px] font-bold uppercase tracking-wider text-text-tertiary mb-0.5">
               target
@@ -239,7 +246,6 @@ function RelationView({ relation }: { relation: Relation }) {
             </span>
           </div>
         </div>
-
         {isSelfRef && (
           <p className="text-[10px] text-text-tertiary font-mono px-3 mt-0.5">
             ↻ self-referential
@@ -247,7 +253,6 @@ function RelationView({ relation }: { relation: Relation }) {
         )}
       </div>
 
-      {/* Cardinality */}
       <div className="flex flex-col gap-1.5">
         <SectionLabel label="Cardinality" />
         <div className="mx-3 flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-black/5 dark:bg-black/30 border border-node-border/60 dark:border-node-border/40">
@@ -263,7 +268,7 @@ function RelationView({ relation }: { relation: Relation }) {
 
 function IdleState() {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center animate-in fade-in duration-200">
       <div className="w-9 h-9 rounded-xl bg-node-border/20 dark:bg-node-border/10 flex items-center justify-center">
         <Table2 size={16} className="text-text-tertiary" />
       </div>
@@ -283,12 +288,13 @@ function IdleState() {
   );
 }
 
-export default function TableInspectorPanel({
+export default function InspectorPanel({
   table,
   provider,
   relation,
-}: TableInspectorPanelProps) {
+}: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
+  const [copied, setCopied] = useState(false);
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
   const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
@@ -305,7 +311,6 @@ export default function TableInspectorPanel({
     : table
       ? table.name
       : "Inspector";
-
   const headerSub = relation
     ? `${relation.sourceTable} → ${relation.targetTable}`
     : table
@@ -318,9 +323,16 @@ export default function TableInspectorPanel({
     <Table2 size={13} className="text-text-secondary" />
   );
 
+  const handleCopyDdl = () => {
+    if (!table) return;
+    navigator.clipboard.writeText(buildDdl(table, provider));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
-      {/* Header */}
+      {/* Header Container */}
       <div className="flex items-center gap-2.5 px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-node-border/20 flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3">
           {headerIcon}
@@ -335,7 +347,7 @@ export default function TableInspectorPanel({
         </div>
       </div>
 
-      {/* Body */}
+      {/* Main Body Switcher Layout */}
       {!table && !relation ? (
         <IdleState />
       ) : relation ? (
@@ -344,6 +356,7 @@ export default function TableInspectorPanel({
         </div>
       ) : table ? (
         <>
+          {/* Navigation Tab Row */}
           <div className="flex items-center gap-0.5 px-2.5 pt-3 pb-2 shrink-0">
             {tabs.map(({ id, icon, label }) => (
               <button
@@ -360,9 +373,10 @@ export default function TableInspectorPanel({
             ))}
           </div>
 
+          {/* Core Content Subviewports */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === "columns" && (
-              <div className="flex flex-col pt-1 pb-4">
+              <div className="flex flex-col pt-1 pb-4 animate-in fade-in duration-150">
                 <SectionLabel label="Fields" />
                 <div className="flex flex-col">
                   {table.fields.map((field) => (
@@ -373,7 +387,7 @@ export default function TableInspectorPanel({
             )}
 
             {activeTab === "indexes" && (
-              <div className="flex flex-col pt-1 pb-4">
+              <div className="flex flex-col pt-1 pb-4 animate-in fade-in duration-150">
                 <SectionLabel label="Indexes" />
                 {indexes.length === 0 ? (
                   <p className="text-[11px] text-text-tertiary px-3 py-4">
@@ -390,8 +404,25 @@ export default function TableInspectorPanel({
             )}
 
             {activeTab === "ddl" && (
-              <div className="p-3 flex flex-col gap-2">
-                <SectionLabel label="Create Statement" />
+              <div className="p-3 flex flex-col gap-2 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between">
+                  <SectionLabel label="Create Statement" />
+                  <button
+                    onClick={handleCopyDdl}
+                    className="flex items-center gap-1 text-[10px] font-medium text-text-secondary hover:text-text-primary transition-colors bg-transparent border-none cursor-pointer px-1.5 py-0.5 rounded mb-1">
+                    {copied ? (
+                      <>
+                        <Check size={11} className="text-teal" />
+                        <span>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={11} />
+                        <span>Copy</span>
+                      </>
+                    )}
+                  </button>
+                </div>
                 <div className="rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-3.5 font-mono text-[10.5px] text-zinc-300 whitespace-pre leading-relaxed select-text tracking-normal overflow-x-auto">
                   {buildDdl(table, provider)}
                 </div>

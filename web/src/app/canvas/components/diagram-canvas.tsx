@@ -31,7 +31,7 @@ import RelationEdge from "./relation-edge";
 import CanvasToolbar from "./canvas-toolbar";
 import CanvasSidebar from "./canvas-sidebar";
 import ExportPreviewDrawer from "./export-preview-drawer";
-import TableInspectorPanel from "./table-inspector-panel";
+import InspectorPanel from "./inspector-panel";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -168,7 +168,7 @@ export default function DiagramCanvas() {
           size={1}
           color="var(--canvas-dot)"
         />
-        <TableInspectorPanel
+        <InspectorPanel
           table={selectedTable?.table ?? null}
           provider={selectedTable?.provider ?? null}
           relation={selectedRelation}
