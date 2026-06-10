@@ -21,5 +21,16 @@ func Router(sess *session.Store, proj projects.Store) *chi.Mux {
 	r := chi.NewRouter()
 	r.Use(middleware.NoCache)
 
+	r.Get("/health", h.handleHealth)
+
+	r.Post("/connect", h.handleConnect)
+	r.Post("/disconnect", h.handleDisconnect)
+
+	r.Get("/schema", h.handleSchema)
+
+	r.Get("/projects", h.handleListProjects)
+	r.Post("/projects", h.handleCreateProject)
+	r.Delete("/projects/{id}", h.handleDeleteProject)
+
 	return r
 }
