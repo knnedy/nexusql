@@ -254,7 +254,8 @@ func GeneratePrisma(schema *Schema) string {
 			if !f.Nullable && !f.IsPrimaryKey {
 				line += ""
 			}
-			sb.WriteString(line + "\n")
+			sb.WriteString(line)
+			sb.WriteString("\n")
 		}
 		sb.WriteString("}\n\n")
 	}
