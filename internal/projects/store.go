@@ -22,8 +22,8 @@ type Project struct {
 	Name         string      `json:"name"`
 	URI          string      `json:"uri"`
 	Provider     db.Provider `json:"provider"`
-	CreatedAt    time.Time   `json:"created_at"`
-	LastOpenedAt time.Time   `json:"last_opened_at"`
+	CreatedAt    time.Time   `json:"createdAt"`
+	LastOpenedAt time.Time   `json:"lastOpenedAt"`
 }
 
 type store struct {
@@ -95,7 +95,7 @@ func (s *store) Create(name, uri string, provider db.Provider) (*Project, error)
 	}
 
 	id := generateID()
-	now := time.Now()
+	now := time.Now().UTC().Truncate(time.Millisecond)
 
 	p := &Project{
 		ID:           id,
@@ -160,7 +160,7 @@ func (s *store) Touch(id string) error {
 		return ErrProjectNotFound
 	}
 
-	p.LastOpenedAt = time.Now()
+	p.LastOpenedAt = time.Now().UTC().Truncate(time.Millisecond)
 
 	if err := s.persist(); err != nil {
 		return fmt.Errorf("persist touch: %w", err)

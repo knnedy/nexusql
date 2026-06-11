@@ -7,31 +7,31 @@ import (
 )
 
 type Field struct {
-	Name         string
-	Type         string
-	Nullable     bool
-	IsPrimaryKey bool
-	IsForeignKey bool
-	DefaultValue *string
+	Name         string  `json:"name"`
+	Type         string  `json:"type"`
+	Nullable     bool    `json:"nullable"`
+	IsPrimaryKey bool    `json:"isPrimaryKey"`
+	IsForeignKey bool    `json:"isForeignKey"`
+	DefaultValue *string `json:"defaultValue"`
 }
 
 type Table struct {
-	Name   string
-	Schema string
-	Fields []Field
+	Name   string  `json:"name"`
+	Schema string  `json:"schema"`
+	Fields []Field `json:"fields"`
 }
 
 type Relation struct {
-	ConstraintName string
-	SourceTable    string
-	SourceField    string
-	TargetTable    string
-	TargetField    string
+	ConstraintName string `json:"constraintName"`
+	SourceTable    string `json:"sourceTable"`
+	SourceField    string `json:"sourceField"`
+	TargetTable    string `json:"targetTable"`
+	TargetField    string `json:"targetField"`
 }
 
 type Schema struct {
-	Tables    []Table
-	Relations []Relation
+	Tables    []Table    `json:"tables"`
+	Relations []Relation `json:"relations"`
 }
 
 const queryTables = `
@@ -83,7 +83,6 @@ JOIN information_schema.key_column_usage kcu
     AND tc.table_schema = kcu.table_schema
 JOIN information_schema.constraint_column_usage ccu
     ON tc.constraint_name = ccu.constraint_name
-    AND tc.table_schema = ccu.table_schema
 WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_schema = $1
 ORDER BY tc.constraint_name
@@ -149,7 +148,7 @@ func introspectTables(ctx context.Context, conn *Connection, schema string) ([]T
 			tableMap[tableName] = &Table{
 				Name:   tableName,
 				Schema: tableSchema,
-				Fields: []Field{},
+				Fields: make([]Field, 0), // Guard against frontend rendering crashes
 			}
 			tableOrder = append(tableOrder, tableName)
 		}
@@ -183,7 +182,7 @@ func introspectRelations(ctx context.Context, conn *Connection, schema string) (
 	}
 	defer rows.Close()
 
-	var relations []Relation
+	relations := make([]Relation, 0) // Guard layout mapping array targets
 
 	for rows.Next() {
 		var r Relation
@@ -219,7 +218,7 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string) ([]strin
 		columns[i] = string(f.Name)
 	}
 
-	var result []map[string]any
+	result := make([]map[string]any, 0)
 	for rows.Next() {
 		values, err := rows.Values()
 		if err != nil {
@@ -250,9 +249,6 @@ func GeneratePrisma(schema *Schema) string {
 			line := fmt.Sprintf("  %s  %s", f.Name, mapPrismaType(f.Type))
 			if f.IsPrimaryKey {
 				line += "  @id @default(autoincrement())"
-			}
-			if !f.Nullable && !f.IsPrimaryKey {
-				line += ""
 			}
 			sb.WriteString(line)
 			sb.WriteString("\n")
