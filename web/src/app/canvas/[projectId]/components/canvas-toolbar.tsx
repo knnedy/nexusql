@@ -8,9 +8,13 @@ import { useDisconnect } from "@/hooks/use-disconnect";
 
 const emptySubscribe = () => () => {};
 
-export default function CanvasToolbar() {
+interface CanvasToolbarProps {
+  projectId: string;
+}
+
+export default function CanvasToolbar({ projectId }: CanvasToolbarProps) {
   const router = useRouter();
-  const { data: schema } = useSchema();
+  const { data: schema } = useSchema(projectId);
   const disconnect = useDisconnect();
 
   // Read metadata strictly on the client side without triggering an effect cascade

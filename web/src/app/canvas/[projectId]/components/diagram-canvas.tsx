@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
@@ -42,10 +43,11 @@ function getCssVar(name: string): string {
     .trim();
 }
 
-// Required for useSyncExternalStore when we don't need to listen for live updates
 const emptySubscribe = () => () => {};
 
 export default function DiagramCanvas() {
+  const { projectId } = useParams<{ projectId: string }>();
+
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
   );
@@ -65,17 +67,13 @@ export default function DiagramCanvas() {
     null,
   );
 
-  const { data: schema, isLoading, isError } = useSchema();
+  const { data: schema, isLoading, isError } = useSchema(projectId);
 
-  // Safely read sessionStorage without useEffect or state cascading
   const provider = useSyncExternalStore<DatabaseProvider>(
     emptySubscribe,
-    () => {
-      const v = sessionStorage.getItem(
-        "nexusql_provider",
-      ) as DatabaseProvider | null;
-      return v ?? "postgres";
-    },
+    () =>
+      (sessionStorage.getItem("nexusql_provider") as DatabaseProvider) ??
+      "postgres",
     () => "postgres",
   );
 
@@ -86,7 +84,7 @@ export default function DiagramCanvas() {
       setEdges(edges);
       setGraphReady(true);
     });
-  }, [schema, setNodes, setEdges, provider]);
+  }, [schema, provider, setNodes, setEdges]);
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TableNodeData>) => {
@@ -151,7 +149,7 @@ export default function DiagramCanvas() {
         <SlidersHorizontal size={15} aria-hidden />
       </button>
 
-      <CanvasToolbar />
+      <CanvasToolbar projectId={projectId} />
 
       <CanvasSidebar
         open={sidebarOpen}
@@ -196,6 +194,7 @@ export default function DiagramCanvas() {
           table={selectedTable?.table ?? null}
           provider={selectedTable?.provider ?? null}
           relation={selectedRelation}
+          projectId={projectId}
         />
         <MiniMap
           nodeColor={() => getCssVar("--minimap-node")}
