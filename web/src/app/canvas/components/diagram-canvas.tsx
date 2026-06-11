@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import {
   ReactFlow,
   Background,
@@ -42,6 +42,9 @@ function getCssVar(name: string): string {
     .trim();
 }
 
+// Required for useSyncExternalStore when we don't need to listen for live updates
+const emptySubscribe = () => () => {};
+
 export default function DiagramCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
@@ -64,8 +67,17 @@ export default function DiagramCanvas() {
 
   const { data: schema, isLoading, isError } = useSchema();
 
-  const provider = (sessionStorage.getItem("nexusql_provider") ??
-    "postgres") as DatabaseProvider;
+  // Safely read sessionStorage without useEffect or state cascading
+  const provider = useSyncExternalStore<DatabaseProvider>(
+    emptySubscribe,
+    () => {
+      const v = sessionStorage.getItem(
+        "nexusql_provider",
+      ) as DatabaseProvider | null;
+      return v ?? "postgres";
+    },
+    () => "postgres",
+  );
 
   useEffect(() => {
     if (!schema) return;

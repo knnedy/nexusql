@@ -1,19 +1,32 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import { Database, Unplug, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useSchema } from "@/hooks/use-schema";
 import { useDisconnect } from "@/hooks/use-disconnect";
+
+const emptySubscribe = () => () => {};
 
 export default function CanvasToolbar() {
   const router = useRouter();
   const { data: schema } = useSchema();
   const disconnect = useDisconnect();
 
-  const provider = sessionStorage.getItem("nexusql_provider") ?? "postgres";
+  // Read metadata strictly on the client side without triggering an effect cascade
+  const provider = useSyncExternalStore(
+    emptySubscribe,
+    () => sessionStorage.getItem("nexusql_provider") ?? "postgres",
+    () => "postgres",
+  );
+
+  const projectName = useSyncExternalStore(
+    emptySubscribe,
+    () => sessionStorage.getItem("nexusql_project_name") ?? "Local Dev",
+    () => "Local Dev",
+  );
+
   const tableCount = schema?.tables.length ?? 0;
-  const projectName =
-    sessionStorage.getItem("nexusql_project_name") ?? "Local Dev";
 
   function handleDisconnect() {
     disconnect.mutate(undefined, {
