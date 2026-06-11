@@ -8,6 +8,9 @@ export function useConnect() {
 
   return useMutation({
     mutationFn: (req: ConnectRequest) => api.connect(req),
-    onSuccess: () => router.push("/canvas"),
+    onSuccess: (data) => {
+      sessionStorage.setItem("nexusql_provider", data.provider);
+      router.push("/canvas");
+    },
   });
 }

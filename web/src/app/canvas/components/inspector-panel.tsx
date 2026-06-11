@@ -12,7 +12,7 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { MOCK_SCHEMA } from "@/lib/mock-schema";

@@ -18,7 +18,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { SlidersHorizontal } from "lucide-react";
 import { buildCanvasGraph } from "@/lib/canvas-utils";
-import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
+import { useSchema } from "@/hooks/use-schema";
 import type {
   TableNodeData,
   RelationEdgeData,
@@ -49,12 +49,11 @@ export default function DiagramCanvas() {
   const [edges, setEdges, onEdgesChange] = useEdgesState<
     Edge<RelationEdgeData>
   >([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [graphReady, setGraphReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeExport, setActiveExport] = useState<
     "png" | "prisma" | "drizzle" | null
   >(null);
-
   const [selectedTable, setSelectedTable] = useState<{
     table: Table;
     provider: DatabaseProvider;
@@ -62,6 +61,20 @@ export default function DiagramCanvas() {
   const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
     null,
   );
+
+  const { data: schema, isLoading, isError } = useSchema();
+
+  const provider = (sessionStorage.getItem("nexusql_provider") ??
+    "postgres") as DatabaseProvider;
+
+  useEffect(() => {
+    if (!schema) return;
+    buildCanvasGraph(schema, provider).then(({ nodes, edges }) => {
+      setNodes(nodes);
+      setEdges(edges);
+      setGraphReady(true);
+    });
+  }, [schema, setNodes, setEdges, provider]);
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TableNodeData>) => {
@@ -89,27 +102,29 @@ export default function DiagramCanvas() {
     setSelectedRelation(null);
   }, []);
 
-  useEffect(() => {
-    buildCanvasGraph(MOCK_SCHEMA, MOCK_PROVIDER).then(({ nodes, edges }) => {
-      setNodes(nodes);
-      setEdges(edges);
-      setIsLoading(false);
-    });
-  }, [setNodes, setEdges]);
-
   const handleLayoutApply = useCallback(
-    (laid: Node<TableNodeData>[]) => {
-      setNodes(laid);
-    },
+    (laid: Node<TableNodeData>[]) => setNodes(laid),
     [setNodes],
   );
 
-  if (isLoading) {
+  if (isLoading || !graphReady) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
         <div className="flex flex-col items-center gap-3">
           <div className="w-5 h-5 rounded-full border-2 border-teal border-t-transparent animate-spin" />
           <span className="text-sm text-text-tertiary">Arranging schema…</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
+        <div className="flex flex-col items-center gap-3">
+          <span className="text-sm text-text-tertiary">
+            Failed to load schema.
+          </span>
         </div>
       </div>
     );
@@ -155,10 +170,7 @@ export default function DiagramCanvas() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
-        fitViewOptions={{
-          padding: 0.38,
-          includeHiddenNodes: false,
-        }}
+        fitViewOptions={{ padding: 0.38, includeHiddenNodes: false }}
         minZoom={0.2}
         maxZoom={2}
         proOptions={{ hideAttribution: true }}>
