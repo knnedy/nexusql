@@ -10,8 +10,9 @@ import type {
   SchemaResponse,
 } from "./types";
 
-// Base URL for the Go backend — overridable via env for development
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:7070";
+// Base URL for the Go backend
+const BASE_URL =
+  process.env.NODE_ENV === "development" ? "http://127.0.0.1:7080" : "";
 
 // Core fetch wrapper — centralises error handling and JSON parsing
 async function request<T>(path: string, options?: RequestInit): Promise<T> {

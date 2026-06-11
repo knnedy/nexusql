@@ -1,1 +1,17 @@
 outline.md
+
+# Go
+bin/
+cmd/nexusql/out/
+
+# GoReleaser output
+dist/
+
+# Frontend
+web/node_modules
+web/.next
+web/out
+
+# Env
+.env
+.env.local
