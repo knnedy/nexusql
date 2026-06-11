@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
@@ -15,8 +16,9 @@ type connectRequest struct {
 }
 
 type connectResponse struct {
-	OK       bool        `json:"ok"`
-	Provider db.Provider `json:"provider"`
+	OK        bool        `json:"ok"`
+	Provider  db.Provider `json:"provider"`
+	ProjectID string      `json:"projectId"`
 }
 
 func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
@@ -48,16 +50,36 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// persist project if a name was provided
-	if req.Name != "" {
-		_, err := h.projects.Create(req.Name, req.URI, conn.Provider)
-		if err != nil {
-			// non-fatal, connection is live, project save failed
+	name := req.Name
+	if name == "" {
+		name = fmt.Sprintf("Project %s", conn.Provider)
+	}
+
+	p, err := h.projects.Create(name, req.URI, conn.Provider)
+	if err != nil {
+		// project with same name exists — still connected, just return existing
+		projects := h.projects.List()
+		for _, existing := range projects {
+			if existing.URI == req.URI {
+				writeJSON(w, http.StatusOK, connectResponse{
+					OK:        true,
+					Provider:  conn.Provider,
+					ProjectID: existing.ID,
+				})
+				return
+			}
 		}
+		// fallback — connect succeeded but project save failed
+		writeJSON(w, http.StatusOK, connectResponse{
+			OK:       true,
+			Provider: conn.Provider,
+		})
+		return
 	}
 
 	writeJSON(w, http.StatusOK, connectResponse{
-		OK:       true,
-		Provider: conn.Provider,
+		OK:        true,
+		Provider:  conn.Provider,
+		ProjectID: p.ID,
 	})
 }
