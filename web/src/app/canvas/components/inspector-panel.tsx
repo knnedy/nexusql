@@ -21,7 +21,6 @@ interface InspectorPanelProps {
   table: Table | null;
   provider: DatabaseProvider | null;
   relation: Relation | null;
-  projectId: string;
 }
 
 type InspectorTab = "columns" | "indexes" | "ddl";
@@ -293,11 +292,10 @@ export default function InspectorPanel({
   table,
   provider,
   relation,
-  projectId,
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
   const [copied, setCopied] = useState(false);
-  const { data: schema } = useSchema(projectId);
+  const { data: schema } = useSchema();
   const tables = schema?.tables ?? [];
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];

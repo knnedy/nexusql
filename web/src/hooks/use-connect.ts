@@ -12,8 +12,9 @@ export function useConnect() {
     mutationFn: (req: ConnectRequest) => api.connect(req),
     onSuccess: (data) => {
       sessionStorage.setItem("nexusql_provider", data.provider);
+      sessionStorage.setItem("nexusql_project_id", data.projectId);
       qc.invalidateQueries({ queryKey: projectsQueryOptions.queryKey });
-      router.push(`/canvas/${data.projectId}`);
+      router.push("/canvas");
     },
   });
 }

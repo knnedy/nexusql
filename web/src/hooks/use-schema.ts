@@ -1,7 +1,13 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
-export function schemaQueryOptions(projectId: string) {
+function getProjectId(): string {
+  if (typeof window === "undefined") return "";
+  return sessionStorage.getItem("nexusql_project_id") ?? "";
+}
+
+export function schemaQueryOptions() {
+  const projectId = getProjectId();
   return queryOptions({
     queryKey: ["schema", projectId],
     queryFn: () => api.schema(),
@@ -10,6 +16,6 @@ export function schemaQueryOptions(projectId: string) {
   });
 }
 
-export function useSchema(projectId: string) {
-  return useQuery(schemaQueryOptions(projectId));
+export function useSchema() {
+  return useQuery(schemaQueryOptions());
 }

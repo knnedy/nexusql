@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
-import { useParams } from "next/navigation";
 import {
   ReactFlow,
   Background,
@@ -46,8 +45,6 @@ function getCssVar(name: string): string {
 const emptySubscribe = () => () => {};
 
 export default function DiagramCanvas() {
-  const { projectId } = useParams<{ projectId: string }>();
-
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
   );
@@ -67,7 +64,7 @@ export default function DiagramCanvas() {
     null,
   );
 
-  const { data: schema, isLoading, isError } = useSchema(projectId);
+  const { data: schema, isLoading, isError } = useSchema();
 
   const provider = useSyncExternalStore<DatabaseProvider>(
     emptySubscribe,
@@ -149,7 +146,7 @@ export default function DiagramCanvas() {
         <SlidersHorizontal size={15} aria-hidden />
       </button>
 
-      <CanvasToolbar projectId={projectId} />
+      <CanvasToolbar />
 
       <CanvasSidebar
         open={sidebarOpen}
@@ -194,7 +191,6 @@ export default function DiagramCanvas() {
           table={selectedTable?.table ?? null}
           provider={selectedTable?.provider ?? null}
           relation={selectedRelation}
-          projectId={projectId}
         />
         <MiniMap
           nodeColor={() => getCssVar("--minimap-node")}
