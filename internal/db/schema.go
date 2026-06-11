@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"fmt"
+	"strings"
 )
 
 type Field struct {
@@ -236,4 +237,95 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string) ([]strin
 	}
 
 	return columns, result, nil
+}
+
+func GeneratePrisma(schema *Schema) string {
+	var sb strings.Builder
+
+	sb.WriteString("datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\ngenerator client {\n  provider = \"prisma-client-js\"\n}\n\n")
+
+	for _, t := range schema.Tables {
+		sb.WriteString(fmt.Sprintf("model %s {\n", capitalize(t.Name)))
+		for _, f := range t.Fields {
+			line := fmt.Sprintf("  %s  %s", f.Name, mapPrismaType(f.Type))
+			if f.IsPrimaryKey {
+				line += "  @id @default(autoincrement())"
+			}
+			if !f.Nullable && !f.IsPrimaryKey {
+				line += ""
+			}
+			sb.WriteString(line + "\n")
+		}
+		sb.WriteString("}\n\n")
+	}
+
+	return strings.TrimSpace(sb.String())
+}
+
+func GenerateDrizzle(schema *Schema) string {
+	var sb strings.Builder
+
+	sb.WriteString("import { pgTable, serial, text, varchar, timestamp } from 'drizzle-orm/pg-core';\n\n")
+
+	for _, t := range schema.Tables {
+		sb.WriteString(fmt.Sprintf("export const %s = pgTable('%s', {\n", t.Name, t.Name))
+		for _, f := range t.Fields {
+			sb.WriteString(fmt.Sprintf("  %s: %s,\n", f.Name, mapDrizzleType(f.Name, f.Type, f.IsPrimaryKey)))
+		}
+		sb.WriteString("});\n\n")
+	}
+
+	return strings.TrimSpace(sb.String())
+}
+
+func capitalize(s string) string {
+	if s == "" {
+		return ""
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+func mapPrismaType(t string) string {
+	switch t {
+	case "serial", "integer", "smallint", "bigint", "bigserial":
+		return "Int"
+	case "varchar", "text", "char", "uuid":
+		return "String"
+	case "boolean":
+		return "Boolean"
+	case "timestamp", "timestamptz":
+		return "DateTime"
+	case "json", "jsonb":
+		return "Json"
+	case "numeric", "real", "double precision":
+		return "Float"
+	default:
+		return "String"
+	}
+}
+
+func mapDrizzleType(name, t string, isPk bool) string {
+	if isPk {
+		return fmt.Sprintf("serial('%s').primaryKey()", name)
+	}
+	switch t {
+	case "varchar", "char":
+		return fmt.Sprintf("varchar('%s', { length: 255 })", name)
+	case "text":
+		return fmt.Sprintf("text('%s')", name)
+	case "integer", "smallint":
+		return fmt.Sprintf("integer('%s')", name)
+	case "bigint", "bigserial":
+		return fmt.Sprintf("bigint('%s', { mode: 'number' })", name)
+	case "boolean":
+		return fmt.Sprintf("boolean('%s')", name)
+	case "timestamp", "timestamptz":
+		return fmt.Sprintf("timestamp('%s')", name)
+	case "uuid":
+		return fmt.Sprintf("uuid('%s')", name)
+	case "json", "jsonb":
+		return fmt.Sprintf("jsonb('%s')", name)
+	default:
+		return fmt.Sprintf("text('%s')", name)
+	}
 }
