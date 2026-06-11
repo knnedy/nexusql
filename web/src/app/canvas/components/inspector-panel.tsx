@@ -15,7 +15,7 @@ import {
 import { useState } from "react";
 import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
-import { MOCK_SCHEMA } from "@/lib/mock-schema";
+import { useSchema } from "@/hooks/use-schema";
 
 interface InspectorPanelProps {
   table: Table | null;
@@ -95,7 +95,6 @@ interface IndexEntry {
   fields: string[];
 }
 
-// Fixed generator configuration context block
 function deriveIndexes(table: Table): IndexEntry[] {
   const entries: IndexEntry[] = [];
 
@@ -173,13 +172,11 @@ function buildDdl(table: Table, provider: DatabaseProvider | null): string {
   return `CREATE TABLE ${schemaPrefix}${q}${table.name}${q} (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
 
-function deriveCardinality(relation: Relation): {
-  label: string;
-  description: string;
-} {
-  const sourceTable = MOCK_SCHEMA.tables.find(
-    (t) => t.name === relation.sourceTable,
-  );
+function deriveCardinality(
+  relation: Relation,
+  tables: Table[],
+): { label: string; description: string } {
+  const sourceTable = tables.find((t) => t.name === relation.sourceTable);
   const sourceField = sourceTable?.fields.find(
     (f) => f.name === relation.sourceField,
   );
@@ -189,19 +186,22 @@ function deriveCardinality(relation: Relation): {
 
   if (isManyToMany)
     return { label: "many-to-many", description: "Junction table" };
-
-  // source FK is also PK = one-to-one (e.g. profile.user_id → users.id)
   if (sourceField?.isPrimaryKey && sourceField?.isForeignKey)
     return { label: "one-to-one", description: "Unique reference" };
-
   return {
     label: "many-to-one",
     description: `Many ${relation.sourceTable} per ${relation.targetTable}`,
   };
 }
 
-function RelationView({ relation }: { relation: Relation }) {
-  const { label, description } = deriveCardinality(relation);
+function RelationView({
+  relation,
+  tables,
+}: {
+  relation: Relation;
+  tables: Table[];
+}) {
+  const { label, description } = deriveCardinality(relation, tables);
   const isSelfRef = relation.sourceTable === relation.targetTable;
 
   return (
@@ -295,6 +295,8 @@ export default function InspectorPanel({
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
   const [copied, setCopied] = useState(false);
+  const { data: schema } = useSchema();
+  const tables = schema?.tables ?? [];
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
   const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
@@ -332,7 +334,6 @@ export default function InspectorPanel({
 
   return (
     <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
-      {/* Header Container */}
       <div className="flex items-center gap-2.5 px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-node-border/20 flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3">
           {headerIcon}
@@ -347,16 +348,14 @@ export default function InspectorPanel({
         </div>
       </div>
 
-      {/* Main Body Switcher Layout */}
       {!table && !relation ? (
         <IdleState />
       ) : relation ? (
         <div className="flex-1 overflow-y-auto min-h-0">
-          <RelationView relation={relation} />
+          <RelationView relation={relation} tables={tables} />
         </div>
       ) : table ? (
         <>
-          {/* Navigation Tab Row */}
           <div className="flex items-center gap-0.5 px-2.5 pt-3 pb-2 shrink-0">
             {tabs.map(({ id, icon, label }) => (
               <button
@@ -373,7 +372,6 @@ export default function InspectorPanel({
             ))}
           </div>
 
-          {/* Core Content Subviewports */}
           <div className="flex-1 overflow-y-auto min-h-0">
             {activeTab === "columns" && (
               <div className="flex flex-col pt-1 pb-4 animate-in fade-in duration-150">
