@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { HardDrive, Loader2, ArrowRight } from "lucide-react";
 import {
   PROVIDERS,
@@ -10,6 +9,8 @@ import {
 } from "@/lib/types";
 import TopNav from "./components/top-nav";
 import RecentProjects from "./components/recent-projects";
+import { useConnect } from "@/hooks/use-connect";
+import { api } from "@/lib/api";
 
 function ProviderCard({
   provider,
@@ -22,7 +23,7 @@ function ProviderCard({
 }) {
   return (
     <button
-      onClick={() => onSelect()}
+      onClick={onSelect}
       className={[
         "relative flex flex-col gap-1.5 rounded-lg px-3 py-3 text-left transition-colors w-full cursor-pointer",
         selected
@@ -44,7 +45,6 @@ function ProviderCard({
           {provider.label}
         </span>
       </div>
-
       <span
         className={[
           "text-xs leading-tight font-mono",
@@ -57,15 +57,13 @@ function ProviderCard({
 }
 
 export default function HomePage() {
-  const router = useRouter();
-
   const [selectedProvider, setSelectedProvider] =
     useState<DatabaseProvider>("postgres");
   const [projectName, setProjectName] = useState("");
   const [uri, setUri] = useState("");
   const [uriError, setUriError] = useState<string | null>(null);
-  const [isConnecting, setIsConnecting] = useState(false);
 
+  const connect = useConnect();
   const activeProvider = PROVIDERS.find((p) => p.id === selectedProvider)!;
 
   function validateUri(value: string): boolean {
@@ -88,21 +86,27 @@ export default function HomePage() {
 
   function handleConnect() {
     if (!validateUri(uri)) return;
-    // Phase 2 — replace with: connect.mutate({ uri, name: projectName, provider: selectedProvider })
-    setIsConnecting(true);
-    setTimeout(() => {
-      setIsConnecting(false);
-      router.push("/canvas");
-    }, 800);
+    connect.mutate(
+      { uri, provider: selectedProvider },
+      {
+        onSuccess: () => {
+          if (projectName.trim()) {
+            api.projects.create({
+              name: projectName,
+              uri,
+              provider: selectedProvider,
+            });
+          }
+        },
+      },
+    );
   }
 
   return (
     <>
       <TopNav />
-
       <main className="flex flex-col items-center justify-center min-h-screen pb-8 px-4 pt-16 bg-canvas-bg">
         <div className="w-full max-w-md flex flex-col gap-6">
-          {/* Hero */}
           <div className="text-center">
             <h1 className="text-2xl font-semibold text-text-primary tracking-[-0.03em]">
               Connect a database
@@ -112,9 +116,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Connection card */}
           <div className="rounded-xl p-5 flex flex-col gap-5 bg-node-bg border-[0.5px] border-border">
-            {/* Provider selector */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-medium text-text-secondary">
                 Database type
@@ -139,7 +141,6 @@ export default function HomePage() {
               </div>
             </div>
 
-            {/* Project name */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="project-name"
@@ -156,7 +157,6 @@ export default function HomePage() {
               />
             </div>
 
-            {/* URI input */}
             <div className="flex flex-col gap-2">
               <label
                 htmlFor="uri"
@@ -183,12 +183,19 @@ export default function HomePage() {
               {uriError && <p className="text-xs text-red-500">{uriError}</p>}
             </div>
 
-            {/* Connect button */}
+            {connect.isError && (
+              <p className="text-xs text-red-500">
+                {connect.error instanceof Error
+                  ? connect.error.message
+                  : "Connection failed"}
+              </p>
+            )}
+
             <button
               onClick={handleConnect}
-              disabled={isConnecting}
+              disabled={connect.isPending}
               className="flex items-center justify-center gap-2 w-full rounded-md px-4 py-2 text-sm font-medium bg-coral hover:bg-coral-hover text-white transition-colors disabled:opacity-80 disabled:cursor-not-allowed cursor-pointer border-none">
-              {isConnecting ? (
+              {connect.isPending ? (
                 <>
                   <Loader2 size={14} className="animate-spin" aria-hidden />
                   Connecting…
@@ -202,10 +209,8 @@ export default function HomePage() {
             </button>
           </div>
 
-          {/* Recent projects */}
           <RecentProjects />
 
-          {/* Footer */}
           <div className="flex items-center justify-center gap-1.5 text-xs pb-4 text-text-tertiary">
             <HardDrive size={12} aria-hidden />
             Projects are stored locally on your machine
