@@ -86,6 +86,9 @@ export default function HomePage() {
 
   function handleConnect() {
     if (!validateUri(uri)) return;
+    if (projectName.trim()) {
+      sessionStorage.setItem("nexusql_project_name", projectName.trim());
+    }
     connect.mutate(
       { uri, provider: selectedProvider },
       {
