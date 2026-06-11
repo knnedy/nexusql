@@ -23,11 +23,6 @@ import {
 import { useConnect } from "@/hooks/use-connect";
 import { formatRelativeTime } from "@/lib/utils";
 import type { DatabaseProvider } from "@/lib/types";
-import { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "Projects | NexusQL",
-};
 
 function EmptyState() {
   const router = useRouter();
