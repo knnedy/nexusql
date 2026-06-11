@@ -28,9 +28,15 @@ func Router(sess *session.Store, proj projects.Store) *chi.Mux {
 
 	r.Get("/schema", h.handleSchema)
 
+	r.Get("/rows/{tableName}", h.handleRows)
+
+	r.Get("/export/prisma", h.handleExportPrisma)
+	r.Get("/export/drizzle", h.handleExportDrizzle)
+
 	r.Get("/projects", h.handleListProjects)
 	r.Post("/projects", h.handleCreateProject)
 	r.Delete("/projects/{id}", h.handleDeleteProject)
+	r.Patch("/projects/{id}/opened", h.handleTouchProject)
 
 	return r
 }
