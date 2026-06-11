@@ -71,6 +71,13 @@ export const api = {
       });
     },
 
+    rename(id: string, name: string): Promise<void> {
+      return request<void>(`/api/projects/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ name }),
+      });
+    },
+
     remove(id: string): Promise<void> {
       return request<void>(`/api/projects/${encodeURIComponent(id)}`, {
         method: "DELETE",

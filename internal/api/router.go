@@ -35,6 +35,7 @@ func Router(sess *session.Store, proj projects.Store) *chi.Mux {
 
 	r.Get("/projects", h.handleListProjects)
 	r.Post("/projects", h.handleCreateProject)
+	r.Patch("/projects/{id}", h.handleRenameProject)
 	r.Delete("/projects/{id}", h.handleDeleteProject)
 	r.Patch("/projects/{id}/opened", h.handleTouchProject)
 

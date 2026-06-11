@@ -36,6 +36,7 @@ type Store interface {
 	List() []*Project
 	Get(id string) (*Project, error)
 	Create(name, uri string, provider db.Provider) (*Project, error)
+	Rename(id, name string) error
 	Delete(id string) error
 	Touch(id string) error
 }
@@ -113,6 +114,24 @@ func (s *store) Create(name, uri string, provider db.Provider) (*Project, error)
 	}
 
 	return p, nil
+}
+
+func (s *store) Rename(id, name string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	p, ok := s.projects[id]
+	if !ok {
+		return ErrProjectNotFound
+	}
+
+	p.Name = name
+
+	if err := s.persist(); err != nil {
+		return fmt.Errorf("persist rename: %w", err)
+	}
+
+	return nil
 }
 
 func (s *store) Delete(id string) error {
