@@ -204,3 +204,36 @@ func introspectRelations(ctx context.Context, conn *Connection, schema string) (
 
 	return relations, nil
 }
+
+func FetchRows(ctx context.Context, conn *Connection, tableName string) ([]string, []map[string]any, error) {
+	rows, err := conn.Pool.Query(ctx, fmt.Sprintf("SELECT * FROM %q LIMIT 10", tableName))
+	if err != nil {
+		return nil, nil, fmt.Errorf("query rows: %w", err)
+	}
+	defer rows.Close()
+
+	fields := rows.FieldDescriptions()
+	columns := make([]string, len(fields))
+	for i, f := range fields {
+		columns[i] = string(f.Name)
+	}
+
+	var result []map[string]any
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, nil, fmt.Errorf("scan row: %w", err)
+		}
+		row := make(map[string]any, len(columns))
+		for i, col := range columns {
+			row[col] = values[i]
+		}
+		result = append(result, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return columns, result, nil
+}
