@@ -10,7 +10,7 @@ export function useConnect() {
     mutationFn: (req: ConnectRequest) => api.connect(req),
     onSuccess: (data) => {
       sessionStorage.setItem("nexusql_provider", data.provider);
-      router.push("/canvas");
+      router.push(`/canvas/${data.projectId}`);
     },
   });
 }

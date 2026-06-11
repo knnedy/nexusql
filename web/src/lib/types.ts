@@ -132,7 +132,7 @@ export interface ConnectRequest {
 export interface ConnectResponse {
   ok: boolean;
   provider: DatabaseProvider;
-  error?: string;
+  projectId: string;
 }
 
 export interface SchemaResponse {
