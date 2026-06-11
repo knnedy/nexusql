@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"embed"
 	"fmt"
 	"io/fs"
 	"log"
@@ -18,9 +17,6 @@ import (
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
 )
-
-//go:embed all:out
-var staticFiles embed.FS
 
 func main() {
 	cfg := config.Load()
