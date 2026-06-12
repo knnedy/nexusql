@@ -89,20 +89,11 @@ export default function HomePage() {
     if (projectName.trim()) {
       sessionStorage.setItem("nexusql_project_name", projectName.trim());
     }
-    connect.mutate(
-      { uri, provider: selectedProvider },
-      {
-        onSuccess: () => {
-          if (projectName.trim()) {
-            api.projects.create({
-              name: projectName,
-              uri,
-              provider: selectedProvider,
-            });
-          }
-        },
-      },
-    );
+    connect.mutate({
+      uri,
+      provider: selectedProvider,
+      name: projectName.trim(),
+    });
   }
 
   return (

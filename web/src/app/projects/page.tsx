@@ -68,7 +68,11 @@ function ProjectRow({
   const [nameInput, setNameInput] = useState(project.name);
 
   function handleOpen() {
-    connect.mutate({ uri: project.uri, provider: project.provider });
+    connect.mutate({
+      uri: project.uri,
+      provider: project.provider,
+      name: project.name,
+    });
   }
 
   function handleDelete(e: React.MouseEvent) {

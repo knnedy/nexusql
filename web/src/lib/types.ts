@@ -127,6 +127,7 @@ export interface HealthResponse {
 export interface ConnectRequest {
   uri: string;
   provider: DatabaseProvider;
+  name: string;
 }
 
 export interface ConnectResponse {

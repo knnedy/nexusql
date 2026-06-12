@@ -7,7 +7,6 @@ import (
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/session"
 )
 
 type connectRequest struct {
@@ -33,9 +32,9 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// auto-disconnect any existing connection before reconnecting
 	if h.session.IsConnected() {
-		writeError(w, http.StatusConflict, session.ErrAlreadyConnected.Error())
-		return
+		h.session.Clear()
 	}
 
 	conn, err := db.Connect(context.Background(), req.URI)
@@ -57,9 +56,8 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	p, err := h.projects.Create(name, req.URI, conn.Provider)
 	if err != nil {
-		// project with same name exists — still connected, just return existing
-		projects := h.projects.List()
-		for _, existing := range projects {
+		// project with same name exists — find by URI and return it
+		for _, existing := range h.projects.List() {
 			if existing.URI == req.URI {
 				writeJSON(w, http.StatusOK, connectResponse{
 					OK:        true,
@@ -69,7 +67,6 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		}
-		// fallback — connect succeeded but project save failed
 		writeJSON(w, http.StatusOK, connectResponse{
 			OK:       true,
 			Provider: conn.Provider,

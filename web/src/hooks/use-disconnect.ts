@@ -12,6 +12,7 @@ export function useDisconnect() {
     onSuccess: () => {
       sessionStorage.removeItem("nexusql_provider");
       sessionStorage.removeItem("nexusql_project_name");
+      sessionStorage.removeItem("nexusql_project_id");
       qc.invalidateQueries({ queryKey: projectsQueryOptions.queryKey });
       router.push("/");
     },

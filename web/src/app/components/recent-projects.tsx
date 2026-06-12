@@ -26,9 +26,10 @@ export default function RecentProjects() {
     id: string,
     uri: string,
     provider: DatabaseProvider,
+    name: string,
   ) {
     touch.mutate(id);
-    connect.mutate({ uri, provider });
+    connect.mutate({ uri, provider, name });
   }
 
   if (isLoading) {
@@ -60,7 +61,12 @@ export default function RecentProjects() {
           <button
             key={project.id}
             onClick={() =>
-              handleRecentProject(project.id, project.uri, project.provider)
+              handleRecentProject(
+                project.id,
+                project.uri,
+                project.provider,
+                project.name,
+              )
             }
             disabled={connect.isPending}
             className={[
