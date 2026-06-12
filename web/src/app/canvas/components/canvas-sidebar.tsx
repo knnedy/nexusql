@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { LayoutGrid, ImageDown, Sun, Moon, X, Database } from "lucide-react";
 import { SiPrisma, SiDrizzle } from "react-icons/si";
-import { MOCK_SCHEMA, MOCK_PROVIDER } from "@/lib/mock-schema";
 import { reapplyLayout } from "@/lib/canvas-utils";
+import { useSchema } from "@/hooks/use-schema";
 import type { Node } from "@xyflow/react";
-import type { TableNodeData } from "@/lib/types";
+import type { TableNodeData, DatabaseProvider } from "@/lib/types";
 
 interface CanvasSidebarProps {
   open: boolean;
@@ -78,18 +77,23 @@ export default function CanvasSidebar({
   onSelectExport,
   activeExport,
 }: CanvasSidebarProps) {
-  const router = useRouter();
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
+  const { data: schema } = useSchema();
+
+  const provider = (sessionStorage.getItem("nexusql_provider") ??
+    "postgres") as DatabaseProvider;
+  const projectName = sessionStorage.getItem("nexusql_project_name") ?? "";
+  const tableCount = schema?.tables.length ?? 0;
 
   const handleAutoLayout = useCallback(async () => {
-    const { nodes } = await reapplyLayout(MOCK_SCHEMA, MOCK_PROVIDER);
+    if (!schema) return;
+    const { nodes } = await reapplyLayout(schema, provider);
     onLayoutApply(nodes);
-  }, [onLayoutApply]);
+  }, [schema, provider, onLayoutApply]);
 
   return (
     <>
-      {/* Translucent Backdrop Mask */}
       {open && (
         <div
           className="absolute inset-0 z-20 bg-black/5 dark:bg-black/20 backdrop-blur-[1px] animate-in fade-in duration-200"
@@ -97,14 +101,12 @@ export default function CanvasSidebar({
         />
       )}
 
-      {/* Main Panel Shell */}
       <div
         className={[
           "absolute top-0 left-0 h-full z-30 flex flex-col border-r border-node-border/80 dark:border-node-border/40 transition-all duration-200 ease-out overflow-hidden shadow-2xl dark:shadow-[4px_0_24px_rgba(0,0,0,0.3)]",
           "bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md",
           open ? "w-72 opacity-100" : "w-0 opacity-0 pointer-events-none",
         ].join(" ")}>
-        {/* Dynamic Headed Identity Workspace Container */}
         <div className="flex items-center justify-between px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-coral/10 text-coral flex items-center justify-center shrink-0 border border-coral/20">
@@ -112,12 +114,10 @@ export default function CanvasSidebar({
             </div>
             <div className="flex flex-col min-w-0 justify-center">
               <span className="text-[12px] font-bold text-text-primary tracking-tight truncate antialiased">
-                {MOCK_SCHEMA.tables[0]?.schema === "public"
-                  ? "Local Dev"
-                  : MOCK_SCHEMA.tables[0]?.schema}
+                {projectName}
               </span>
               <span className="text-[9px] font-medium font-mono text-text-tertiary mt-0.5 uppercase tracking-wider">
-                {MOCK_PROVIDER} · {MOCK_SCHEMA.tables.length} tables
+                {provider} · {tableCount} tables
               </span>
             </div>
           </div>
@@ -129,9 +129,7 @@ export default function CanvasSidebar({
           </button>
         </div>
 
-        {/* Sidebar Interior Scroller Layout */}
         <div className="flex flex-col gap-3.5 p-2 flex-1 overflow-y-auto pt-4">
-          {/* Layout */}
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Layout" />
             <SidebarItem
@@ -145,7 +143,6 @@ export default function CanvasSidebar({
 
           <Divider />
 
-          {/* Exports */}
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Data Exports" />
             <SidebarItem
@@ -182,7 +179,6 @@ export default function CanvasSidebar({
 
           <Divider />
 
-          {/* Theme */}
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Theme" />
             <SidebarItem

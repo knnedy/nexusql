@@ -10,7 +10,6 @@ import {
 import TopNav from "./components/top-nav";
 import RecentProjects from "./components/recent-projects";
 import { useConnect } from "@/hooks/use-connect";
-import { api } from "@/lib/api";
 
 function ProviderCard({
   provider,
