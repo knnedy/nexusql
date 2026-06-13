@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X, Copy, Check, Download, FileCode, ImageIcon } from "lucide-react";
+import { codeToHtml } from "shiki";
+import { useQuery, queryOptions } from "@tanstack/react-query";
+import { api } from "@/lib/api";
 
 interface ExportPreviewDrawerProps {
   type: "png" | "prisma" | "drizzle" | null;
@@ -9,65 +12,45 @@ interface ExportPreviewDrawerProps {
   onClose: () => void;
 }
 
-const PRISMA_PAYLOAD = `datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
+const exportQueryOptions = (
+  type: "png" | "prisma" | "drizzle" | null,
+  enabled: boolean,
+) =>
+  queryOptions({
+    queryKey: ["export", type],
+    queryFn: () =>
+      type === "prisma" ? api.export.prisma() : api.export.drizzle(),
+    enabled: enabled && !!type && type !== "png",
+    staleTime: Infinity,
+  });
 
-generator client {
-  provider = "prisma-client-js"
-}
+function CodeBlock({
+  code,
+  lang,
+}: {
+  code: string;
+  lang: "prisma" | "typescript";
+}) {
+  const [html, setHtml] = useState<string>("");
 
-model User {
-  id         Int       @id @default(autoincrement())
-  email      String
-  name       String
-  created_at String
-}
+  useEffect(() => {
+    codeToHtml(code, { lang, theme: "vesper" }).then(setHtml);
+  }, [code, lang]);
 
-model Post {
-  id         Int    @id @default(autoincrement())
-  title      String
-  body       String
-  user_id    Int
-  created_at String
-}
+  if (!html) {
+    return (
+      <div className="flex-1 rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-4 font-mono text-[11px] text-zinc-300 overflow-auto whitespace-pre leading-relaxed select-text tracking-normal">
+        {code}
+      </div>
+    );
+  }
 
-model Comment {
-  id         Int    @id @default(autoincrement())
-  body       String
-  post_id    Int
-  user_id    Int
-  created_at String
-}`;
-
-const DRIZZLE_PAYLOAD = `import { pgTable, serial, text, varchar, timestamp } from 'drizzle-orm/pg-core';
-
-export const users = pgTable('users', {
-  id:         serial('id').primaryKey(),
-  email:      varchar('email', { length: 255 }),
-  name:       varchar('name', { length: 255 }),
-  created_at: timestamp('created_at'),
-});
-
-export const posts = pgTable('posts', {
-  id:         serial('id').primaryKey(),
-  title:      varchar('title', { length: 255 }),
-  body:       text('body'),
-  user_id:    serial('user_id'),
-  created_at: timestamp('created_at'),
-});
-
-export const comments = pgTable('comments', {
-  id:         serial('id').primaryKey(),
-  body:       text('body'),
-  post_id:    serial('post_id'),
-  user_id:    serial('user_id'),
-  created_at: timestamp('created_at'),
-});`;
-
-function getPayload(type: "prisma" | "drizzle"): string {
-  return type === "prisma" ? PRISMA_PAYLOAD : DRIZZLE_PAYLOAD;
+  return (
+    <div
+      className="flex-1 rounded-xl overflow-auto border border-node-border/60 dark:border-node-border/40 text-[11px] leading-relaxed select-text [&>pre]:h-full [&>pre]:p-4 [&>pre]:rounded-xl [&>pre]:overflow-auto [&>pre]:bg-black/60!"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
 export default function ExportPreviewDrawer({
@@ -77,11 +60,15 @@ export default function ExportPreviewDrawer({
 }: ExportPreviewDrawerProps) {
   const [copied, setCopied] = useState(false);
 
+  const { data, isLoading } = useQuery(exportQueryOptions(type, sidebarOpen));
+
   if (!type || !sidebarOpen) return null;
 
+  const payload = data?.schema ?? "";
+
   const handleCopy = () => {
-    if (type === "png") return;
-    navigator.clipboard.writeText(getPayload(type));
+    if (type === "png" || !payload) return;
+    navigator.clipboard.writeText(payload);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -93,7 +80,7 @@ export default function ExportPreviewDrawer({
       );
       return;
     }
-    const blob = new Blob([getPayload(type)], { type: "text/plain" });
+    const blob = new Blob([payload], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -158,10 +145,15 @@ export default function ExportPreviewDrawer({
               PNG export will capture your viewport in Phase 2
             </p>
           </div>
-        ) : (
-          <div className="flex-1 rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-4 font-mono text-[11px] text-zinc-300 overflow-auto whitespace-pre leading-relaxed select-text tracking-normal">
-            {getPayload(type)}
+        ) : isLoading ? (
+          <div className="flex-1 flex items-center justify-center">
+            <div className="w-4 h-4 rounded-full border-2 border-teal border-t-transparent animate-spin" />
           </div>
+        ) : (
+          <CodeBlock
+            code={payload}
+            lang={type === "prisma" ? "prisma" : "typescript"}
+          />
         )}
       </div>
     </div>
