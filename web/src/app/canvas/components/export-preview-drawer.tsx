@@ -5,6 +5,7 @@ import { X, Copy, Check, Download, FileCode, ImageIcon } from "lucide-react";
 import { codeToHtml } from "shiki";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { useTheme } from "next-themes";
 
 interface ExportPreviewDrawerProps {
   type: "png" | "prisma" | "drizzle" | null;
@@ -32,10 +33,12 @@ function CodeBlock({
   lang: "prisma" | "typescript";
 }) {
   const [html, setHtml] = useState<string>("");
+  const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    codeToHtml(code, { lang, theme: "vesper" }).then(setHtml);
-  }, [code, lang]);
+    const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
+    codeToHtml(code, { lang, theme }).then(setHtml);
+  }, [code, lang, resolvedTheme]);
 
   if (!html) {
     return (
@@ -47,7 +50,7 @@ function CodeBlock({
 
   return (
     <div
-      className="flex-1 rounded-xl overflow-auto border border-node-border/60 dark:border-node-border/40 text-[11px] leading-relaxed select-text [&>pre]:h-full [&>pre]:p-4 [&>pre]:rounded-xl [&>pre]:overflow-auto [&>pre]:bg-black/60!"
+      className="flex-1 rounded-xl overflow-auto border border-node-border/60 dark:border-node-border/40 text-[11px] leading-relaxed select-text [&>pre]:h-full [&>pre]:p-4 [&>pre]:rounded-xl [&>pre]:overflow-auto [&>pre]:text-[11px]! [&>pre]:font-mono!"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -93,7 +96,7 @@ export default function ExportPreviewDrawer({
 
   return (
     <div
-      className="absolute top-0 bottom-0 h-full w-100 z-20 flex flex-col border-r border-node-border/80 dark:border-node-border/40 bg-node-bg/90 dark:bg-node-bg/95 backdrop-blur-md shadow-2xl transition-all duration-300 ease-out animate-in slide-in-from-left-12"
+      className="absolute top-0 bottom-0 h-full w-120 z-20 flex flex-col border-r border-node-border/80 dark:border-node-border/40 bg-node-bg/90 dark:bg-node-bg/95 backdrop-blur-md shadow-2xl transition-all duration-300 ease-out animate-in slide-in-from-left-12"
       style={{ left: "18rem" }}>
       <div className="flex items-center justify-between px-4 py-4 bg-node-header-bg/20 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="flex items-center gap-2 min-w-0">

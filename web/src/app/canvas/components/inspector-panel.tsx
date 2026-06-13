@@ -12,7 +12,9 @@ import {
   Copy,
   Check,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useTheme } from "next-themes";
+import { codeToHtml } from "shiki";
 import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { useSchema } from "@/hooks/use-schema";
@@ -181,6 +183,31 @@ function buildDdl(
     });
 
   return `CREATE TABLE ${schemaPrefix}${q}${table.name}${q} (\n${[...lines, ...fkLines].join(",\n")}\n);`;
+}
+
+function DdlBlock({ code }: { code: string }) {
+  const [html, setHtml] = useState<string>("");
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
+    codeToHtml(code, { lang: "sql", theme }).then(setHtml);
+  }, [code, resolvedTheme]);
+
+  if (!html) {
+    return (
+      <div className="rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-3.5 font-mono text-[10.5px] text-zinc-300 whitespace-pre leading-relaxed select-text tracking-normal overflow-x-auto">
+        {code}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="rounded-xl overflow-auto border border-node-border/60 dark:border-node-border/40 text-[10.5px] leading-relaxed select-text [&>pre]:p-3.5 [&>pre]:rounded-xl [&>pre]:overflow-auto [&>pre]:text-[10.5px]! [&>pre]:font-mono!"
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  );
 }
 
 function deriveCardinality(
@@ -433,9 +460,7 @@ export default function InspectorPanel({
                     )}
                   </button>
                 </div>
-                <div className="rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-3.5 font-mono text-[10.5px] text-zinc-300 whitespace-pre leading-relaxed select-text tracking-normal overflow-x-auto">
-                  {buildDdl(table, provider, relations)}
-                </div>
+                <DdlBlock code={buildDdl(table, provider, relations)} />
               </div>
             )}
           </div>
