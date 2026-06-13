@@ -149,10 +149,18 @@ function IndexRow({ entry }: { entry: IndexEntry }) {
   );
 }
 
-function buildDdl(table: Table, provider: DatabaseProvider | null): string {
+function buildDdl(
+  table: Table,
+  provider: DatabaseProvider | null,
+  relations: Relation[],
+): string {
   const q = provider === "mysql" ? "`" : '"';
   const schemaPrefix =
     table.schema && table.schema !== "public" ? `${q}${table.schema}${q}.` : "";
+
+  const relLookup = new Map(
+    relations.map((r) => [`${r.sourceTable}.${r.sourceField}`, r]),
+  );
 
   const lines = table.fields.map((f) => {
     const parts: string[] = [`  ${q}${f.name}${q}`, f.type.toUpperCase()];
@@ -164,10 +172,13 @@ function buildDdl(table: Table, provider: DatabaseProvider | null): string {
 
   const fkLines = table.fields
     .filter((f) => f.isForeignKey)
-    .map(
-      (f) =>
-        `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES -- target (${f.name})`,
-    );
+    .map((f) => {
+      const rel = relLookup.get(`${table.name}.${f.name}`);
+      if (rel) {
+        return `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES ${q}${rel.targetTable}${q} (${q}${rel.targetField}${q})`;
+      }
+      return `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES -- unknown`;
+    });
 
   return `CREATE TABLE ${schemaPrefix}${q}${table.name}${q} (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
@@ -297,6 +308,7 @@ export default function InspectorPanel({
   const [copied, setCopied] = useState(false);
   const { data: schema } = useSchema();
   const tables = schema?.tables ?? [];
+  const relations = schema?.relations ?? [];
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
   const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
@@ -327,7 +339,7 @@ export default function InspectorPanel({
 
   const handleCopyDdl = () => {
     if (!table) return;
-    navigator.clipboard.writeText(buildDdl(table, provider));
+    navigator.clipboard.writeText(buildDdl(table, provider, relations));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -422,7 +434,7 @@ export default function InspectorPanel({
                   </button>
                 </div>
                 <div className="rounded-xl bg-black/40 dark:bg-black/60 border border-node-border/60 dark:border-node-border/40 p-3.5 font-mono text-[10.5px] text-zinc-300 whitespace-pre leading-relaxed select-text tracking-normal overflow-x-auto">
-                  {buildDdl(table, provider)}
+                  {buildDdl(table, provider, relations)}
                 </div>
               </div>
             )}
