@@ -6,11 +6,15 @@ import { codeToHtml } from "shiki";
 import { useQuery, queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useTheme } from "next-themes";
+import Image from "next/image";
 
 interface ExportPreviewDrawerProps {
   type: "png" | "prisma" | "drizzle" | null;
   sidebarOpen: boolean;
   onClose: () => void;
+  pngDataUrl: string | null;
+  isGeneratingPng: boolean;
+  onGeneratePng: () => void;
 }
 
 const exportQueryOptions = (
@@ -60,10 +64,19 @@ export default function ExportPreviewDrawer({
   type,
   sidebarOpen,
   onClose,
+  isGeneratingPng,
+  onGeneratePng,
+  pngDataUrl,
 }: ExportPreviewDrawerProps) {
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useQuery(exportQueryOptions(type, sidebarOpen));
+
+  useEffect(() => {
+    if (type === "png" && sidebarOpen) {
+      onGeneratePng();
+    }
+  }, [type, sidebarOpen, onGeneratePng]);
 
   if (!type || !sidebarOpen) return null;
 
@@ -78,9 +91,11 @@ export default function ExportPreviewDrawer({
 
   const handleDownload = () => {
     if (type === "png") {
-      alert(
-        "PNG rendering logic will capture your viewport layout in Phase 2.",
-      );
+      if (!pngDataUrl) return;
+      const link = document.createElement("a");
+      link.href = pngDataUrl;
+      link.download = "schema.png";
+      link.click();
       return;
     }
     const blob = new Blob([payload], { type: "text/plain" });
@@ -124,7 +139,8 @@ export default function ExportPreviewDrawer({
           )}
           <button
             onClick={handleDownload}
-            className="flex items-center justify-center w-7 h-7 rounded-md text-text-tertiary hover:text-text-primary hover:bg-node-border/40 transition-colors border-none bg-transparent cursor-pointer">
+            disabled={type === "png" && (isGeneratingPng || !pngDataUrl)}
+            className="flex items-center justify-center w-7 h-7 rounded-md text-text-tertiary hover:text-text-primary hover:bg-node-border/40 transition-colors border-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
             <Download size={13} />
           </button>
           <div className="w-px h-4 bg-node-border/60 mx-1" />
@@ -138,15 +154,25 @@ export default function ExportPreviewDrawer({
 
       <div className="flex-1 p-4 overflow-y-auto min-h-0 flex flex-col">
         {type === "png" ? (
-          <div className="flex-1 flex flex-col items-center justify-center rounded-xl bg-black/10 dark:bg-black/30 border border-dashed border-node-border/80 p-6">
-            <div className="w-full aspect-video rounded-lg border border-node-border/40 bg-canvas-bg/60 dark:bg-canvas-bg/40 shadow-md flex items-center justify-center overflow-hidden">
-              <span className="text-[10px] font-medium font-mono text-text-tertiary">
-                Canvas Viewport Snapshot
+          <div className="flex-1 flex items-center justify-center rounded-xl bg-black/10 dark:bg-black/30 border border-dashed border-node-border/80 p-4 overflow-hidden">
+            {isGeneratingPng ? (
+              <div className="flex flex-col items-center gap-3">
+                <div className="w-5 h-5 rounded-full border-2 border-teal border-t-transparent animate-spin" />
+                <span className="text-[11px] text-text-tertiary font-mono">
+                  Rendering snapshot…
+                </span>
+              </div>
+            ) : pngDataUrl ? (
+              <Image
+                src={pngDataUrl}
+                alt="Canvas snapshot"
+                className="max-w-full max-h-full rounded-lg border border-node-border/40 shadow-md object-contain"
+              />
+            ) : (
+              <span className="text-[11px] text-text-tertiary font-mono">
+                No preview yet
               </span>
-            </div>
-            <p className="text-[10px] text-text-tertiary font-mono mt-3">
-              PNG export will capture your viewport in Phase 2
-            </p>
+            )}
           </div>
         ) : isLoading ? (
           <div className="flex-1 flex items-center justify-center">

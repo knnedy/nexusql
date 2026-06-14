@@ -372,7 +372,9 @@ export default function InspectorPanel({
   };
 
   return (
-    <div className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
+    <div
+      data-export-exclude="true"
+      className="absolute top-0 right-0 h-full w-72 z-10 flex flex-col border-l border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 backdrop-blur-md">
       <div className="flex items-center gap-2.5 px-4 py-4 bg-node-header-bg/40 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="w-7 h-7 rounded-lg bg-node-border/20 flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3">
           {headerIcon}
@@ -386,7 +388,6 @@ export default function InspectorPanel({
           </span>
         </div>
       </div>
-
       {!table && !relation ? (
         <IdleState />
       ) : relation ? (

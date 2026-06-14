@@ -1,13 +1,22 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   BackgroundVariant,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
+  getNodesBounds,
   type NodeTypes,
   type EdgeTypes,
   type OnNodesChange,
@@ -16,6 +25,7 @@ import {
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { toPng } from "html-to-image";
 import { SlidersHorizontal } from "lucide-react";
 import { buildCanvasGraph } from "@/lib/canvas-utils";
 import { useSchema } from "@/hooks/use-schema";
@@ -45,6 +55,14 @@ function getCssVar(name: string): string {
 const emptySubscribe = () => () => {};
 
 export default function DiagramCanvas() {
+  return (
+    <ReactFlowProvider>
+      <CanvasInner />
+    </ReactFlowProvider>
+  );
+}
+
+function CanvasInner() {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
   );
@@ -63,6 +81,11 @@ export default function DiagramCanvas() {
   const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
     null,
   );
+  const [pngDataUrl, setPngDataUrl] = useState<string | null>(null);
+  const [isGeneratingPng, setIsGeneratingPng] = useState(false);
+
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
+  const { getViewport, setViewport, getNodes } = useReactFlow();
 
   const { data: schema, isLoading, isError } = useSchema();
 
@@ -114,6 +137,79 @@ export default function DiagramCanvas() {
     [setNodes],
   );
 
+  const handleGeneratePng = useCallback(async () => {
+    if (!canvasWrapperRef.current) return;
+
+    setIsGeneratingPng(true);
+    setPngDataUrl(null);
+
+    const wrapper = canvasWrapperRef.current;
+    const previousViewport = getViewport();
+    const allNodes = getNodes();
+
+    const previousStyle = {
+      width: wrapper.style.width,
+      height: wrapper.style.height,
+      position: wrapper.style.position,
+    };
+
+    try {
+      const bounds = getNodesBounds(allNodes);
+      const padding = 60;
+      const exportZoom = 1;
+
+      const imageWidth = Math.ceil(bounds.width * exportZoom + padding * 2);
+      const imageHeight = Math.ceil(bounds.height * exportZoom + padding * 2);
+
+      // resize wrapper to match the full diagram bounds
+      wrapper.style.width = `${imageWidth}px`;
+      wrapper.style.height = `${imageHeight}px`;
+
+      setViewport(
+        {
+          x: -bounds.x * exportZoom + padding,
+          y: -bounds.y * exportZoom + padding,
+          zoom: exportZoom,
+        },
+        { duration: 0 },
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      const dataUrl = await toPng(wrapper, {
+        backgroundColor: getCssVar("--canvas-bg"),
+        width: imageWidth,
+        height: imageHeight,
+        pixelRatio: 2,
+        filter: (node) => {
+          if (node instanceof HTMLElement) {
+            if (node.getAttribute("data-export-exclude") === "true") {
+              return false;
+            }
+            const cls = node.className;
+            if (typeof cls === "string") {
+              return (
+                !cls.includes("react-flow__minimap") &&
+                !cls.includes("react-flow__controls") &&
+                !cls.includes("react-flow__attribution")
+              );
+            }
+          }
+          return true;
+        },
+      });
+
+      setPngDataUrl(dataUrl);
+    } catch (err) {
+      console.error("PNG export failed:", err);
+    } finally {
+      wrapper.style.width = previousStyle.width;
+      wrapper.style.height = previousStyle.height;
+      setViewport(previousViewport, { duration: 0 });
+      setIsGeneratingPng(false);
+    }
+  }, [getViewport, setViewport, getNodes]);
+
   if (isLoading || !graphReady) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
@@ -164,44 +260,49 @@ export default function DiagramCanvas() {
         type={activeExport}
         sidebarOpen={sidebarOpen}
         onClose={() => setActiveExport(null)}
+        pngDataUrl={pngDataUrl}
+        isGeneratingPng={isGeneratingPng}
+        onGeneratePng={handleGeneratePng}
       />
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodeClick={handleNodeClick}
-        onEdgeClick={handleEdgeClick}
-        onPaneClick={handlePaneClick}
-        onNodesChange={onNodesChange as OnNodesChange}
-        onEdgesChange={onEdgesChange as OnEdgesChange}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.38, includeHiddenNodes: false }}
-        minZoom={0.2}
-        maxZoom={2}
-        proOptions={{ hideAttribution: true }}>
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color="var(--canvas-dot)"
-        />
-        <InspectorPanel
-          table={selectedTable?.table ?? null}
-          provider={selectedTable?.provider ?? null}
-          relation={selectedRelation}
-        />
-        <MiniMap
-          nodeColor={() => getCssVar("--minimap-node")}
-          maskColor={getCssVar("--minimap-mask")}
-          style={{
-            background: getCssVar("--minimap-bg"),
-            border: "0.5px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-          }}
-        />
-      </ReactFlow>
+      <div ref={canvasWrapperRef} className="absolute inset-0">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodeClick={handleNodeClick}
+          onEdgeClick={handleEdgeClick}
+          onPaneClick={handlePaneClick}
+          onNodesChange={onNodesChange as OnNodesChange}
+          onEdgesChange={onEdgesChange as OnEdgesChange}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.38, includeHiddenNodes: false }}
+          minZoom={0.2}
+          maxZoom={2}
+          proOptions={{ hideAttribution: true }}>
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="var(--canvas-dot)"
+          />
+          <InspectorPanel
+            table={selectedTable?.table ?? null}
+            provider={selectedTable?.provider ?? null}
+            relation={selectedRelation}
+          />
+          <MiniMap
+            nodeColor={() => getCssVar("--minimap-node")}
+            maskColor={getCssVar("--minimap-mask")}
+            style={{
+              background: getCssVar("--minimap-bg"),
+              border: "0.5px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+            }}
+          />
+        </ReactFlow>
+      </div>
     </div>
   );
 }
