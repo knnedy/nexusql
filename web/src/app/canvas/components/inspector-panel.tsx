@@ -190,7 +190,9 @@ function DdlBlock({ code }: { code: string }) {
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
+    const theme =
+      resolvedTheme === "dark" ? "github-dark-default" : "github-light-default";
+
     codeToHtml(code, { lang: "sql", theme }).then(setHtml);
   }, [code, resolvedTheme]);
 

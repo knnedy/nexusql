@@ -40,7 +40,8 @@ function CodeBlock({
   const { resolvedTheme } = useTheme();
 
   useEffect(() => {
-    const theme = resolvedTheme === "dark" ? "github-dark" : "github-light";
+    const theme =
+      resolvedTheme === "dark" ? "github-dark-default" : "github-light-default";
     codeToHtml(code, { lang, theme }).then(setHtml);
   }, [code, lang, resolvedTheme]);
 
