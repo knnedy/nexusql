@@ -8,7 +8,7 @@ interface DisconnectButtonProps {
 }
 
 export default function DisconnectButton({
-  className = "",
+  className = "px-4 py-2", // Provides a safe fallback if used outside the toolbar without props
 }: DisconnectButtonProps) {
   const disconnect = useDisconnect();
 
@@ -16,18 +16,18 @@ export default function DisconnectButton({
     <button
       onClick={() => disconnect.mutate()}
       disabled={disconnect.isPending}
-      className={`flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-medium text-text-secondary dark:text-text-secondary/90 hover:text-coral hover:bg-coral/5 dark:hover:bg-coral/10 transition-all duration-150 cursor-pointer border-none bg-transparent group disabled:opacity-60 ${className}`}
+      className={`flex items-center justify-center gap-1.5 text-[11.5px] font-bold text-text-secondary dark:text-text-secondary/90 hover:text-coral transition-all duration-150 cursor-pointer border-none bg-transparent group disabled:opacity-60 ${className}`}
       aria-label="Disconnect">
       {disconnect.isPending ? (
-        <Loader2 size={12} className="animate-spin text-text-tertiary" />
+        <Loader2 size={13} className="animate-spin text-text-tertiary" />
       ) : (
         <Unplug
-          size={12}
+          size={13}
           className="text-text-tertiary group-hover:text-coral transition-colors"
           aria-hidden
         />
       )}
-      <span className="tracking-tight antialiased">Disconnect</span>
+      <span className="tracking-tight antialiased mt-px">Disconnect</span>
     </button>
   );
 }
