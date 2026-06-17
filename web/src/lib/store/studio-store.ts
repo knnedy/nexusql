@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { DatabaseProvider } from "@/lib/types";
 
-export type ViewMode = "diagram" | "data";
+export type ViewMode = "canvas" | "explorer";
 
 interface StudioState {
   viewMode: ViewMode;

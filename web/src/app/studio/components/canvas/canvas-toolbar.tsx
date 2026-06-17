@@ -1,21 +1,17 @@
 "use client";
 
-import { Database, Unplug, Loader2 } from "lucide-react";
+import { Database } from "lucide-react";
 import { useSchema } from "@/hooks/use-schema";
-import { useDisconnect } from "@/hooks/use-disconnect";
+import { useStudioStore } from "@/lib/store/studio-store";
+import ModeSwitcher from "../mode-switcher";
+import DisconnectButton from "../disconnect-button";
 
 export default function CanvasToolbar() {
   const { data: schema } = useSchema();
-  const disconnect = useDisconnect();
+  const provider = useStudioStore((s) => s.provider);
+  const projectName = useStudioStore((s) => s.projectName);
 
-  const provider = sessionStorage.getItem("nexusql_provider") ?? "postgres";
-  const projectName =
-    sessionStorage.getItem("nexusql_project_name") ?? "Local Dev";
   const tableCount = schema?.tables.length ?? 0;
-
-  function handleDisconnect() {
-    disconnect.mutate();
-  }
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-center rounded-xl bg-node-bg/85 dark:bg-node-bg/90 backdrop-blur-md border border-node-border/80 dark:border-node-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_42px_rgba(0,0,0,0.5)] transition-all duration-200">
@@ -43,22 +39,13 @@ export default function CanvasToolbar() {
 
       <div className="w-px h-4 bg-node-border/60 dark:bg-node-border/30 shrink-0" />
 
-      <button
-        onClick={handleDisconnect}
-        disabled={disconnect.isPending}
-        className="flex items-center gap-1.5 px-4 py-2.5 text-[11px] font-medium text-text-secondary dark:text-text-secondary/90 hover:text-coral hover:bg-coral/5 dark:hover:bg-coral/10 transition-all duration-150 rounded-r-xl cursor-pointer border-none bg-transparent group disabled:opacity-60"
-        aria-label="Disconnect">
-        {disconnect.isPending ? (
-          <Loader2 size={12} className="animate-spin text-text-tertiary" />
-        ) : (
-          <Unplug
-            size={12}
-            className="text-text-tertiary group-hover:text-coral transition-colors"
-            aria-hidden
-          />
-        )}
-        <span className="tracking-tight antialiased">Disconnect</span>
-      </button>
+      <div className="px-3 py-2.5 flex items-center">
+        <ModeSwitcher />
+      </div>
+
+      <div className="w-px h-4 bg-node-border/60 dark:bg-node-border/30 shrink-0" />
+
+      <DisconnectButton className="rounded-r-xl" />
     </div>
   );
 }

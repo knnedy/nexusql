@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import DiagramCanvas from "./components/diagram-canvas";
+import DiagramCanvas from "./components/canvas/diagram-canvas";
 
 export const metadata: Metadata = {
   title: "Canvas | NexusQL",
@@ -7,7 +7,7 @@ export const metadata: Metadata = {
 
 export default function CanvasPage() {
   return (
-    <div className="w-screen h-screen overflow-hidden bg-canvas-bg">
+    <div className="w-screen h-screen overflow-hidden">
       <DiagramCanvas />
     </div>
   );
