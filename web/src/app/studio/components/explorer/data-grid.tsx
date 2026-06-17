@@ -27,6 +27,7 @@ export default function DataGrid({
   isLoading,
   isError,
 }: DataGridProps) {
+  "use no memo";
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () =>
       columns.map((col) => ({
