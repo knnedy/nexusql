@@ -54,8 +54,7 @@ export default function Explorer() {
   return (
     <div className="w-full h-full flex flex-col bg-canvas-bg">
       <ExplorerToolbar
-        tableName={selectedTable}
-        rowCount={filteredRows.length}
+        tableSelected={!!selectedTable}
         searchValue={searchValue}
         onSearchChange={setSearchValue}
         onRefresh={handleRefresh}
@@ -67,6 +66,7 @@ export default function Explorer() {
           tables={tables}
           selectedTable={selectedTable}
           onSelectTable={handleSelectTable}
+          rowCount={filteredRows.length}
         />
 
         {selectedTable ? (
