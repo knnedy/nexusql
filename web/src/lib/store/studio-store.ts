@@ -17,11 +17,25 @@ interface StudioState {
   reset: () => void;
 }
 
+function readInitialSession(): {
+  provider: DatabaseProvider;
+  projectName: string;
+} {
+  if (typeof window === "undefined") {
+    return { provider: "postgres", projectName: "Untitled" };
+  }
+  return {
+    provider:
+      (sessionStorage.getItem("nexusql_provider") as DatabaseProvider) ??
+      "postgres",
+    projectName: sessionStorage.getItem("nexusql_project_name") ?? "Untitled",
+  };
+}
+
 const initialState = {
   viewMode: "diagram" as ViewMode,
-  provider: "postgres" as DatabaseProvider,
-  projectName: "Untitled",
   selectedTable: null,
+  ...readInitialSession(),
 };
 
 export const useStudioStore = create<StudioState>((set) => ({
@@ -33,5 +47,5 @@ export const useStudioStore = create<StudioState>((set) => ({
 
   setSelectedTable: (name) => set({ selectedTable: name }),
 
-  reset: () => set(initialState),
+  reset: () => set({ ...initialState, ...readInitialSession() }),
 }));
