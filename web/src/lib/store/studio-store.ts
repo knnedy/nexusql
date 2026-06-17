@@ -33,7 +33,7 @@ function readInitialSession(): {
 }
 
 const initialState = {
-  viewMode: "diagram" as ViewMode,
+  viewMode: "canvas" as ViewMode,
   selectedTable: null,
   ...readInitialSession(),
 };
