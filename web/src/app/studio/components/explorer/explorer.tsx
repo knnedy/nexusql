@@ -52,7 +52,7 @@ export default function Explorer() {
   }
 
   return (
-    <div className="relative w-full h-full overflow-hidden bg-canvas-bg flex">
+    <div className="w-full h-full flex flex-col bg-canvas-bg">
       <ExplorerToolbar
         tableName={selectedTable}
         rowCount={filteredRows.length}
@@ -62,7 +62,7 @@ export default function Explorer() {
         isRefreshing={isFetching}
       />
 
-      <div className="flex w-full h-full pt-16">
+      <div className="flex flex-1 overflow-hidden">
         <TableList
           tables={tables}
           selectedTable={selectedTable}
