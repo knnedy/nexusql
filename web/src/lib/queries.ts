@@ -105,7 +105,7 @@ export function useConnect(): UseMutationResult<
     onSuccess: (data) => {
       if (data.ok) {
         queryClient.invalidateQueries(queries.schema());
-        router.push("/canvas");
+        router.push("/studio");
       }
     },
   });

@@ -17,7 +17,7 @@ export function useConnect() {
       sessionStorage.setItem("nexusql_project_name", variables.name ?? "");
       qc.invalidateQueries({ queryKey: projectsQueryOptions.queryKey });
       qc.invalidateQueries({ queryKey: schemaQueryOptions().queryKey });
-      router.push("/canvas");
+      router.push("/studio");
     },
   });
 }
