@@ -11,8 +11,7 @@ import type {
 } from "./types";
 
 // Base URL for the Go backend
-const BASE_URL =
-  process.env.NODE_ENV === "development" ? "http://127.0.0.1:7080" : "";
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 // Core fetch wrapper — centralises error handling and JSON parsing
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
