@@ -1,8 +1,11 @@
 package api
 
 import (
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
 )
@@ -12,7 +15,7 @@ type handler struct {
 	projects projects.Store
 }
 
-func Router(sess *session.Store, proj projects.Store) *chi.Mux {
+func Router(sess *session.Store, proj projects.Store, isDev bool) *chi.Mux {
 	h := &handler{
 		session:  sess,
 		projects: proj,
@@ -20,6 +23,16 @@ func Router(sess *session.Store, proj projects.Store) *chi.Mux {
 
 	r := chi.NewRouter()
 	r.Use(middleware.NoCache)
+
+	if isDev {
+		r.Use(cors.Handler(cors.Options{
+			AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
+			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+			AllowedHeaders:   []string{"Content-Type"},
+			AllowCredentials: false,
+			MaxAge:           300,
+		}))
+	}
 
 	r.Get("/health", h.handleHealth)
 
