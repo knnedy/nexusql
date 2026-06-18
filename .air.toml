@@ -1,0 +1,16 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/nexusql ./cmd/nexusql"
+  bin = "./tmp/nexusql"
+  include_ext = ["go"]
+  exclude_dir = ["web", "tmp", "bin", "cmd/nexusql/out"]
+  delay = 200
+  stop_on_error = true
+
+[log]
+  time = true
+
+[misc]
+  clean_on_exit = true

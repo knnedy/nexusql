@@ -16,10 +16,12 @@ run: build
 	./bin/nexusql
 
 dev:
-	@echo "Starting Go backend..."
-	go run ./cmd/nexusql &
-	@echo "Starting Next.js dev server..."
-	cd web && pnpm dev
+	@trap 'kill 0' EXIT INT TERM; \
+	echo "Starting Go backend on :7080 (air hot-reload)..."; \
+	NEXUSQL_ENV=development air & \
+	echo "Starting Next.js dev server on :3000..."; \
+	cd web && pnpm dev; \
+	wait
 
 clean:
 	rm -rf web/out web/.next bin cmd/nexusql/out
