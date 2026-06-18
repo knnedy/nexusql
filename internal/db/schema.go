@@ -312,7 +312,7 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string) ([]strin
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
-			row[col] = values[i]
+			row[col] = normalizeValue(values[i])
 		}
 		result = append(result, row)
 	}
@@ -322,6 +322,16 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string) ([]strin
 	}
 
 	return columns, result, nil
+}
+
+func normalizeValue(v any) any {
+	switch val := v.(type) {
+	case [16]byte:
+		return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+			val[0:4], val[4:6], val[6:8], val[8:10], val[10:16])
+	default:
+		return v
+	}
 }
 
 func GeneratePrisma(schema *Schema) string {

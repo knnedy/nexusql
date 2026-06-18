@@ -3,6 +3,7 @@ outline.md
 # Go
 bin/
 cmd/nexusql/out/
+tmp/
 
 # GoReleaser output
 dist/
