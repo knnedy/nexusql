@@ -29,7 +29,7 @@ func main() {
 	sess := session.NewStore()
 
 	r := chi.NewRouter()
-	r.Mount("/api", api.Router(sess, proj))
+	r.Mount("/api", api.Router(sess, proj, cfg.IsDev))
 
 	sub, err := fs.Sub(staticFiles, "out")
 	if err != nil {
