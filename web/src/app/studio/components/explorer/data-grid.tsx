@@ -15,10 +15,34 @@ interface DataGridProps {
   isError: boolean;
 }
 
+function isNullish(value: unknown): boolean {
+  return value === null || value === undefined;
+}
+
 function formatCellValue(value: unknown): string {
-  if (value === null || value === undefined) return "null";
+  if (isNullish(value)) return "null";
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+function CellValue({ value }: { value: unknown }) {
+  if (isNullish(value)) {
+    return (
+      <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
+        null
+      </span>
+    );
+  }
+
+  const formatted = formatCellValue(value);
+
+  return (
+    <span
+      title={formatted}
+      className="block truncate max-w-50 font-mono text-[11px] text-text-secondary/90">
+      {formatted}
+    </span>
+  );
 }
 
 export default function DataGrid({
@@ -28,12 +52,14 @@ export default function DataGrid({
   isError,
 }: DataGridProps) {
   "use no memo";
+
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () =>
       columns.map((col) => ({
         accessorKey: col,
         header: col,
-        cell: (info) => formatCellValue(info.getValue()),
+        size: 200,
+        cell: (info) => <CellValue value={info.getValue()} />,
       })),
     [columns],
   );
@@ -42,6 +68,10 @@ export default function DataGrid({
     data: rows,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    defaultColumn: {
+      size: 200,
+      minSize: 80,
+    },
   });
 
   if (isLoading) {
@@ -74,18 +104,23 @@ export default function DataGrid({
 
   return (
     <div className="flex-1 overflow-auto">
-      <table className="w-full text-[11px] font-mono border-collapse">
+      <table
+        className="text-[11px] font-mono border-collapse"
+        style={{ width: table.getTotalSize() }}>
         <thead className="sticky top-0 bg-node-header-bg/95 backdrop-blur-md z-10">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  className="px-3 py-2.5 text-left font-semibold text-text-secondary whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40">
-                  {flexRender(
-                    header.column.columnDef.header,
-                    header.getContext(),
-                  )}
+                  style={{ width: header.getSize() }}
+                  className="px-3 py-2.5 text-left font-semibold text-text-secondary whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden">
+                  <span className="block truncate">
+                    {flexRender(
+                      header.column.columnDef.header,
+                      header.getContext(),
+                    )}
+                  </span>
                 </th>
               ))}
             </tr>
@@ -99,7 +134,8 @@ export default function DataGrid({
               {row.getVisibleCells().map((cell) => (
                 <td
                   key={cell.id}
-                  className="px-3 py-2 text-text-secondary/90 whitespace-nowrap max-w-55 truncate">
+                  style={{ width: cell.column.getSize() }}
+                  className="px-3 py-2 overflow-hidden">
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
