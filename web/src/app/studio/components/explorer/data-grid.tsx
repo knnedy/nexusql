@@ -7,9 +7,13 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
+import { Key, Link, Hash } from "lucide-react";
+import type { Field } from "@/lib/types";
+import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 
 interface DataGridProps {
   columns: string[];
+  fields: Field[];
   rows: Record<string, unknown>[];
   isLoading: boolean;
   isError: boolean;
@@ -45,23 +49,69 @@ function CellValue({ value }: { value: unknown }) {
   );
 }
 
+function ColumnHeader({ field }: { field: Field | undefined }) {
+  if (!field) return null;
+
+  const variant = FIELD_TYPE_BADGE_MAP[field.type] ?? "gray";
+
+  const badgeStyles = {
+    teal: "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal border-black/2 dark:border-white/2",
+    coral:
+      "bg-badge-coral-bg/15 text-badge-coral-text dark:bg-badge-coral-bg/20 dark:text-coral border-black/2 dark:border-white/2",
+    gray: "bg-badge-gray-bg/50 text-badge-gray-text dark:bg-badge-gray-bg/20 dark:text-text-secondary border-black/2 dark:border-white/2",
+  } as const;
+
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <div className="flex items-center gap-1.5 min-w-0">
+        {field.isPrimaryKey && (
+          <Key size={9} className="text-coral shrink-0" aria-hidden />
+        )}
+        {field.isForeignKey && !field.isPrimaryKey && (
+          <Link size={9} className="text-teal shrink-0" aria-hidden />
+        )}
+        {!field.isPrimaryKey && !field.isForeignKey && (
+          <Hash
+            size={9}
+            className="text-text-tertiary/50 shrink-0"
+            aria-hidden
+          />
+        )}
+        <span className="truncate text-[11px] font-semibold text-text-secondary font-mono tracking-tight">
+          {field.name}
+        </span>
+      </div>
+      <span
+        className={`inline-flex items-center self-start rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider border font-mono ${badgeStyles[variant]}`}>
+        {field.type}
+      </span>
+    </div>
+  );
+}
+
 export default function DataGrid({
   columns,
+  fields,
   rows,
   isLoading,
   isError,
 }: DataGridProps) {
   "use no memo";
 
+  const fieldMap = useMemo(
+    () => new Map(fields.map((f) => [f.name, f])),
+    [fields],
+  );
+
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () =>
       columns.map((col) => ({
         accessorKey: col,
-        header: col,
+        header: () => <ColumnHeader field={fieldMap.get(col)} />,
         size: 200,
         cell: (info) => <CellValue value={info.getValue()} />,
       })),
-    [columns],
+    [columns, fieldMap],
   );
 
   const table = useReactTable({
@@ -114,13 +164,11 @@ export default function DataGrid({
                 <th
                   key={header.id}
                   style={{ width: header.getSize() }}
-                  className="px-3 py-2.5 text-left font-semibold text-text-secondary whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden">
-                  <span className="block truncate">
-                    {flexRender(
-                      header.column.columnDef.header,
-                      header.getContext(),
-                    )}
-                  </span>
+                  className="px-3 py-2.5 text-left whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden">
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext(),
+                  )}
                 </th>
               ))}
             </tr>

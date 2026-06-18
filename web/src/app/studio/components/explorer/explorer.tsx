@@ -18,6 +18,11 @@ export default function Explorer() {
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
 
+  const selectedTableFields = useMemo(
+    () => schema?.tables.find((t) => t.name === selectedTable)?.fields ?? [],
+    [schema, selectedTable],
+  );
+
   const {
     data: rowsData,
     isLoading,
@@ -72,6 +77,7 @@ export default function Explorer() {
         {selectedTable ? (
           <DataGrid
             columns={rowsData?.columns ?? []}
+            fields={selectedTableFields}
             rows={filteredRows}
             isLoading={isLoading}
             isError={isError}
