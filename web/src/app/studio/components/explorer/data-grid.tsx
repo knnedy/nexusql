@@ -43,7 +43,7 @@ function CellValue({ value }: { value: unknown }) {
   return (
     <span
       title={formatted}
-      className="block truncate max-w-50 font-mono text-[11px] text-text-secondary/90">
+      className="block truncate font-mono text-[11px] text-text-secondary/90">
       {formatted}
     </span>
   );
@@ -97,6 +97,7 @@ const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
     </span>
   ),
   size: 48,
+  enableResizing: false,
   cell: (info) => (
     <span className="text-[10.5px] font-mono text-text-tertiary/40 select-none tabular-nums">
       {info.row.index + 1}
@@ -126,6 +127,7 @@ export default function DataGrid({
           accessorKey: col,
           header: () => <ColumnHeader field={fieldMap.get(col)} />,
           size: 200,
+          minSize: 80,
           cell: (info) => <CellValue value={info.getValue()} />,
         }),
       ),
@@ -137,6 +139,8 @@ export default function DataGrid({
     data: rows,
     columns: tableColumns,
     getCoreRowModel: getCoreRowModel(),
+    columnResizeMode: "onChange",
+    enableColumnResizing: true,
     defaultColumn: {
       size: 200,
       minSize: 80,
@@ -174,16 +178,20 @@ export default function DataGrid({
   return (
     <div className="flex-1 overflow-auto">
       <table
-        className="text-[11px] font-mono border-collapse"
+        className="text-[11px] font-mono border-collapse table-fixed"
         style={{ width: table.getTotalSize() }}>
+        <colgroup>
+          {table.getAllColumns().map((col) => (
+            <col key={col.id} style={{ width: col.getSize() }} />
+          ))}
+        </colgroup>
         <thead className="sticky top-0 bg-node-header-bg/95 backdrop-blur-md z-10">
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th
                   key={header.id}
-                  style={{ width: header.getSize() }}
-                  className={`px-3 py-2.5 text-left whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden ${
+                  className={`relative px-3 py-2.5 text-left whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden ${
                     header.column.id === "__row_number__"
                       ? "bg-node-header-bg/80 border-r border-node-border/40 dark:border-node-border/20"
                       : ""
@@ -191,6 +199,18 @@ export default function DataGrid({
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext(),
+                  )}
+                  {header.column.getCanResize() && (
+                    <div
+                      onMouseDown={header.getResizeHandler()}
+                      onTouchStart={header.getResizeHandler()}
+                      className={`absolute top-0 right-0 h-full w-1 cursor-col-resize select-none touch-none opacity-0 hover:opacity-100 transition-opacity ${
+                        header.column.getIsResizing()
+                          ? "bg-teal opacity-100"
+                          : "bg-node-border/60 dark:bg-node-border/40"
+                      }`}
+                      aria-hidden
+                    />
                   )}
                 </th>
               ))}
@@ -205,7 +225,6 @@ export default function DataGrid({
               {row.getVisibleCells().map((cell) => (
                 <td
                   key={cell.id}
-                  style={{ width: cell.column.getSize() }}
                   className={`px-3 py-2 overflow-hidden ${
                     cell.column.id === "__row_number__"
                       ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
