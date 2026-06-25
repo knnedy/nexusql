@@ -89,6 +89,21 @@ function ColumnHeader({ field }: { field: Field | undefined }) {
   );
 }
 
+const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
+  id: "__row_number__",
+  header: () => (
+    <span className="text-[10px] font-mono text-text-tertiary/50 select-none">
+      #
+    </span>
+  ),
+  size: 48,
+  cell: (info) => (
+    <span className="text-[10.5px] font-mono text-text-tertiary/40 select-none tabular-nums">
+      {info.row.index + 1}
+    </span>
+  ),
+};
+
 export default function DataGrid({
   columns,
   fields,
@@ -104,13 +119,17 @@ export default function DataGrid({
   );
 
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
-    () =>
-      columns.map((col) => ({
-        accessorKey: col,
-        header: () => <ColumnHeader field={fieldMap.get(col)} />,
-        size: 200,
-        cell: (info) => <CellValue value={info.getValue()} />,
-      })),
+    () => [
+      ROW_NUMBER_COLUMN,
+      ...columns.map(
+        (col): ColumnDef<Record<string, unknown>> => ({
+          accessorKey: col,
+          header: () => <ColumnHeader field={fieldMap.get(col)} />,
+          size: 200,
+          cell: (info) => <CellValue value={info.getValue()} />,
+        }),
+      ),
+    ],
     [columns, fieldMap],
   );
 
@@ -164,7 +183,11 @@ export default function DataGrid({
                 <th
                   key={header.id}
                   style={{ width: header.getSize() }}
-                  className="px-3 py-2.5 text-left whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden">
+                  className={`px-3 py-2.5 text-left whitespace-nowrap border-b border-node-border/60 dark:border-node-border/40 overflow-hidden ${
+                    header.column.id === "__row_number__"
+                      ? "bg-node-header-bg/80 border-r border-node-border/40 dark:border-node-border/20"
+                      : ""
+                  }`}>
                   {flexRender(
                     header.column.columnDef.header,
                     header.getContext(),
@@ -183,7 +206,11 @@ export default function DataGrid({
                 <td
                   key={cell.id}
                   style={{ width: cell.column.getSize() }}
-                  className="px-3 py-2 overflow-hidden">
+                  className={`px-3 py-2 overflow-hidden ${
+                    cell.column.id === "__row_number__"
+                      ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
+                      : ""
+                  }`}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}

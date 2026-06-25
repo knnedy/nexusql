@@ -190,7 +190,7 @@ export default function CanvasSidebar({
                   <Moon size={14} aria-hidden />
                 )
               }
-              label={isDark ? "Light Presentation" : "Dark Presentation"}
+              label={isDark ? "Light Mode" : "Dark Mode"}
               description="Invert appearance theme"
               onClick={() => setTheme(isDark ? "light" : "dark")}
             />
