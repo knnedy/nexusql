@@ -53,8 +53,10 @@ export const api = {
   },
 
   // Table rows — safe SELECT * LIMIT 10
-  rows(tableName: string): Promise<RowsResponse> {
-    return request<RowsResponse>(`/api/rows/${encodeURIComponent(tableName)}`);
+  rows(tableName: string, page = 1, pageSize = 50): Promise<RowsResponse> {
+    return request<RowsResponse>(
+      `/api/rows/${encodeURIComponent(tableName)}?page=${page}&pageSize=${pageSize}`,
+    );
   },
 
   // Projects

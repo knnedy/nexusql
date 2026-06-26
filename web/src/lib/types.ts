@@ -145,6 +145,9 @@ export interface RowsResponse {
   tableName: string;
   columns: string[];
   rows: Record<string, unknown>[];
+  total: number;
+  page: number;
+  pageSize: number;
 }
 
 // Project
