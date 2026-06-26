@@ -16,6 +16,8 @@ type rowsResponse struct {
 	Total     int64            `json:"total"`
 	Page      int              `json:"page"`
 	PageSize  int              `json:"pageSize"`
+	SortCol   string           `json:"sortCol"`
+	SortDir   string           `json:"sortDir"`
 }
 
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
@@ -50,9 +52,35 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// validate sort column against actual table columns
+	sortCol := ""
+	sortDir := db.SortAsc
+
+	if sc := r.URL.Query().Get("sort"); sc != "" {
+		validCols, colErr := db.GetTableColumns(r.Context(), conn, tableName)
+		if colErr != nil {
+			writeError(w, http.StatusInternalServerError, colErr.Error())
+			return
+		}
+		for _, col := range validCols {
+			if col == sc {
+				sortCol = sc
+				break
+			}
+		}
+		if sortCol == "" {
+			writeError(w, http.StatusBadRequest, "invalid sort column")
+			return
+		}
+	}
+
+	if sd := r.URL.Query().Get("dir"); sd == "desc" {
+		sortDir = db.SortDesc
+	}
+
 	offset := (page - 1) * pageSize
 
-	columns, rows, total, err := db.FetchRows(r.Context(), conn, tableName, pageSize, offset)
+	columns, rows, total, err := db.FetchRows(r.Context(), conn, tableName, pageSize, offset, sortCol, sortDir)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -65,5 +93,7 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		Total:     total,
 		Page:      page,
 		PageSize:  pageSize,
+		SortCol:   sortCol,
+		SortDir:   string(sortDir),
 	})
 }
