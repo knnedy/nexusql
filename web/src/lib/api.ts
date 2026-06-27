@@ -4,16 +4,15 @@ import type {
   CreateProjectRequest,
   CreateProjectResponse,
   HealthResponse,
+  LookupResponse,
   OrmExportResponse,
   ProjectsResponse,
   RowsResponse,
   SchemaResponse,
 } from "./types";
 
-// Base URL for the Go backend
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
-// Core fetch wrapper — centralises error handling and JSON parsing
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -28,14 +27,11 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-// API methods
 export const api = {
-  // Health
   health(): Promise<HealthResponse> {
     return request<HealthResponse>("/api/health");
   },
 
-  // Connection
   connect(body: ConnectRequest): Promise<ConnectResponse> {
     return request<ConnectResponse>("/api/connect", {
       method: "POST",
@@ -47,12 +43,10 @@ export const api = {
     return request<void>("/api/disconnect", { method: "POST" });
   },
 
-  // Schema
   schema(): Promise<SchemaResponse> {
     return request<SchemaResponse>("/api/schema");
   },
 
-  // Table rows — safe SELECT * LIMIT 10
   rows(
     tableName: string,
     page = 1,
@@ -73,7 +67,17 @@ export const api = {
     );
   },
 
-  // Projects
+  lookup(
+    tableName: string,
+    field: string,
+    value: string,
+  ): Promise<LookupResponse> {
+    const params = new URLSearchParams({ field, value });
+    return request<LookupResponse>(
+      `/api/rows/${encodeURIComponent(tableName)}/lookup?${params.toString()}`,
+    );
+  },
+
   projects: {
     list(): Promise<ProjectsResponse> {
       return request<ProjectsResponse>("/api/projects");
@@ -106,7 +110,6 @@ export const api = {
     },
   },
 
-  // ORM export
   export: {
     prisma(): Promise<OrmExportResponse> {
       return request<OrmExportResponse>("/api/export/prisma");

@@ -152,6 +152,14 @@ export interface RowsResponse {
   sortDir: "asc" | "desc";
 }
 
+export interface LookupResponse {
+  tableName: string;
+  field: string;
+  value: string;
+  columns: string[];
+  rows: Record<string, unknown>[];
+}
+
 // Project
 export interface Project {
   id: string;

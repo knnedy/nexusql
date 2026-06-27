@@ -232,8 +232,15 @@ export default function Explorer() {
               <RowDrawer
                 row={selectedRow}
                 fields={selectedTableFields}
+                relations={schema?.relations ?? []}
                 rowIndex={selectedRowIndex}
+                tableName={selectedTable}
                 onClose={() => {
+                  setSelectedRow(null);
+                  setSelectedRowIndex(null);
+                }}
+                onNavigate={(targetTable) => {
+                  handleSelectTable(targetTable);
                   setSelectedRow(null);
                   setSelectedRowIndex(null);
                 }}
