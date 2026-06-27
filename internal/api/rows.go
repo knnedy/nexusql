@@ -20,6 +20,14 @@ type rowsResponse struct {
 	SortDir   string           `json:"sortDir"`
 }
 
+type lookupResponse struct {
+	TableName string           `json:"tableName"`
+	Field     string           `json:"field"`
+	Value     string           `json:"value"`
+	Columns   []string         `json:"columns"`
+	Rows      []map[string]any `json:"rows"`
+}
+
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.session.Get()
 	if err == session.ErrNoActiveConnection {
@@ -52,7 +60,6 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// validate sort column against actual table columns
 	sortCol := ""
 	sortDir := db.SortAsc
 
@@ -95,5 +102,45 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		PageSize:  pageSize,
 		SortCol:   sortCol,
 		SortDir:   string(sortDir),
+	})
+}
+
+func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
+	conn, err := h.session.Get()
+	if err == session.ErrNoActiveConnection {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	tableName := chi.URLParam(r, "tableName")
+	if tableName == "" {
+		writeError(w, http.StatusBadRequest, "tableName is required")
+		return
+	}
+
+	field := r.URL.Query().Get("field")
+	value := r.URL.Query().Get("value")
+
+	if field == "" || value == "" {
+		writeError(w, http.StatusBadRequest, "field and value are required")
+		return
+	}
+
+	columns, rows, err := db.FetchRowWhere(r.Context(), conn, tableName, field, value)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, lookupResponse{
+		TableName: tableName,
+		Field:     field,
+		Value:     value,
+		Columns:   columns,
+		Rows:      rows,
 	})
 }

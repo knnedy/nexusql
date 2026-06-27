@@ -64,6 +64,61 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 	return columns, result, total, nil
 }
 
+func FetchRowWhere(ctx context.Context, conn *Connection, tableName, field, value string) ([]string, []map[string]any, error) {
+	validCols, err := GetTableColumns(ctx, conn, tableName)
+	if err != nil {
+		return nil, nil, fmt.Errorf("validate field: %w", err)
+	}
+
+	fieldValid := false
+	for _, col := range validCols {
+		if col == field {
+			fieldValid = true
+			break
+		}
+	}
+	if !fieldValid {
+		return nil, nil, fmt.Errorf("invalid field: %s", field)
+	}
+
+	query := fmt.Sprintf(
+		"SELECT * FROM %s WHERE %s = $1 LIMIT 100",
+		pgx.Identifier{tableName}.Sanitize(),
+		pgx.Identifier{field}.Sanitize(),
+	)
+
+	rows, err := conn.Pool.Query(ctx, query, value)
+	if err != nil {
+		return nil, nil, fmt.Errorf("query rows: %w", err)
+	}
+	defer rows.Close()
+
+	descs := rows.FieldDescriptions()
+	columns := make([]string, len(descs))
+	for i, f := range descs {
+		columns[i] = string(f.Name)
+	}
+
+	result := make([]map[string]any, 0)
+	for rows.Next() {
+		values, err := rows.Values()
+		if err != nil {
+			return nil, nil, fmt.Errorf("scan row: %w", err)
+		}
+		row := make(map[string]any, len(columns))
+		for i, col := range columns {
+			row[col] = normalizeValue(values[i])
+		}
+		result = append(result, row)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+
+	return columns, result, nil
+}
+
 func normalizeValue(v any) any {
 	switch val := v.(type) {
 	case [16]byte:
