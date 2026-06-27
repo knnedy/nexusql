@@ -148,6 +148,8 @@ export interface RowsResponse {
   total: number;
   page: number;
   pageSize: number;
+  sortCol: string;
+  sortDir: "asc" | "desc";
 }
 
 // Project

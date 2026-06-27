@@ -7,7 +7,14 @@ import {
   type ColumnDef,
 } from "@tanstack/react-table";
 import { useMemo } from "react";
-import { Key, Link, Hash } from "lucide-react";
+import {
+  Key,
+  Link,
+  Hash,
+  ChevronUp,
+  ChevronDown,
+  ChevronsUpDown,
+} from "lucide-react";
 import type { Field } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 
@@ -17,6 +24,9 @@ interface DataGridProps {
   rows: Record<string, unknown>[];
   isLoading: boolean;
   isError: boolean;
+  sortCol: string;
+  sortDir: "asc" | "desc";
+  onSort: (col: string) => void;
 }
 
 function isNullish(value: unknown): boolean {
@@ -49,10 +59,46 @@ function CellValue({ value }: { value: unknown }) {
   );
 }
 
-function ColumnHeader({ field }: { field: Field | undefined }) {
+function SortIcon({
+  col,
+  sortCol,
+  sortDir,
+}: {
+  col: string;
+  sortCol: string;
+  sortDir: "asc" | "desc";
+}) {
+  if (sortCol !== col) {
+    return (
+      <ChevronsUpDown
+        size={10}
+        className="text-text-tertiary/60 shrink-0 group-hover:text-text-secondary transition-colors"
+        aria-hidden
+      />
+    );
+  }
+  return sortDir === "asc" ? (
+    <ChevronUp size={10} className="text-teal shrink-0" aria-hidden />
+  ) : (
+    <ChevronDown size={10} className="text-teal shrink-0" aria-hidden />
+  );
+}
+
+function ColumnHeader({
+  field,
+  sortCol,
+  sortDir,
+  onSort,
+}: {
+  field: Field | undefined;
+  sortCol: string;
+  sortDir: "asc" | "desc";
+  onSort: (col: string) => void;
+}) {
   if (!field) return null;
 
   const variant = FIELD_TYPE_BADGE_MAP[field.type] ?? "gray";
+  const isActive = sortCol === field.name;
 
   const badgeStyles = {
     teal: "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal border-black/2 dark:border-white/2",
@@ -62,7 +108,11 @@ function ColumnHeader({ field }: { field: Field | undefined }) {
   } as const;
 
   return (
-    <div className="flex flex-col gap-1 min-w-0">
+    <button
+      onClick={() => onSort(field.name)}
+      className={`w-full flex flex-col gap-1 min-w-0 text-left bg-transparent border-none cursor-pointer p-0 group ${
+        isActive ? "opacity-100" : "opacity-90 hover:opacity-100"
+      }`}>
       <div className="flex items-center gap-1.5 min-w-0">
         {field.isPrimaryKey && (
           <Key size={9} className="text-coral shrink-0" aria-hidden />
@@ -77,22 +127,26 @@ function ColumnHeader({ field }: { field: Field | undefined }) {
             aria-hidden
           />
         )}
-        <span className="truncate text-[11px] font-semibold text-text-secondary font-mono tracking-tight">
+        <span
+          className={`truncate text-[11px] font-semibold font-mono tracking-tight ${
+            isActive ? "text-text-primary" : "text-text-secondary"
+          }`}>
           {field.name}
         </span>
+        <SortIcon col={field.name} sortCol={sortCol} sortDir={sortDir} />
       </div>
       <span
         className={`inline-flex items-center self-start rounded px-1.5 py-0.5 text-[9px] font-bold tracking-wider border font-mono ${badgeStyles[variant]}`}>
         {field.type}
       </span>
-    </div>
+    </button>
   );
 }
 
 const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
   id: "__row_number__",
   header: () => (
-    <span className="text-[10px] font-mono text-text-tertiary/50 select-none">
+    <span className="text-[10px] font-mono text-text-secondary select-none">
       #
     </span>
   ),
@@ -111,6 +165,9 @@ export default function DataGrid({
   rows,
   isLoading,
   isError,
+  sortCol,
+  sortDir,
+  onSort,
 }: DataGridProps) {
   "use no memo";
 
@@ -125,14 +182,21 @@ export default function DataGrid({
       ...columns.map(
         (col): ColumnDef<Record<string, unknown>> => ({
           accessorKey: col,
-          header: () => <ColumnHeader field={fieldMap.get(col)} />,
+          header: () => (
+            <ColumnHeader
+              field={fieldMap.get(col)}
+              sortCol={sortCol}
+              sortDir={sortDir}
+              onSort={onSort}
+            />
+          ),
           size: 200,
           minSize: 80,
           cell: (info) => <CellValue value={info.getValue()} />,
         }),
       ),
     ],
-    [columns, fieldMap],
+    [columns, fieldMap, sortCol, sortDir, onSort],
   );
 
   const table = useReactTable({

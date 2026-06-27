@@ -92,6 +92,8 @@ export default function Explorer() {
   const [searchValue, setSearchValue] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const [sortCol, setSortCol] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
@@ -106,7 +108,14 @@ export default function Explorer() {
     isLoading,
     isError,
     isFetching,
-  } = useTableRows(selectedTable ?? "", !!selectedTable, page, pageSize);
+  } = useTableRows(
+    selectedTable ?? "",
+    !!selectedTable,
+    page,
+    pageSize,
+    sortCol,
+    sortDir,
+  );
 
   const filteredRows = useMemo(() => {
     if (!rowsData) return [];
@@ -126,13 +135,34 @@ export default function Explorer() {
     setSelectedTable(name);
     setSearchValue("");
     setPage(1);
+    setSortCol("");
+    setSortDir("asc");
+  }
+
+  function handleSort(col: string) {
+    if (sortCol !== col) {
+      setSortCol(col);
+      setSortDir("asc");
+    } else if (sortDir === "asc") {
+      setSortDir("desc");
+    } else {
+      setSortCol("");
+      setSortDir("asc");
+    }
+    setPage(1);
   }
 
   function handleRefresh() {
     if (!selectedTable) return;
     qc.invalidateQueries({
-      queryKey: tableRowsQueryOptions(selectedTable, true, page, pageSize)
-        .queryKey,
+      queryKey: tableRowsQueryOptions(
+        selectedTable,
+        true,
+        page,
+        pageSize,
+        sortCol,
+        sortDir,
+      ).queryKey,
     });
   }
 
@@ -166,6 +196,9 @@ export default function Explorer() {
                 rows={filteredRows}
                 isLoading={isLoading}
                 isError={isError}
+                sortCol={sortCol}
+                sortDir={sortDir}
+                onSort={handleSort}
               />
               <Pagination
                 page={page}

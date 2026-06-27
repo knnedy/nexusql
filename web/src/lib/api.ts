@@ -53,9 +53,23 @@ export const api = {
   },
 
   // Table rows — safe SELECT * LIMIT 10
-  rows(tableName: string, page = 1, pageSize = 50): Promise<RowsResponse> {
+  rows(
+    tableName: string,
+    page = 1,
+    pageSize = 50,
+    sortCol = "",
+    sortDir: "asc" | "desc" = "asc",
+  ): Promise<RowsResponse> {
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    });
+    if (sortCol) {
+      params.set("sort", sortCol);
+      params.set("dir", sortDir);
+    }
     return request<RowsResponse>(
-      `/api/rows/${encodeURIComponent(tableName)}?page=${page}&pageSize=${pageSize}`,
+      `/api/rows/${encodeURIComponent(tableName)}?${params.toString()}`,
     );
   },
 
