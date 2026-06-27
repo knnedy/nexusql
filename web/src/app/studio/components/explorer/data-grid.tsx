@@ -27,6 +27,8 @@ interface DataGridProps {
   sortCol: string;
   sortDir: "asc" | "desc";
   onSort: (col: string) => void;
+  selectedRowIndex: number | null;
+  onRowClick: (row: Record<string, unknown>, index: number) => void;
 }
 
 function isNullish(value: unknown): boolean {
@@ -72,7 +74,7 @@ function SortIcon({
     return (
       <ChevronsUpDown
         size={10}
-        className="text-text-tertiary/60 shrink-0 group-hover:text-text-secondary transition-colors"
+        className="text-text-secondary shrink-0 group-hover:text-text-primary transition-colors"
         aria-hidden
       />
     );
@@ -168,6 +170,8 @@ export default function DataGrid({
   sortCol,
   sortDir,
   onSort,
+  selectedRowIndex,
+  onRowClick,
 }: DataGridProps) {
   "use no memo";
 
@@ -282,23 +286,31 @@ export default function DataGrid({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => (
-            <tr
-              key={row.id}
-              className="border-t-[0.5px] border-node-row-border/60 hover:bg-black/2 dark:hover:bg-white/2 transition-colors">
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={`px-3 py-2 overflow-hidden ${
-                    cell.column.id === "__row_number__"
-                      ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
-                      : ""
-                  }`}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {table.getRowModel().rows.map((row) => {
+            const isSelected = selectedRowIndex === row.index;
+            return (
+              <tr
+                key={row.id}
+                onClick={() => onRowClick(row.original, row.index)}
+                className={`border-t-[0.5px] border-node-row-border/60 cursor-pointer transition-colors ${
+                  isSelected
+                    ? "bg-teal/8 dark:bg-teal/10 hover:bg-teal/10 dark:hover:bg-teal/15"
+                    : "hover:bg-black/2 dark:hover:bg-white/2"
+                }`}>
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className={`px-3 py-2 overflow-hidden ${
+                      cell.column.id === "__row_number__"
+                        ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
+                        : ""
+                    }`}>
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

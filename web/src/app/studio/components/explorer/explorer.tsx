@@ -13,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import TableList from "./table-list";
 import DataGrid from "./data-grid";
 import ExplorerToolbar from "./explorer-toolbar";
+import RowDrawer from "./row-drawer";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -94,6 +95,11 @@ export default function Explorer() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [sortCol, setSortCol] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+  const [selectedRow, setSelectedRow] = useState<Record<
+    string,
+    unknown
+  > | null>(null);
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
 
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
@@ -137,6 +143,8 @@ export default function Explorer() {
     setPage(1);
     setSortCol("");
     setSortDir("asc");
+    setSelectedRow(null);
+    setSelectedRowIndex(null);
   }
 
   function handleSort(col: string) {
@@ -150,6 +158,18 @@ export default function Explorer() {
       setSortDir("asc");
     }
     setPage(1);
+    setSelectedRow(null);
+    setSelectedRowIndex(null);
+  }
+
+  function handleRowClick(row: Record<string, unknown>, index: number) {
+    if (selectedRowIndex === index) {
+      setSelectedRow(null);
+      setSelectedRowIndex(null);
+    } else {
+      setSelectedRow(row);
+      setSelectedRowIndex(index);
+    }
   }
 
   function handleRefresh() {
@@ -187,7 +207,7 @@ export default function Explorer() {
           rowCount={rowsData?.total ?? 0}
         />
 
-        <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="relative flex flex-col flex-1 overflow-hidden">
           {selectedTable ? (
             <>
               <DataGrid
@@ -199,6 +219,8 @@ export default function Explorer() {
                 sortCol={sortCol}
                 sortDir={sortDir}
                 onSort={handleSort}
+                selectedRowIndex={selectedRowIndex}
+                onRowClick={handleRowClick}
               />
               <Pagination
                 page={page}
@@ -206,6 +228,15 @@ export default function Explorer() {
                 total={rowsData?.total ?? 0}
                 onPageChange={setPage}
                 onPageSizeChange={setPageSize}
+              />
+              <RowDrawer
+                row={selectedRow}
+                fields={selectedTableFields}
+                rowIndex={selectedRowIndex}
+                onClose={() => {
+                  setSelectedRow(null);
+                  setSelectedRowIndex(null);
+                }}
               />
             </>
           ) : (
