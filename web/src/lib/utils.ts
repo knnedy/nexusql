@@ -1,4 +1,5 @@
 import { parseISO, formatDistanceToNowStrict } from "date-fns";
+import { DatabaseProvider, FieldType } from "./types";
 
 export function formatRelativeTime(iso: string): string {
   if (!iso || typeof iso !== "string") {
@@ -31,4 +32,89 @@ export function formatRelativeTime(iso: string): string {
     console.error("Error formatting relative time:", error);
     return "Unknown date";
   }
+}
+
+export function normalizeFieldType(
+  rawType: string,
+  provider: DatabaseProvider,
+): FieldType {
+  const sanitized = rawType.toLowerCase().trim();
+
+  // Shared Base Mappings across all engines
+  const sharedMap: Record<string, FieldType> = {
+    int: "integer",
+    integer: "integer",
+    bigint: "bigint",
+    smallint: "smallint",
+    tinyint: "smallint",
+    decimal: "numeric",
+    numeric: "numeric",
+    float: "real",
+    double: "double precision",
+    varchar: "varchar",
+    char: "char",
+    text: "text",
+    bool: "boolean",
+    boolean: "boolean",
+    date: "date",
+    time: "time",
+    timestamp: "timestamp",
+    datetime: "timestamp",
+    json: "json",
+    blob: "bytea",
+    clob: "text",
+  };
+
+  if (sharedMap[sanitized]) return sharedMap[sanitized];
+
+  // PostgreSQL Overrides
+  if (provider === "postgres") {
+    const pgMap: Record<string, FieldType> = {
+      int4: "integer",
+      int8: "bigint",
+      int2: "smallint",
+      float4: "real",
+      float8: "double precision",
+      bpchar: "char",
+      "character varying": "varchar",
+      character: "char",
+      "timestamp without time zone": "timestamp",
+      "timestamp with time zone": "timestamptz",
+      "time without time zone": "time",
+    };
+    if (pgMap[sanitized]) return pgMap[sanitized];
+  }
+
+  // MySQL Overrides
+  if (provider === "mysql") {
+    if (sanitized === "tinyint(1)" || sanitized === "tinyint1") {
+      return "boolean";
+    }
+    const mysqlMap: Record<string, FieldType> = {
+      mediumint: "integer",
+      longtext: "text",
+      mediumtext: "text",
+      tinytext: "varchar",
+      longblob: "bytea",
+      mediumblob: "bytea",
+      fixed: "numeric",
+    };
+    if (mysqlMap[sanitized]) return mysqlMap[sanitized];
+  }
+
+  // SQLite Affinity Fallbacks
+  if (provider === "sqlite") {
+    const baseAffinity = sanitized.match(/^[a-z]+/)?.[0] || sanitized;
+    const sqliteMap: Record<string, FieldType> = {
+      int: "integer",
+      integer: "integer",
+      real: "double precision",
+      text: "text",
+      blob: "bytea",
+    };
+    if (sqliteMap[baseAffinity]) return sqliteMap[baseAffinity];
+  }
+
+  // Fallback for custom user domains/extensions
+  return sanitized as FieldType;
 }

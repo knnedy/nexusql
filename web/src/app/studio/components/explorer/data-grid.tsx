@@ -15,8 +15,10 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
-import type { Field } from "@/lib/types";
+import type { DatabaseProvider, Field } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
+import { normalizeFieldType } from "@/lib/utils";
+import { useStudioStore } from "@/lib/store/studio-store";
 
 interface DataGridProps {
   columns: string[];
@@ -88,18 +90,22 @@ function SortIcon({
 
 function ColumnHeader({
   field,
+  provider, // 🌟 Added provider context string
   sortCol,
   sortDir,
   onSort,
 }: {
   field: Field | undefined;
+  provider: DatabaseProvider;
   sortCol: string;
   sortDir: "asc" | "desc";
   onSort: (col: string) => void;
 }) {
   if (!field) return null;
 
-  const variant = FIELD_TYPE_BADGE_MAP[field.type] ?? "gray";
+  // Normalization  handles multi-dialect mappings dynamically
+  const canonicalType = normalizeFieldType(field.type, provider);
+  const variant = FIELD_TYPE_BADGE_MAP[canonicalType] ?? "gray";
   const isActive = sortCol === field.name;
 
   const badgeStyles = {
@@ -175,6 +181,8 @@ export default function DataGrid({
 }: DataGridProps) {
   "use no memo";
 
+  const provider = useStudioStore((s) => s.provider);
+
   const fieldMap = useMemo(
     () => new Map(fields.map((f) => [f.name, f])),
     [fields],
@@ -188,6 +196,7 @@ export default function DataGrid({
           accessorKey: col,
           header: () => (
             <ColumnHeader
+              provider={provider}
               field={fieldMap.get(col)}
               sortCol={sortCol}
               sortDir={sortDir}
@@ -200,7 +209,7 @@ export default function DataGrid({
         }),
       ),
     ],
-    [columns, fieldMap, sortCol, sortDir, onSort],
+    [provider, columns, fieldMap, sortCol, sortDir, onSort],
   );
 
   const table = useReactTable({

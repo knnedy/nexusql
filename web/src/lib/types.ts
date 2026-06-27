@@ -1,5 +1,7 @@
 export type DatabaseProvider = "postgres" | "sqlite" | "mysql";
 
+export type OrmTarget = "prisma" | "drizzle";
+
 export type FieldType =
   // Numeric
   | "serial"
@@ -34,10 +36,8 @@ export type FieldType =
 
 export type BadgeVariant = "teal" | "coral" | "gray";
 
-export type OrmTarget = "prisma" | "drizzle";
-
 // Maps a FieldType to its visual badge variant on the canvas node.
-export const FIELD_TYPE_BADGE_MAP: Record<string, BadgeVariant> = {
+export const FIELD_TYPE_BADGE_MAP: Record<FieldType, BadgeVariant> = {
   // Teal — relational / structural identity types
   serial: "teal",
   bigserial: "teal",

@@ -3,6 +3,8 @@
 import { X, Key, Link, Hash } from "lucide-react";
 import type { Field } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
+import { normalizeFieldType } from "@/lib/utils";
+import { useStudioStore } from "@/lib/store/studio-store";
 
 interface RowDrawerProps {
   row: Record<string, unknown> | null;
@@ -22,7 +24,11 @@ function formatValue(value: unknown): string {
 }
 
 function FieldEntry({ field, value }: { field: Field; value: unknown }) {
-  const variant = FIELD_TYPE_BADGE_MAP[field.type] ?? "gray";
+  const provider = useStudioStore((s) => s.provider);
+
+  // Normalization  handles multi-dialect mappings dynamically
+  const canonicalType = normalizeFieldType(field.type, provider);
+  const variant = FIELD_TYPE_BADGE_MAP[canonicalType] ?? "gray";
   const nullish = isNullish(value);
   const formatted = formatValue(value);
   const isLong = formatted.length > 60;
