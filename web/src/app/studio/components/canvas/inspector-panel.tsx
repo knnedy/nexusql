@@ -18,6 +18,8 @@ import { codeToHtml } from "shiki";
 import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { useSchema } from "@/hooks/use-schema";
+import { useStudioStore } from "@/lib/store/studio-store";
+import { normalizeFieldType } from "@/lib/utils";
 
 interface InspectorPanelProps {
   table: Table | null;
@@ -49,7 +51,11 @@ function NullabilityBadge({ nullable }: { nullable: boolean }) {
 }
 
 function TypeBadge({ type }: { type: string }) {
-  const variant = FIELD_TYPE_BADGE_MAP[type] ?? "gray";
+  const provider = useStudioStore((s) => s.provider);
+
+  const canonicalType = normalizeFieldType(type, provider);
+  const variant = FIELD_TYPE_BADGE_MAP[canonicalType] ?? "gray";
+
   const styles = {
     teal: "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal",
     coral:

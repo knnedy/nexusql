@@ -31,6 +31,8 @@ interface DataGridProps {
   onSort: (col: string) => void;
   selectedRowIndex: number | null;
   onRowClick: (row: Record<string, unknown>, index: number) => void;
+  columnVisibility: Record<string, boolean>;
+  onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
 
 function isNullish(value: unknown): boolean {
@@ -178,6 +180,8 @@ export default function DataGrid({
   onSort,
   selectedRowIndex,
   onRowClick,
+  columnVisibility,
+  onColumnVisibilityChange,
 }: DataGridProps) {
   "use no memo";
 
@@ -218,6 +222,14 @@ export default function DataGrid({
     getCoreRowModel: getCoreRowModel(),
     columnResizeMode: "onChange",
     enableColumnResizing: true,
+    state: {
+      columnVisibility,
+    },
+    onColumnVisibilityChange: (updater) => {
+      const next =
+        typeof updater === "function" ? updater(columnVisibility) : updater;
+      onColumnVisibilityChange(next);
+    },
     defaultColumn: {
       size: 200,
       minSize: 80,
@@ -258,7 +270,7 @@ export default function DataGrid({
         className="text-[11px] font-mono border-collapse table-fixed"
         style={{ width: table.getTotalSize() }}>
         <colgroup>
-          {table.getAllColumns().map((col) => (
+          {table.getVisibleLeafColumns().map((col) => (
             <col key={col.id} style={{ width: col.getSize() }} />
           ))}
         </colgroup>

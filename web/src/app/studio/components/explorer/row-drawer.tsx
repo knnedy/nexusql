@@ -8,7 +8,6 @@ import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { normalizeFieldType } from "@/lib/utils";
 import { useStudioStore } from "@/lib/store/studio-store";
 import { rowLookupQueryOptions } from "@/hooks/use-row-lookup";
-import { api } from "@/lib/api";
 
 interface RowDrawerProps {
   row: Record<string, unknown> | null;

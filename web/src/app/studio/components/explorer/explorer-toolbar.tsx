@@ -1,6 +1,7 @@
 "use client";
 
-import { Database, Search, RotateCw } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { Database, Search, RotateCw, Columns3, Check } from "lucide-react";
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../mode-switcher";
 import DisconnectButton from "../disconnect-button";
@@ -12,6 +13,9 @@ interface ExplorerToolbarProps {
   onSearchChange: (value: string) => void;
   onRefresh: () => void;
   isRefreshing: boolean;
+  columns: string[];
+  columnVisibility: Record<string, boolean>;
+  onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
 
 export default function ExplorerToolbar({
@@ -20,9 +24,45 @@ export default function ExplorerToolbar({
   onSearchChange,
   onRefresh,
   isRefreshing,
+  columns = [],
+  columnVisibility,
+  onColumnVisibilityChange,
 }: ExplorerToolbarProps) {
   const provider = useStudioStore((s) => s.provider);
   const projectName = useStudioStore((s) => s.projectName);
+  const [columnsOpen, setColumnsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!columnsOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(e.target as Node)
+      ) {
+        setColumnsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [columnsOpen]);
+
+  const hiddenCount = columns.filter(
+    (col) => columnVisibility[col] === false,
+  ).length;
+
+  function toggleColumn(col: string) {
+    onColumnVisibilityChange({
+      ...columnVisibility,
+      [col]: columnVisibility[col] === false ? true : false,
+    });
+  }
+
+  function showAll() {
+    const next: Record<string, boolean> = {};
+    columns.forEach((col) => (next[col] = true));
+    onColumnVisibilityChange(next);
+  }
 
   return (
     <div className="flex items-center h-14 px-4 gap-3 border-b border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 shrink-0">
@@ -75,6 +115,71 @@ export default function ExplorerToolbar({
           />
         </button>
       </div>
+
+      {tableSelected && (
+        <div ref={dropdownRef} className="relative">
+          <button
+            onClick={() => setColumnsOpen((o) => !o)}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-lg border text-[11.5px] font-medium transition-colors cursor-pointer bg-transparent ${
+              columnsOpen
+                ? "border-teal/40 text-teal bg-teal/5"
+                : "border-node-border/60 dark:border-node-border/40 text-text-secondary hover:text-text-primary hover:bg-black/2 dark:hover:bg-white/2"
+            }`}>
+            <Columns3 size={13} aria-hidden />
+            <span>Columns</span>
+            {hiddenCount > 0 && (
+              <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-teal text-[9px] font-bold text-white leading-none">
+                {hiddenCount}
+              </span>
+            )}
+          </button>
+
+          {columnsOpen && (
+            <div className="absolute top-full left-0 mt-1.5 w-52 rounded-xl border border-node-border/60 dark:border-node-border/40 bg-node-bg/98 dark:bg-node-bg/99 backdrop-blur-xl shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-node-border/40">
+                <span className="text-[11px] font-semibold text-text-secondary">
+                  Toggle columns
+                </span>
+                {hiddenCount > 0 && (
+                  <button
+                    onClick={showAll}
+                    className="text-[10px] font-medium text-teal hover:text-teal-hover transition-colors border-none bg-transparent cursor-pointer">
+                    Show all
+                  </button>
+                )}
+              </div>
+              <div className="max-h-64 overflow-y-auto py-1">
+                {columns.map((col) => {
+                  const visible = columnVisibility[col] !== false;
+                  return (
+                    <button
+                      key={col}
+                      onClick={() => toggleColumn(col)}
+                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left border-none bg-transparent cursor-pointer hover:bg-black/2 dark:hover:bg-white/2 transition-colors">
+                      <div
+                        className={`w-4 h-4 rounded flex items-center justify-center border shrink-0 transition-colors ${
+                          visible
+                            ? "bg-teal border-teal"
+                            : "border-node-border/60 dark:border-node-border/40"
+                        }`}>
+                        {visible && (
+                          <Check size={10} className="text-white" aria-hidden />
+                        )}
+                      </div>
+                      <span
+                        className={`text-[11.5px] font-mono truncate ${
+                          visible ? "text-text-primary" : "text-text-tertiary"
+                        }`}>
+                        {col}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="flex-1" />
 

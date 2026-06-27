@@ -100,6 +100,9 @@ export default function Explorer() {
     unknown
   > | null>(null);
   const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
+  const [columnVisibility, setColumnVisibility] = useState<
+    Record<string, boolean>
+  >({});
 
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
@@ -145,6 +148,7 @@ export default function Explorer() {
     setSortDir("asc");
     setSelectedRow(null);
     setSelectedRowIndex(null);
+    setColumnVisibility({});
   }
 
   function handleSort(col: string) {
@@ -197,6 +201,9 @@ export default function Explorer() {
         }}
         onRefresh={handleRefresh}
         isRefreshing={isFetching}
+        columns={selectedTableFields.map((f) => f.name)}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={setColumnVisibility}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -221,6 +228,8 @@ export default function Explorer() {
                 onSort={handleSort}
                 selectedRowIndex={selectedRowIndex}
                 onRowClick={handleRowClick}
+                columnVisibility={columnVisibility}
+                onColumnVisibilityChange={setColumnVisibility}
               />
               <Pagination
                 page={page}
