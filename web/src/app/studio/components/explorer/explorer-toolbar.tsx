@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Database, Search, RotateCw, Columns3, Check } from "lucide-react";
+import {
+  Database,
+  Search,
+  RotateCw,
+  Columns3,
+  Check,
+  Download,
+} from "lucide-react";
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../mode-switcher";
 import DisconnectButton from "../disconnect-button";
@@ -16,6 +23,7 @@ interface ExplorerToolbarProps {
   columns: string[];
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
+  onExportCsv: () => void;
 }
 
 export default function ExplorerToolbar({
@@ -27,6 +35,7 @@ export default function ExplorerToolbar({
   columns = [],
   columnVisibility,
   onColumnVisibilityChange,
+  onExportCsv,
 }: ExplorerToolbarProps) {
   const provider = useStudioStore((s) => s.provider);
   const projectName = useStudioStore((s) => s.projectName);
@@ -179,6 +188,15 @@ export default function ExplorerToolbar({
             </div>
           )}
         </div>
+      )}
+
+      {tableSelected && (
+        <button
+          onClick={onExportCsv}
+          className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-node-border/60 dark:border-node-border/40 text-[11.5px] font-medium text-text-secondary hover:text-text-primary hover:bg-black/2 dark:hover:bg-white/2 transition-colors cursor-pointer bg-transparent">
+          <Download size={13} aria-hidden />
+          <span>Export CSV</span>
+        </button>
       )}
 
       <div className="flex-1" />

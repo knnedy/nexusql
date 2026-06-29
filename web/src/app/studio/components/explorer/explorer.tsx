@@ -14,6 +14,7 @@ import TableList from "./table-list";
 import DataGrid from "./data-grid";
 import ExplorerToolbar from "./explorer-toolbar";
 import RowDrawer from "./row-drawer";
+import { exportToCsv } from "@/lib/utils";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -190,6 +191,16 @@ export default function Explorer() {
     });
   }
 
+  function handleExportCsv() {
+    if (!selectedTable || !rowsData) return;
+    exportToCsv(
+      selectedTable,
+      rowsData.columns,
+      filteredRows,
+      columnVisibility,
+    );
+  }
+
   return (
     <div className="w-full h-full flex flex-col bg-canvas-bg">
       <ExplorerToolbar
@@ -204,6 +215,7 @@ export default function Explorer() {
         columns={selectedTableFields.map((f) => f.name)}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
+        onExportCsv={handleExportCsv}
       />
 
       <div className="flex flex-1 overflow-hidden">
