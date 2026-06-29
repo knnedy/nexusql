@@ -18,6 +18,7 @@ type rowsResponse struct {
 	PageSize  int              `json:"pageSize"`
 	SortCol   string           `json:"sortCol"`
 	SortDir   string           `json:"sortDir"`
+	Search    string           `json:"search"`
 }
 
 type lookupResponse struct {
@@ -85,9 +86,11 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		sortDir = db.SortDesc
 	}
 
+	search := r.URL.Query().Get("search")
+
 	offset := (page - 1) * pageSize
 
-	columns, rows, total, err := db.FetchRows(r.Context(), conn, tableName, pageSize, offset, sortCol, sortDir)
+	columns, rows, total, err := db.FetchRows(r.Context(), conn, tableName, pageSize, offset, sortCol, sortDir, search)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -102,6 +105,7 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		PageSize:  pageSize,
 		SortCol:   sortCol,
 		SortDir:   string(sortDir),
+		Search:    search,
 	})
 }
 
