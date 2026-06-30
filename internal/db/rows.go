@@ -51,7 +51,7 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 		query += fmt.Sprintf(" ORDER BY %s %s", pgx.Identifier{sortCol}.Sanitize(), dir)
 	}
 
-	query += fmt.Sprintf(" LIMIT $1 OFFSET $2")
+	query += " LIMIT $1 OFFSET $2"
 
 	rows, err := conn.Pool.Query(ctx, query, args...)
 	if err != nil {

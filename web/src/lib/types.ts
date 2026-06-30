@@ -150,6 +150,7 @@ export interface RowsResponse {
   pageSize: number;
   sortCol: string;
   sortDir: "asc" | "desc";
+  search: string;
 }
 
 export interface LookupResponse {

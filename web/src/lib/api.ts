@@ -53,6 +53,7 @@ export const api = {
     pageSize = 50,
     sortCol = "",
     sortDir: "asc" | "desc" = "asc",
+    search = "",
   ): Promise<RowsResponse> {
     const params = new URLSearchParams({
       page: String(page),
@@ -61,6 +62,9 @@ export const api = {
     if (sortCol) {
       params.set("sort", sortCol);
       params.set("dir", sortDir);
+    }
+    if (search) {
+      params.set("search", search);
     }
     return request<RowsResponse>(
       `/api/rows/${encodeURIComponent(tableName)}?${params.toString()}`,

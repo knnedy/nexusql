@@ -10,10 +10,12 @@ export function tableRowsQueryOptions(
   pageSize: number = DEFAULT_PAGE_SIZE,
   sortCol: string = "",
   sortDir: "asc" | "desc" = "asc",
+  search: string = "",
 ) {
   return queryOptions({
-    queryKey: ["rows", tableName, page, pageSize, sortCol, sortDir],
-    queryFn: () => api.rows(tableName, page, pageSize, sortCol, sortDir),
+    queryKey: ["rows", tableName, page, pageSize, sortCol, sortDir, search],
+    queryFn: () =>
+      api.rows(tableName, page, pageSize, sortCol, sortDir, search),
     enabled: enabled && !!tableName,
     staleTime: Infinity,
   });
@@ -26,8 +28,17 @@ export function useTableRows(
   pageSize: number = DEFAULT_PAGE_SIZE,
   sortCol: string = "",
   sortDir: "asc" | "desc" = "asc",
+  search: string = "",
 ) {
   return useQuery(
-    tableRowsQueryOptions(tableName, enabled, page, pageSize, sortCol, sortDir),
+    tableRowsQueryOptions(
+      tableName,
+      enabled,
+      page,
+      pageSize,
+      sortCol,
+      sortDir,
+      search,
+    ),
   );
 }
