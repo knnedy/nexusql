@@ -9,12 +9,13 @@ import {
   tableRowsQueryOptions,
   DEFAULT_PAGE_SIZE,
 } from "@/hooks/use-table-rows";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
+import { exportToCsv } from "@/lib/utils";
 import TableList from "./table-list";
 import DataGrid from "./data-grid";
 import ExplorerToolbar from "./explorer-toolbar";
 import RowDrawer from "./row-drawer";
-import { exportToCsv } from "@/lib/utils";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -105,6 +106,8 @@ export default function Explorer() {
     Record<string, boolean>
   >({});
 
+  const debouncedSearch = useDebouncedValue(searchValue, 300);
+
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
 
@@ -125,21 +128,8 @@ export default function Explorer() {
     pageSize,
     sortCol,
     sortDir,
+    debouncedSearch,
   );
-
-  const filteredRows = useMemo(() => {
-    if (!rowsData) return [];
-    if (!searchValue.trim()) return rowsData.rows;
-
-    const needle = searchValue.toLowerCase();
-    return rowsData.rows.filter((row) =>
-      Object.values(row).some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(needle),
-      ),
-    );
-  }, [rowsData, searchValue]);
 
   function handleSelectTable(name: string) {
     setSelectedTable(name);
@@ -187,6 +177,7 @@ export default function Explorer() {
         pageSize,
         sortCol,
         sortDir,
+        debouncedSearch,
       ).queryKey,
     });
   }
@@ -196,7 +187,7 @@ export default function Explorer() {
     exportToCsv(
       selectedTable,
       rowsData.columns,
-      filteredRows,
+      rowsData.rows,
       columnVisibility,
     );
   }
@@ -232,7 +223,7 @@ export default function Explorer() {
               <DataGrid
                 columns={rowsData?.columns ?? []}
                 fields={selectedTableFields}
-                rows={filteredRows}
+                rows={rowsData?.rows ?? []}
                 isLoading={isLoading}
                 isError={isError}
                 sortCol={sortCol}
