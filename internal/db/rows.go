@@ -22,22 +22,20 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 	}
 
 	whereClause := ""
-	args := []any{limit, offset}
+	searchArgs := []any{}
 
 	if search != "" && len(searchCols) > 0 {
 		conditions := make([]string, len(searchCols))
 		for i, col := range searchCols {
-			argIdx := len(args) + 1
-			conditions[i] = fmt.Sprintf("%s::text ILIKE $%d", pgx.Identifier{col}.Sanitize(), argIdx)
-			args = append(args, "%"+search+"%")
+			conditions[i] = fmt.Sprintf("%s::text ILIKE $%d", pgx.Identifier{col}.Sanitize(), i+1)
+			searchArgs = append(searchArgs, "%"+search+"%")
 		}
 		whereClause = " WHERE " + strings.Join(conditions, " OR ")
 	}
 
 	var total int64
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %q%s", tableName, whereClause)
-	countArgs := args[2:]
-	if err := conn.Pool.QueryRow(ctx, countQuery, countArgs...).Scan(&total); err != nil {
+	if err := conn.Pool.QueryRow(ctx, countQuery, searchArgs...).Scan(&total); err != nil {
 		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
 	}
 
@@ -51,9 +49,12 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 		query += fmt.Sprintf(" ORDER BY %s %s", pgx.Identifier{sortCol}.Sanitize(), dir)
 	}
 
-	query += " LIMIT $1 OFFSET $2"
+	nextParam := len(searchArgs) + 1
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", nextParam, nextParam+1)
 
-	rows, err := conn.Pool.Query(ctx, query, args...)
+	dataArgs := append(searchArgs, limit, offset)
+
+	rows, err := conn.Pool.Query(ctx, query, dataArgs...)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("query rows: %w", err)
 	}
