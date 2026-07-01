@@ -7,6 +7,7 @@ import { useQuery, queryOptions } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { useTheme } from "next-themes";
 import Image from "next/image";
+import { QUERY_KEYS } from "@/lib/query-keys";
 
 interface ExportPreviewDrawerProps {
   type: "png" | "prisma" | "drizzle" | null;
@@ -22,7 +23,7 @@ const exportQueryOptions = (
   enabled: boolean,
 ) =>
   queryOptions({
-    queryKey: ["export", type],
+    queryKey: [QUERY_KEYS.export, type],
     queryFn: () =>
       type === "prisma" ? api.export.prisma() : api.export.drizzle(),
     enabled: enabled && !!type && type !== "png",
