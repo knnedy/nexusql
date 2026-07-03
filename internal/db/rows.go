@@ -201,3 +201,40 @@ func GetTableColumns(ctx context.Context, conn *Connection, tableName string) ([
 	}
 	return cols, rows.Err()
 }
+
+func UpdateRow(ctx context.Context, conn *Connection, tableName, pkField, pkValue, targetField, newValue string) error {
+	validCols, err := GetTableColumns(ctx, conn, tableName)
+	if err != nil {
+		return fmt.Errorf("validate columns: %w", err)
+	}
+
+	colSet := make(map[string]bool, len(validCols))
+	for _, col := range validCols {
+		colSet[col] = true
+	}
+
+	if !colSet[pkField] {
+		return fmt.Errorf("invalid pk field: %s", pkField)
+	}
+	if !colSet[targetField] {
+		return fmt.Errorf("invalid target field: %s", targetField)
+	}
+
+	query := fmt.Sprintf(
+		"UPDATE %s SET %s = $1 WHERE %s = $2",
+		pgx.Identifier{tableName}.Sanitize(),
+		pgx.Identifier{targetField}.Sanitize(),
+		pgx.Identifier{pkField}.Sanitize(),
+	)
+
+	tag, err := conn.Pool.Exec(ctx, query, newValue, pkValue)
+	if err != nil {
+		return fmt.Errorf("update row: %w", err)
+	}
+
+	if tag.RowsAffected() == 0 {
+		return fmt.Errorf("no row found with %s = %s", pkField, pkValue)
+	}
+
+	return nil
+}

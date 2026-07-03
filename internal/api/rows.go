@@ -29,6 +29,13 @@ type lookupResponse struct {
 	Rows      []map[string]any `json:"rows"`
 }
 
+type updateRowRequest struct {
+	PKField     string `json:"pkField"`
+	PKValue     string `json:"pkValue"`
+	TargetField string `json:"targetField"`
+	NewValue    string `json:"newValue"`
+}
+
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 	conn, err := h.session.Get()
 	if err == session.ErrNoActiveConnection {
@@ -147,4 +154,40 @@ func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
 		Columns:   columns,
 		Rows:      rows,
 	})
+}
+
+func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
+	conn, err := h.session.Get()
+	if err == session.ErrNoActiveConnection {
+		writeError(w, http.StatusUnauthorized, err.Error())
+		return
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	tableName := chi.URLParam(r, "tableName")
+	if tableName == "" {
+		writeError(w, http.StatusBadRequest, "tableName is required")
+		return
+	}
+
+	var req updateRowRequest
+	if err := readJSON(r, &req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.PKField == "" || req.PKValue == "" || req.TargetField == "" {
+		writeError(w, http.StatusBadRequest, "pkField, pkValue and targetField are required")
+		return
+	}
+
+	if err := db.UpdateRow(r.Context(), conn, tableName, req.PKField, req.PKValue, req.TargetField, req.NewValue); err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }
