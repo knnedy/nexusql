@@ -118,6 +118,11 @@ export interface Relation {
   targetField: string;
 }
 
+export interface EnumType {
+  name: string;
+  values: string[];
+}
+
 // API response shapes
 export interface HealthResponse {
   status: "ok";
@@ -139,6 +144,7 @@ export interface ConnectResponse {
 export interface SchemaResponse {
   tables: Table[];
   relations: Relation[];
+  enums: EnumType[];
 }
 
 export interface RowsResponse {
