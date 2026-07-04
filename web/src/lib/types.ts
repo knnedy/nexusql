@@ -161,6 +161,17 @@ export interface LookupResponse {
   rows: Record<string, unknown>[];
 }
 
+export interface UpdateRowRequest {
+  pkField: string;
+  pkValue: string;
+  targetField: string;
+  newValue: string;
+}
+
+export interface UpdateRowResponse {
+  ok: boolean;
+}
+
 // Project
 export interface Project {
   id: string;
