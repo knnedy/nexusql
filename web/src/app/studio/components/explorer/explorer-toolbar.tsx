@@ -8,6 +8,9 @@ import {
   Columns3,
   Check,
   Download,
+  Save,
+  X,
+  Loader2,
 } from "lucide-react";
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../mode-switcher";
@@ -24,6 +27,10 @@ interface ExplorerToolbarProps {
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
   onExportCsv: () => void;
+  pendingEditsCount: number;
+  isSaving: boolean;
+  onSaveChanges: () => void;
+  onDiscardChanges: () => void;
 }
 
 export default function ExplorerToolbar({
@@ -36,6 +43,10 @@ export default function ExplorerToolbar({
   columnVisibility,
   onColumnVisibilityChange,
   onExportCsv,
+  pendingEditsCount,
+  isSaving,
+  onSaveChanges,
+  onDiscardChanges,
 }: ExplorerToolbarProps) {
   const provider = useStudioStore((s) => s.provider);
   const projectName = useStudioStore((s) => s.projectName);
@@ -59,6 +70,8 @@ export default function ExplorerToolbar({
   const hiddenCount = columns.filter(
     (col) => columnVisibility[col] === false,
   ).length;
+
+  const hasPendingEdits = pendingEditsCount > 0;
 
   function toggleColumn(col: string) {
     onColumnVisibilityChange({
@@ -200,6 +213,36 @@ export default function ExplorerToolbar({
       )}
 
       <div className="flex-1" />
+
+      {hasPendingEdits && (
+        <div className="flex items-center gap-2 pr-1 animate-in fade-in slide-in-from-top-1 duration-150">
+          <span className="flex items-center gap-1.5 h-9 px-3 rounded-lg bg-coral/10 dark:bg-coral/15 border border-coral/20 text-[11px] font-mono font-semibold text-coral">
+            <span className="w-1.5 h-1.5 rounded-full bg-coral shrink-0" />
+            {pendingEditsCount} unsaved{" "}
+            {pendingEditsCount === 1 ? "change" : "changes"}
+          </span>
+
+          <button
+            onClick={onDiscardChanges}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 h-9 px-3 rounded-lg border border-node-border/60 dark:border-node-border/40 text-[11.5px] font-medium text-text-secondary hover:text-text-primary hover:bg-black/2 dark:hover:bg-white/2 transition-colors cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed">
+            <X size={13} aria-hidden />
+            <span>Discard</span>
+          </button>
+
+          <button
+            onClick={onSaveChanges}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 h-9 px-3.5 rounded-lg bg-coral text-white text-[11.5px] font-semibold hover:bg-coral/90 transition-colors cursor-pointer border-none disabled:opacity-60 disabled:cursor-not-allowed">
+            {isSaving ? (
+              <Loader2 size={13} className="animate-spin" aria-hidden />
+            ) : (
+              <Save size={13} aria-hidden />
+            )}
+            <span>{isSaving ? "Saving…" : "Save changes"}</span>
+          </button>
+        </div>
+      )}
 
       <ThemeToggle className="w-9 h-9 rounded-lg hover:bg-black/2 dark:hover:bg-white/2" />
 

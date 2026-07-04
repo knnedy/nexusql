@@ -5,8 +5,9 @@ import {
   getCoreRowModel,
   flexRender,
   type ColumnDef,
+  type Row,
 } from "@tanstack/react-table";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   Key,
   Link,
@@ -15,20 +16,43 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
-import type { DatabaseProvider, Field } from "@/lib/types";
+import type { DatabaseProvider, EnumType, Field } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { normalizeFieldType } from "@/lib/utils";
 import { useStudioStore } from "@/lib/store/studio-store";
 
+export interface PendingEdit {
+  pkField: string;
+  pkValue: string;
+  targetField: string;
+  newValue: string;
+  originalValue: unknown;
+}
+
+export interface CellEditPayload {
+  pkField: string;
+  pkValue: string;
+  targetField: string;
+  newValue: string;
+  originalValue: unknown;
+}
+
+export function buildEditKey(pkValue: string, targetField: string): string {
+  return `${pkValue}::${targetField}`;
+}
+
 interface DataGridProps {
   columns: string[];
   fields: Field[];
+  enums: EnumType[];
   rows: Record<string, unknown>[];
   isLoading: boolean;
   isError: boolean;
   sortCol: string;
   sortDir: "asc" | "desc";
   onSort: (col: string) => void;
+  pendingEdits: Map<string, PendingEdit>;
+  onCellEdit: (edit: CellEditPayload) => void;
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
@@ -43,40 +67,117 @@ function formatCellValue(value: unknown): string {
   return String(value);
 }
 
-function CellValue({
-  value,
-  isForeignKey,
-}: {
+interface EditableCellProps {
   value: unknown;
-  isForeignKey?: boolean;
-}) {
-  if (isNullish(value)) {
+  field: Field;
+  enumValues: string[] | null;
+  canEdit: boolean;
+  isEditing: boolean;
+  isPending: boolean;
+  pendingValue: string | undefined;
+  onStartEdit: () => void;
+  onCommit: (newValue: string) => void;
+  onCancel: () => void;
+}
+
+function EditableCell({
+  value,
+  field,
+  enumValues,
+  canEdit,
+  isEditing,
+  isPending,
+  pendingValue,
+  onStartEdit,
+  onCommit,
+  onCancel,
+}: EditableCellProps) {
+  const initialValue = isPending
+    ? (pendingValue ?? "")
+    : formatCellValue(value);
+  const [localValue, setLocalValue] = useState(initialValue);
+  const suppressBlurRef = useRef(false);
+
+  if (isEditing) {
+    if (enumValues) {
+      return (
+        <select
+          autoFocus
+          defaultValue={localValue}
+          onChange={(e) => onCommit(e.target.value)}
+          onBlur={onCancel}
+          className="w-full h-6 rounded border border-teal bg-node-bg text-[11px] font-mono text-text-primary px-1 outline-none ring-1 ring-teal/40">
+          {field.nullable && <option value="">null</option>}
+          {enumValues.map((v) => (
+            <option key={v} value={v}>
+              {v}
+            </option>
+          ))}
+        </select>
+      );
+    }
+
     return (
-      <div className="group flex items-center justify-between gap-1.5 min-w-0">
-        <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
-          null
-        </span>
-        {isForeignKey && (
-          <Link
-            size={11}
-            className="text-teal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-            aria-hidden
-          />
-        )}
-      </div>
+      <input
+        autoFocus
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onFocus={(e) => e.currentTarget.select()}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            suppressBlurRef.current = true;
+            onCommit(localValue);
+          } else if (e.key === "Escape") {
+            suppressBlurRef.current = true;
+            onCancel();
+          }
+        }}
+        onBlur={() => {
+          if (suppressBlurRef.current) {
+            suppressBlurRef.current = false;
+            return;
+          }
+          onCommit(localValue);
+        }}
+        className="w-full h-6 rounded border border-teal bg-node-bg text-[11px] font-mono text-text-primary px-1 outline-none ring-1 ring-teal/40"
+      />
     );
   }
 
-  const formatted = formatCellValue(value);
+  const displayValue = isPending
+    ? (pendingValue ?? "")
+    : formatCellValue(value);
+  const isDisplayNull = !isPending && isNullish(value);
 
   return (
-    <div className="group flex items-center justify-between gap-1.5 min-w-0">
-      <span
-        title={formatted}
-        className="block truncate font-mono text-[11px] text-text-secondary/90">
-        {formatted}
-      </span>
-      {isForeignKey && (
+    <div
+      onDoubleClick={canEdit ? onStartEdit : undefined}
+      className={`group flex items-center justify-between gap-1.5 min-w-0 ${
+        canEdit ? "cursor-text" : ""
+      }`}>
+      <div className="flex items-center gap-1.5 min-w-0">
+        {isPending && (
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-coral shrink-0"
+            title="Unsaved change"
+            aria-hidden
+          />
+        )}
+        {isDisplayNull ? (
+          <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
+            null
+          </span>
+        ) : (
+          <span
+            title={displayValue}
+            className={`block truncate font-mono text-[11px] ${
+              isPending ? "text-coral font-semibold" : "text-text-secondary/90"
+            }`}>
+            {displayValue}
+          </span>
+        )}
+      </div>
+      {field.isForeignKey && (
         <Link
           size={11}
           className="text-teal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
@@ -193,34 +294,52 @@ const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
 export default function DataGrid({
   columns,
   fields,
+  enums,
   rows,
   isLoading,
   isError,
   sortCol,
   sortDir,
   onSort,
+  pendingEdits,
+  onCellEdit,
   columnVisibility,
   onColumnVisibilityChange,
 }: DataGridProps) {
   "use no memo";
 
   const provider = useStudioStore((s) => s.provider);
+  const [editingCell, setEditingCell] = useState<{
+    rowId: string;
+    columnId: string;
+  } | null>(null);
 
   const fieldMap = useMemo(
     () => new Map(fields.map((f) => [f.name, f])),
     [fields],
   );
 
+  const enumMap = useMemo(
+    () => new Map(enums.map((e) => [e.name, e])),
+    [enums],
+  );
+
+  const pkField = useMemo(() => fields.find((f) => f.isPrimaryKey), [fields]);
+
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () => [
       ROW_NUMBER_COLUMN,
-      ...columns.map(
-        (col): ColumnDef<Record<string, unknown>> => ({
+      ...columns.map((col): ColumnDef<Record<string, unknown>> => {
+        const field = fieldMap.get(col);
+        const enumType = field ? enumMap.get(field.type) : undefined;
+        const canEdit = !!field && !!pkField && !field.isPrimaryKey;
+
+        return {
           accessorKey: col,
           header: () => (
             <ColumnHeader
               provider={provider}
-              field={fieldMap.get(col)}
+              field={field}
               sortCol={sortCol}
               sortDir={sortDir}
               onSort={onSort}
@@ -228,16 +347,70 @@ export default function DataGrid({
           ),
           size: 200,
           minSize: 80,
-          cell: (info) => (
-            <CellValue
-              value={info.getValue()}
-              isForeignKey={fieldMap.get(col)?.isForeignKey}
-            />
-          ),
-        }),
-      ),
+          cell: (info) => {
+            if (!field) {
+              return (
+                <span className="font-mono text-[11px]">
+                  {formatCellValue(info.getValue())}
+                </span>
+              );
+            }
+
+            const row = info.row as Row<Record<string, unknown>>;
+            const isEditing =
+              editingCell?.rowId === row.id && editingCell?.columnId === col;
+
+            const pkValue = pkField
+              ? String(row.original[pkField.name] ?? "")
+              : "";
+            const editKey = pkValue ? buildEditKey(pkValue, col) : "";
+            const pending = editKey ? pendingEdits.get(editKey) : undefined;
+
+            return (
+              <EditableCell
+                key={isEditing ? "editing" : "display"}
+                value={info.getValue()}
+                field={field}
+                enumValues={enumType ? enumType.values : null}
+                canEdit={canEdit}
+                isEditing={isEditing}
+                isPending={!!pending}
+                pendingValue={pending?.newValue}
+                onStartEdit={() =>
+                  setEditingCell({ rowId: row.id, columnId: col })
+                }
+                onCancel={() => setEditingCell(null)}
+                onCommit={(newValue) => {
+                  if (!pkField) return;
+                  const originalValue = row.original[col];
+                  onCellEdit({
+                    pkField: pkField.name,
+                    pkValue,
+                    targetField: col,
+                    newValue,
+                    originalValue,
+                  });
+                  setEditingCell(null);
+                }}
+              />
+            );
+          },
+        };
+      }),
     ],
-    [provider, columns, fieldMap, sortCol, sortDir, onSort],
+    [
+      provider,
+      columns,
+      fieldMap,
+      enumMap,
+      pkField,
+      sortCol,
+      sortDir,
+      onSort,
+      editingCell,
+      pendingEdits,
+      onCellEdit,
+    ],
   );
 
   const table = useReactTable({

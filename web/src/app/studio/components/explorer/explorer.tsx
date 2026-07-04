@@ -9,11 +9,16 @@ import {
   tableRowsQueryOptions,
   DEFAULT_PAGE_SIZE,
 } from "@/hooks/use-table-rows";
+import { useUpdateRow } from "@/hooks/use-update-row";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
 import { exportToCsv } from "@/lib/utils";
 import TableList from "./table-list";
-import DataGrid from "./data-grid";
+import DataGrid, {
+  buildEditKey,
+  type PendingEdit,
+  type CellEditPayload,
+} from "./data-grid";
 import ExplorerToolbar from "./explorer-toolbar";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
@@ -99,6 +104,10 @@ export default function Explorer() {
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({});
+  const [pendingEdits, setPendingEdits] = useState<Map<string, PendingEdit>>(
+    new Map(),
+  );
+  const [isSaving, setIsSaving] = useState(false);
 
   const debouncedSearch = useDebouncedValue(searchValue, 300);
 
@@ -125,6 +134,8 @@ export default function Explorer() {
     debouncedSearch,
   );
 
+  const updateRow = useUpdateRow(selectedTable ?? "");
+
   function handleSelectTable(name: string) {
     setSelectedTable(name);
     setSearchValue("");
@@ -132,6 +143,7 @@ export default function Explorer() {
     setSortCol("");
     setSortDir("asc");
     setColumnVisibility({});
+    setPendingEdits(new Map());
   }
 
   function handleSort(col: string) {
@@ -172,6 +184,63 @@ export default function Explorer() {
     );
   }
 
+  function handleCellEdit(edit: CellEditPayload) {
+    const key = buildEditKey(edit.pkValue, edit.targetField);
+
+    setPendingEdits((prev) => {
+      const next = new Map(prev);
+
+      if (edit.newValue === String(edit.originalValue ?? "")) {
+        next.delete(key);
+        return next;
+      }
+
+      next.set(key, {
+        pkField: edit.pkField,
+        pkValue: edit.pkValue,
+        targetField: edit.targetField,
+        newValue: edit.newValue,
+        originalValue: edit.originalValue,
+      });
+      return next;
+    });
+  }
+
+  async function handleSaveChanges() {
+    if (!selectedTable || pendingEdits.size === 0) return;
+
+    setIsSaving(true);
+    const failedKeys: string[] = [];
+
+    for (const [key, edit] of pendingEdits) {
+      try {
+        await updateRow.mutateAsync({
+          pkField: edit.pkField,
+          pkValue: edit.pkValue,
+          targetField: edit.targetField,
+          newValue: edit.newValue,
+        });
+      } catch {
+        failedKeys.push(key);
+      }
+    }
+
+    setPendingEdits((prev) => {
+      const next = new Map<string, PendingEdit>();
+      for (const key of failedKeys) {
+        const edit = prev.get(key);
+        if (edit) next.set(key, edit);
+      }
+      return next;
+    });
+
+    setIsSaving(false);
+  }
+
+  function handleDiscardChanges() {
+    setPendingEdits(new Map());
+  }
+
   return (
     <div className="w-full h-full flex flex-col bg-canvas-bg">
       <ExplorerToolbar
@@ -187,6 +256,10 @@ export default function Explorer() {
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
         onExportCsv={handleExportCsv}
+        pendingEditsCount={pendingEdits.size}
+        isSaving={isSaving}
+        onSaveChanges={handleSaveChanges}
+        onDiscardChanges={handleDiscardChanges}
       />
 
       <div className="flex flex-1 overflow-hidden">
@@ -203,12 +276,15 @@ export default function Explorer() {
               <DataGrid
                 columns={rowsData?.columns ?? []}
                 fields={selectedTableFields}
+                enums={schema?.enums ?? []}
                 rows={rowsData?.rows ?? []}
                 isLoading={isLoading}
                 isError={isError}
                 sortCol={sortCol}
                 sortDir={sortDir}
                 onSort={handleSort}
+                pendingEdits={pendingEdits}
+                onCellEdit={handleCellEdit}
                 columnVisibility={columnVisibility}
                 onColumnVisibilityChange={setColumnVisibility}
               />
