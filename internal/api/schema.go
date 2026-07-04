@@ -10,6 +10,7 @@ import (
 type schemaResponse struct {
 	Tables    []db.Table    `json:"tables"`
 	Relations []db.Relation `json:"relations"`
+	Enums     []db.EnumType `json:"enums"`
 }
 
 func (h *handler) handleSchema(w http.ResponseWriter, r *http.Request) {
@@ -37,5 +38,6 @@ func (h *handler) handleSchema(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, schemaResponse{
 		Tables:    result.Tables,
 		Relations: result.Relations,
+		Enums:     result.Enums,
 	})
 }
