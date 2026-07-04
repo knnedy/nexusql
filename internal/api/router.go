@@ -43,6 +43,7 @@ func Router(sess *session.Store, proj projects.Store, isDev bool) *chi.Mux {
 
 	r.Get("/rows/{tableName}", h.handleRows)
 	r.Get("/rows/{tableName}/lookup", h.handleRowLookup)
+	r.Patch("/rows/{tableName}", h.handleUpdateRow)
 
 	r.Get("/export/prisma", h.handleExportPrisma)
 	r.Get("/export/drizzle", h.handleExportDrizzle)
