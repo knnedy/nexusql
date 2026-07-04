@@ -9,6 +9,8 @@ import type {
   ProjectsResponse,
   RowsResponse,
   SchemaResponse,
+  UpdateRowRequest,
+  UpdateRowResponse,
 } from "./types";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -79,6 +81,19 @@ export const api = {
     const params = new URLSearchParams({ field, value });
     return request<LookupResponse>(
       `/api/rows/${encodeURIComponent(tableName)}/lookup?${params.toString()}`,
+    );
+  },
+
+  updateRow(
+    tableName: string,
+    body: UpdateRowRequest,
+  ): Promise<UpdateRowResponse> {
+    return request<UpdateRowResponse>(
+      `/api/rows/${encodeURIComponent(tableName)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      },
     );
   },
 
