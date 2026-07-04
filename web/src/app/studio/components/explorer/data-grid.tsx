@@ -29,8 +29,6 @@ interface DataGridProps {
   sortCol: string;
   sortDir: "asc" | "desc";
   onSort: (col: string) => void;
-  selectedRowIndex: number | null;
-  onRowClick: (row: Record<string, unknown>, index: number) => void;
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
@@ -45,23 +43,47 @@ function formatCellValue(value: unknown): string {
   return String(value);
 }
 
-function CellValue({ value }: { value: unknown }) {
+function CellValue({
+  value,
+  isForeignKey,
+}: {
+  value: unknown;
+  isForeignKey?: boolean;
+}) {
   if (isNullish(value)) {
     return (
-      <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
-        null
-      </span>
+      <div className="group flex items-center justify-between gap-1.5 min-w-0">
+        <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
+          null
+        </span>
+        {isForeignKey && (
+          <Link
+            size={11}
+            className="text-teal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+            aria-hidden
+          />
+        )}
+      </div>
     );
   }
 
   const formatted = formatCellValue(value);
 
   return (
-    <span
-      title={formatted}
-      className="block truncate font-mono text-[11px] text-text-secondary/90">
-      {formatted}
-    </span>
+    <div className="group flex items-center justify-between gap-1.5 min-w-0">
+      <span
+        title={formatted}
+        className="block truncate font-mono text-[11px] text-text-secondary/90">
+        {formatted}
+      </span>
+      {isForeignKey && (
+        <Link
+          size={11}
+          className="text-teal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
+          aria-hidden
+        />
+      )}
+    </div>
   );
 }
 
@@ -92,7 +114,7 @@ function SortIcon({
 
 function ColumnHeader({
   field,
-  provider, // 🌟 Added provider context string
+  provider,
   sortCol,
   sortDir,
   onSort,
@@ -105,7 +127,6 @@ function ColumnHeader({
 }) {
   if (!field) return null;
 
-  // Normalization  handles multi-dialect mappings dynamically
   const canonicalType = normalizeFieldType(field.type, provider);
   const variant = FIELD_TYPE_BADGE_MAP[canonicalType] ?? "gray";
   const isActive = sortCol === field.name;
@@ -178,8 +199,6 @@ export default function DataGrid({
   sortCol,
   sortDir,
   onSort,
-  selectedRowIndex,
-  onRowClick,
   columnVisibility,
   onColumnVisibilityChange,
 }: DataGridProps) {
@@ -209,7 +228,12 @@ export default function DataGrid({
           ),
           size: 200,
           minSize: 80,
-          cell: (info) => <CellValue value={info.getValue()} />,
+          cell: (info) => (
+            <CellValue
+              value={info.getValue()}
+              isForeignKey={fieldMap.get(col)?.isForeignKey}
+            />
+          ),
         }),
       ),
     ],
@@ -307,31 +331,23 @@ export default function DataGrid({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.map((row) => {
-            const isSelected = selectedRowIndex === row.index;
-            return (
-              <tr
-                key={row.id}
-                onClick={() => onRowClick(row.original, row.index)}
-                className={`border-t-[0.5px] border-node-row-border/60 cursor-pointer transition-colors ${
-                  isSelected
-                    ? "bg-teal/8 dark:bg-teal/10 hover:bg-teal/10 dark:hover:bg-teal/15"
-                    : "hover:bg-black/2 dark:hover:bg-white/2"
-                }`}>
-                {row.getVisibleCells().map((cell) => (
-                  <td
-                    key={cell.id}
-                    className={`px-3 py-2 overflow-hidden ${
-                      cell.column.id === "__row_number__"
-                        ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
-                        : ""
-                    }`}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
+          {table.getRowModel().rows.map((row) => (
+            <tr
+              key={row.id}
+              className="border-t-[0.5px] border-node-row-border/60 transition-colors hover:bg-black/2 dark:hover:bg-white/2">
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className={`px-3 py-2 overflow-hidden ${
+                    cell.column.id === "__row_number__"
+                      ? "bg-node-header-bg/40 border-r border-node-border/40 dark:border-node-border/20"
+                      : ""
+                  }`}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>
