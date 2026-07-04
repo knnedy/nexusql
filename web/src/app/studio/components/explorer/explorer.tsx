@@ -15,7 +15,6 @@ import { exportToCsv } from "@/lib/utils";
 import TableList from "./table-list";
 import DataGrid from "./data-grid";
 import ExplorerToolbar from "./explorer-toolbar";
-import RowDrawer from "./row-drawer";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -97,11 +96,6 @@ export default function Explorer() {
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
   const [sortCol, setSortCol] = useState("");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
-  const [selectedRow, setSelectedRow] = useState<Record<
-    string,
-    unknown
-  > | null>(null);
-  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null);
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -137,8 +131,6 @@ export default function Explorer() {
     setPage(1);
     setSortCol("");
     setSortDir("asc");
-    setSelectedRow(null);
-    setSelectedRowIndex(null);
     setColumnVisibility({});
   }
 
@@ -153,18 +145,6 @@ export default function Explorer() {
       setSortDir("asc");
     }
     setPage(1);
-    setSelectedRow(null);
-    setSelectedRowIndex(null);
-  }
-
-  function handleRowClick(row: Record<string, unknown>, index: number) {
-    if (selectedRowIndex === index) {
-      setSelectedRow(null);
-      setSelectedRowIndex(null);
-    } else {
-      setSelectedRow(row);
-      setSelectedRowIndex(index);
-    }
   }
 
   function handleRefresh() {
@@ -229,8 +209,6 @@ export default function Explorer() {
                 sortCol={sortCol}
                 sortDir={sortDir}
                 onSort={handleSort}
-                selectedRowIndex={selectedRowIndex}
-                onRowClick={handleRowClick}
                 columnVisibility={columnVisibility}
                 onColumnVisibilityChange={setColumnVisibility}
               />
@@ -240,22 +218,6 @@ export default function Explorer() {
                 total={rowsData?.total ?? 0}
                 onPageChange={setPage}
                 onPageSizeChange={setPageSize}
-              />
-              <RowDrawer
-                row={selectedRow}
-                fields={selectedTableFields}
-                relations={schema?.relations ?? []}
-                rowIndex={selectedRowIndex}
-                tableName={selectedTable}
-                onClose={() => {
-                  setSelectedRow(null);
-                  setSelectedRowIndex(null);
-                }}
-                onNavigate={(targetTable) => {
-                  handleSelectTable(targetTable);
-                  setSelectedRow(null);
-                  setSelectedRowIndex(null);
-                }}
               />
             </>
           ) : (
