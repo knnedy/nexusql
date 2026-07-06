@@ -1,12 +1,7 @@
 import { create } from "zustand";
 import type { DatabaseProvider } from "@/lib/types";
 
-export type ViewMode = "canvas" | "explorer";
-
 interface StudioState {
-  viewMode: ViewMode;
-  setViewMode: (mode: ViewMode) => void;
-
   provider: DatabaseProvider;
   projectName: string;
   setSession: (provider: DatabaseProvider, projectName: string) => void;
@@ -33,15 +28,12 @@ function readInitialSession(): {
 }
 
 const initialState = {
-  viewMode: "canvas" as ViewMode,
   selectedTable: null,
   ...readInitialSession(),
 };
 
 export const useStudioStore = create<StudioState>((set) => ({
   ...initialState,
-
-  setViewMode: (mode) => set({ viewMode: mode }),
 
   setSession: (provider, projectName) => set({ provider, projectName }),
 
