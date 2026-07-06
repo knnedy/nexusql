@@ -92,7 +92,7 @@ function Pagination({
   );
 }
 
-export default function Explorer() {
+export default function ExplorerPage() {
   const { data: schema } = useSchema();
   const selectedTable = useStudioStore((s) => s.selectedTable);
   const setSelectedTable = useStudioStore((s) => s.setSelectedTable);

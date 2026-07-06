@@ -54,7 +54,7 @@ function getCssVar(name: string): string {
 
 const emptySubscribe = () => () => {};
 
-export default function DiagramCanvas() {
+export default function CanvasPage() {
   return (
     <ReactFlowProvider>
       <CanvasInner />

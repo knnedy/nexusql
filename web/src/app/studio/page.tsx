@@ -1,15 +1,14 @@
 "use client";
 
-import { useStudioStore } from "@/lib/store/studio-store";
-import DiagramCanvas from "./components/canvas/diagram-canvas";
-import Explorer from "./components/explorer/explorer";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 export default function StudioPage() {
-  const viewMode = useStudioStore((s) => s.viewMode);
+  const router = useRouter();
 
-  return (
-    <div className="w-screen h-screen overflow-hidden">
-      {viewMode === "canvas" ? <DiagramCanvas /> : <Explorer />}
-    </div>
-  );
+  useEffect(() => {
+    router.replace("/studio/canvas");
+  }, [router]);
+
+  return null;
 }
