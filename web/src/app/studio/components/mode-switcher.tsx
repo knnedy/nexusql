@@ -1,23 +1,24 @@
 "use client";
 
 import { LayoutGrid, Table2 } from "lucide-react";
-import { useStudioStore } from "@/lib/store/studio-store";
+import { usePathname, useRouter } from "next/navigation";
 
 interface ModeSwitcherProps {
   className?: string;
 }
 
 export default function ModeSwitcher({ className = "" }: ModeSwitcherProps) {
-  const viewMode = useStudioStore((s) => s.viewMode);
-  const setViewMode = useStudioStore((s) => s.setViewMode);
+  const router = useRouter();
+  const pathname = usePathname();
+  const isCanvas = pathname === "/studio/canvas";
 
   return (
     <div
       className={`flex items-center gap-0.5 p-0.5 rounded-lg bg-node-header-bg/60 dark:bg-node-header-bg/40 border border-node-border/60 dark:border-node-border/30 ${className}`}>
       <button
-        onClick={() => setViewMode("canvas")}
+        onClick={() => router.push("/studio/canvas")}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all duration-150 border-none cursor-pointer ${
-          viewMode === "canvas"
+          isCanvas
             ? "bg-node-bg text-text-primary shadow-sm"
             : "bg-transparent text-text-tertiary hover:text-text-secondary"
         }`}>
@@ -25,9 +26,9 @@ export default function ModeSwitcher({ className = "" }: ModeSwitcherProps) {
         <span>Canvas</span>
       </button>
       <button
-        onClick={() => setViewMode("explorer")}
+        onClick={() => router.push("/studio/explorer")}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-semibold transition-all duration-150 border-none cursor-pointer ${
-          viewMode === "explorer"
+          !isCanvas
             ? "bg-node-bg text-text-primary shadow-sm"
             : "bg-transparent text-text-tertiary hover:text-text-secondary"
         }`}>
