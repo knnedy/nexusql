@@ -56,11 +56,9 @@ const emptySubscribe = () => () => {};
 
 export default function CanvasPage() {
   return (
-    <div className="w-screen h-screen overflow-hidden">
-      <ReactFlowProvider>
-        <CanvasInner />
-      </ReactFlowProvider>
-    </div>
+    <ReactFlowProvider>
+      <CanvasInner />
+    </ReactFlowProvider>
   );
 }
 

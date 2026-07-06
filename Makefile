@@ -25,3 +25,4 @@ dev:
 
 clean:
 	rm -rf web/out web/.next bin cmd/nexusql/out
+	
