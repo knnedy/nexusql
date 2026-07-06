@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { useStudioStore } from "@/lib/store/studio-store";
 import { useSchema } from "@/hooks/use-schema";
 import {
   useTableRows,
@@ -13,13 +13,13 @@ import { useUpdateRow } from "@/hooks/use-update-row";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
 import { exportToCsv } from "@/lib/utils";
-import TableList from "./table-list";
+import TableList from "./components/table-list";
 import DataGrid, {
   buildEditKey,
   type PendingEdit,
   type CellEditPayload,
-} from "./data-grid";
-import ExplorerToolbar from "./explorer-toolbar";
+} from "./components/data-grid";
+import ExplorerToolbar from "./components/explorer-toolbar";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 
@@ -94,13 +94,17 @@ function Pagination({
 
 export default function ExplorerPage() {
   const { data: schema } = useSchema();
-  const selectedTable = useStudioStore((s) => s.selectedTable);
-  const setSelectedTable = useStudioStore((s) => s.setSelectedTable);
-  const [searchValue, setSearchValue] = useState("");
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const selectedTable = searchParams.get("table");
+  const page = Number(searchParams.get("page") ?? "1");
+  const sortCol = searchParams.get("sort") ?? "";
+  const sortDir = (searchParams.get("dir") as "asc" | "desc") ?? "asc";
+  const urlSearch = searchParams.get("search") ?? "";
+
+  const [searchValue, setSearchValue] = useState(urlSearch);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
-  const [sortCol, setSortCol] = useState("");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -113,6 +117,23 @@ export default function ExplorerPage() {
 
   const qc = useQueryClient();
   const tables = schema?.tables ?? [];
+
+  const updateParams = useCallback(
+    (updates: Record<string, string | number | null>) => {
+      const next = new URLSearchParams(searchParams.toString());
+      for (const [key, value] of Object.entries(updates)) {
+        if (value === null || value === "") {
+          next.delete(key);
+        } else {
+          next.set(key, String(value));
+        }
+      }
+      router.replace(`/studio/explorer?${next.toString()}`, {
+        scroll: false,
+      });
+    },
+    [router, searchParams],
+  );
 
   const selectedTableFields = useMemo(
     () => schema?.tables.find((t) => t.name === selectedTable)?.fields ?? [],
@@ -137,26 +158,35 @@ export default function ExplorerPage() {
   const updateRow = useUpdateRow(selectedTable ?? "");
 
   function handleSelectTable(name: string) {
-    setSelectedTable(name);
     setSearchValue("");
-    setPage(1);
-    setSortCol("");
-    setSortDir("asc");
     setColumnVisibility({});
     setPendingEdits(new Map());
+    updateParams({
+      table: name,
+      page: null,
+      sort: null,
+      dir: null,
+      search: null,
+    });
   }
 
   function handleSort(col: string) {
     if (sortCol !== col) {
-      setSortCol(col);
-      setSortDir("asc");
+      updateParams({ sort: col, dir: "asc", page: null });
     } else if (sortDir === "asc") {
-      setSortDir("desc");
+      updateParams({ sort: col, dir: "desc", page: null });
     } else {
-      setSortCol("");
-      setSortDir("asc");
+      updateParams({ sort: null, dir: null, page: null });
     }
-    setPage(1);
+  }
+
+  function handlePageChange(next: number) {
+    updateParams({ page: next === 1 ? null : next });
+  }
+
+  function handleSearchChange(v: string) {
+    setSearchValue(v);
+    updateParams({ search: v || null, page: null });
   }
 
   function handleRefresh() {
@@ -246,10 +276,7 @@ export default function ExplorerPage() {
       <ExplorerToolbar
         tableSelected={!!selectedTable}
         searchValue={searchValue}
-        onSearchChange={(v) => {
-          setSearchValue(v);
-          setPage(1);
-        }}
+        onSearchChange={handleSearchChange}
         onRefresh={handleRefresh}
         isRefreshing={isFetching}
         columns={selectedTableFields.map((f) => f.name)}
@@ -292,7 +319,7 @@ export default function ExplorerPage() {
                 page={page}
                 pageSize={pageSize}
                 total={rowsData?.total ?? 0}
-                onPageChange={setPage}
+                onPageChange={handlePageChange}
                 onPageSizeChange={setPageSize}
               />
             </>

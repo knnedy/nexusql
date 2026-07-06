@@ -36,12 +36,12 @@ import type {
   DatabaseProvider,
   Relation,
 } from "@/lib/types";
-import TableNode from "./table-node";
-import RelationEdge from "./relation-edge";
-import CanvasToolbar from "./canvas-toolbar";
-import CanvasSidebar from "./canvas-sidebar";
-import ExportPreviewDrawer from "./export-preview-drawer";
-import InspectorPanel from "./inspector-panel";
+import TableNode from "./components/table-node";
+import RelationEdge from "./components/relation-edge";
+import CanvasToolbar from "./components/canvas-toolbar";
+import CanvasSidebar from "./components/canvas-sidebar";
+import ExportPreviewDrawer from "./components/export-preview-drawer";
+import InspectorPanel from "./components/inspector-panel";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };

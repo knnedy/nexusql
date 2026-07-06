@@ -3,8 +3,8 @@
 import { Database } from "lucide-react";
 import { useSchema } from "@/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
-import ModeSwitcher from "../components/mode-switcher";
-import DisconnectButton from "../components/disconnect-button";
+import ModeSwitcher from "../../components/mode-switcher";
+import DisconnectButton from "../../components/disconnect-button";
 
 export default function CanvasToolbar() {
   const { data: schema } = useSchema();

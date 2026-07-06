@@ -13,8 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useStudioStore } from "@/lib/store/studio-store";
-import ModeSwitcher from "../components/mode-switcher";
-import DisconnectButton from "../components/disconnect-button";
+import ModeSwitcher from "../../components/mode-switcher";
+import DisconnectButton from "../../components/disconnect-button";
 import ThemeToggle from "./theme-toggle";
 
 interface ExplorerToolbarProps {
