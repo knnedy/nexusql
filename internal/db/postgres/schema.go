@@ -1,8 +1,10 @@
-package db
+package postgres
 
 import (
 	"context"
 	"fmt"
+
+	"github.com/knnedy/nexusql/internal/db"
 )
 
 const queryTables = `
@@ -70,7 +72,7 @@ WHERE n.nspname = $1
 ORDER BY t.typname, e.enumsortorder
 `
 
-func (p *postgresProvider) IntrospectSchema(ctx context.Context, schema string) (*Schema, error) {
+func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Schema, error) {
 	if schema == "" {
 		schema = "public"
 	}
@@ -90,21 +92,21 @@ func (p *postgresProvider) IntrospectSchema(ctx context.Context, schema string) 
 		return nil, fmt.Errorf("introspect enums: %w", err)
 	}
 
-	return &Schema{
+	return &db.Schema{
 		Tables:    tables,
 		Relations: relations,
 		Enums:     enums,
 	}, nil
 }
 
-func (p *postgresProvider) introspectTables(ctx context.Context, schema string) ([]Table, error) {
+func (p *provider) introspectTables(ctx context.Context, schema string) ([]db.Table, error) {
 	rows, err := p.pool.Query(ctx, queryTables, schema)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	tableMap := make(map[string]*Table)
+	tableMap := make(map[string]*db.Table)
 	tableOrder := []string{}
 
 	for rows.Next() {
@@ -133,17 +135,17 @@ func (p *postgresProvider) introspectTables(ctx context.Context, schema string) 
 		}
 
 		if _, exists := tableMap[tableName]; !exists {
-			tableMap[tableName] = &Table{
+			tableMap[tableName] = &db.Table{
 				Name:   tableName,
 				Schema: tableSchema,
-				Fields: make([]Field, 0),
+				Fields: make([]db.Field, 0),
 			}
 			tableOrder = append(tableOrder, tableName)
 		}
 
-		tableMap[tableName].Fields = append(tableMap[tableName].Fields, Field{
+		tableMap[tableName].Fields = append(tableMap[tableName].Fields, db.Field{
 			Name:         columnName,
-			Type:         normalizePostgresType(udtName),
+			Type:         normalizeType(udtName),
 			Nullable:     isNullable == "YES",
 			IsPrimaryKey: isPrimaryKey,
 			IsForeignKey: isForeignKey,
@@ -155,7 +157,7 @@ func (p *postgresProvider) introspectTables(ctx context.Context, schema string) 
 		return nil, err
 	}
 
-	tables := make([]Table, 0, len(tableOrder))
+	tables := make([]db.Table, 0, len(tableOrder))
 	for _, name := range tableOrder {
 		tables = append(tables, *tableMap[name])
 	}
@@ -163,17 +165,17 @@ func (p *postgresProvider) introspectTables(ctx context.Context, schema string) 
 	return tables, nil
 }
 
-func (p *postgresProvider) introspectRelations(ctx context.Context, schema string) ([]Relation, error) {
+func (p *provider) introspectRelations(ctx context.Context, schema string) ([]db.Relation, error) {
 	rows, err := p.pool.Query(ctx, queryRelations, schema)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	relations := make([]Relation, 0)
+	relations := make([]db.Relation, 0)
 
 	for rows.Next() {
-		var r Relation
+		var r db.Relation
 		if err := rows.Scan(
 			&r.ConstraintName,
 			&r.SourceTable,
@@ -193,14 +195,14 @@ func (p *postgresProvider) introspectRelations(ctx context.Context, schema strin
 	return relations, nil
 }
 
-func (p *postgresProvider) introspectEnums(ctx context.Context, schema string) ([]EnumType, error) {
+func (p *provider) introspectEnums(ctx context.Context, schema string) ([]db.EnumType, error) {
 	rows, err := p.pool.Query(ctx, queryEnums, schema)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	enumMap := make(map[string]*EnumType)
+	enumMap := make(map[string]*db.EnumType)
 	enumOrder := []string{}
 
 	for rows.Next() {
@@ -209,7 +211,7 @@ func (p *postgresProvider) introspectEnums(ctx context.Context, schema string) (
 			return nil, fmt.Errorf("scan enum: %w", err)
 		}
 		if _, exists := enumMap[name]; !exists {
-			enumMap[name] = &EnumType{Name: name, Values: []string{}}
+			enumMap[name] = &db.EnumType{Name: name, Values: []string{}}
 			enumOrder = append(enumOrder, name)
 		}
 		enumMap[name].Values = append(enumMap[name].Values, value)
@@ -219,7 +221,7 @@ func (p *postgresProvider) introspectEnums(ctx context.Context, schema string) (
 		return nil, err
 	}
 
-	enums := make([]EnumType, 0, len(enumOrder))
+	enums := make([]db.EnumType, 0, len(enumOrder))
 	for _, name := range enumOrder {
 		enums = append(enums, *enumMap[name])
 	}
