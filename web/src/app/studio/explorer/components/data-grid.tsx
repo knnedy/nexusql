@@ -16,7 +16,7 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
-import type { DatabaseProvider, EnumType, Field } from "@/lib/types";
+import type { DatabaseProvider, EnumType, Field, Relation } from "@/lib/types";
 import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { normalizeFieldType } from "@/lib/utils";
 import { useStudioStore } from "@/lib/store/studio-store";
@@ -42,9 +42,11 @@ export function buildEditKey(pkValue: string, targetField: string): string {
 }
 
 interface DataGridProps {
+  tableName: string;
   columns: string[];
   fields: Field[];
   enums: EnumType[];
+  relations: Relation[];
   rows: Record<string, unknown>[];
   isLoading: boolean;
   isError: boolean;
@@ -53,6 +55,11 @@ interface DataGridProps {
   onSort: (col: string) => void;
   pendingEdits: Map<string, PendingEdit>;
   onCellEdit: (edit: CellEditPayload) => void;
+  onNavigateFk: (
+    targetTable: string,
+    targetField: string,
+    value: string,
+  ) => void;
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
 }
@@ -78,6 +85,7 @@ interface EditableCellProps {
   onStartEdit: () => void;
   onCommit: (newValue: string) => void;
   onCancel: () => void;
+  onNavigate: (() => void) | null;
 }
 
 function EditableCell({
@@ -91,6 +99,7 @@ function EditableCell({
   onStartEdit,
   onCommit,
   onCancel,
+  onNavigate,
 }: EditableCellProps) {
   const initialValue = isPending
     ? (pendingValue ?? "")
@@ -178,11 +187,21 @@ function EditableCell({
         )}
       </div>
       {field.isForeignKey && (
-        <Link
-          size={11}
-          className="text-teal shrink-0 opacity-0 group-hover:opacity-100 transition-opacity"
-          aria-hidden
-        />
+        <button
+          onClick={(e) => {
+            if (!onNavigate) return;
+            e.stopPropagation();
+            onNavigate();
+          }}
+          disabled={!onNavigate}
+          title={onNavigate ? "Go to related row" : undefined}
+          className={`shrink-0 opacity-0 group-hover:opacity-100 transition-opacity border-none bg-transparent p-0 ${
+            onNavigate
+              ? "cursor-pointer text-teal"
+              : "cursor-default text-text-tertiary/40"
+          }`}>
+          <Link size={11} aria-hidden />
+        </button>
       )}
     </div>
   );
@@ -292,9 +311,11 @@ const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
 };
 
 export default function DataGrid({
+  tableName,
   columns,
   fields,
   enums,
+  relations,
   rows,
   isLoading,
   isError,
@@ -303,6 +324,7 @@ export default function DataGrid({
   onSort,
   pendingEdits,
   onCellEdit,
+  onNavigateFk,
   columnVisibility,
   onColumnVisibilityChange,
 }: DataGridProps) {
@@ -324,6 +346,16 @@ export default function DataGrid({
     [enums],
   );
 
+  const relationMap = useMemo(
+    () =>
+      new Map(
+        relations
+          .filter((r) => r.sourceTable === tableName)
+          .map((r) => [r.sourceField, r]),
+      ),
+    [relations, tableName],
+  );
+
   const pkField = useMemo(() => fields.find((f) => f.isPrimaryKey), [fields]);
 
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
@@ -333,6 +365,7 @@ export default function DataGrid({
         const field = fieldMap.get(col);
         const enumType = field ? enumMap.get(field.type) : undefined;
         const canEdit = !!field && !!pkField && !field.isPrimaryKey;
+        const relation = relationMap.get(col);
 
         return {
           accessorKey: col,
@@ -365,11 +398,12 @@ export default function DataGrid({
               : "";
             const editKey = pkValue ? buildEditKey(pkValue, col) : "";
             const pending = editKey ? pendingEdits.get(editKey) : undefined;
+            const cellValue = info.getValue();
 
             return (
               <EditableCell
                 key={isEditing ? "editing" : "display"}
-                value={info.getValue()}
+                value={cellValue}
                 field={field}
                 enumValues={enumType ? enumType.values : null}
                 canEdit={canEdit}
@@ -392,6 +426,16 @@ export default function DataGrid({
                   });
                   setEditingCell(null);
                 }}
+                onNavigate={
+                  relation && !isNullish(cellValue)
+                    ? () =>
+                        onNavigateFk(
+                          relation.targetTable,
+                          relation.targetField,
+                          String(cellValue),
+                        )
+                    : null
+                }
               />
             );
           },
@@ -403,6 +447,7 @@ export default function DataGrid({
       columns,
       fieldMap,
       enumMap,
+      relationMap,
       pkField,
       sortCol,
       sortDir,
@@ -410,6 +455,7 @@ export default function DataGrid({
       editingCell,
       pendingEdits,
       onCellEdit,
+      onNavigateFk,
     ],
   );
 
