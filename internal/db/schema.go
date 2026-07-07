@@ -70,22 +70,22 @@ WHERE n.nspname = $1
 ORDER BY t.typname, e.enumsortorder
 `
 
-func IntrospectSchema(ctx context.Context, conn *Connection, schema string) (*Schema, error) {
+func (p *postgresProvider) IntrospectSchema(ctx context.Context, schema string) (*Schema, error) {
 	if schema == "" {
 		schema = "public"
 	}
 
-	tables, err := introspectTables(ctx, conn, schema)
+	tables, err := p.introspectTables(ctx, schema)
 	if err != nil {
 		return nil, fmt.Errorf("introspect tables: %w", err)
 	}
 
-	relations, err := introspectRelations(ctx, conn, schema)
+	relations, err := p.introspectRelations(ctx, schema)
 	if err != nil {
 		return nil, fmt.Errorf("introspect relations: %w", err)
 	}
 
-	enums, err := introspectEnums(ctx, conn, schema)
+	enums, err := p.introspectEnums(ctx, schema)
 	if err != nil {
 		return nil, fmt.Errorf("introspect enums: %w", err)
 	}
@@ -97,8 +97,8 @@ func IntrospectSchema(ctx context.Context, conn *Connection, schema string) (*Sc
 	}, nil
 }
 
-func introspectTables(ctx context.Context, conn *Connection, schema string) ([]Table, error) {
-	rows, err := conn.Pool.Query(ctx, queryTables, schema)
+func (p *postgresProvider) introspectTables(ctx context.Context, schema string) ([]Table, error) {
+	rows, err := p.pool.Query(ctx, queryTables, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -143,7 +143,7 @@ func introspectTables(ctx context.Context, conn *Connection, schema string) ([]T
 
 		tableMap[tableName].Fields = append(tableMap[tableName].Fields, Field{
 			Name:         columnName,
-			Type:         udtName,
+			Type:         normalizePostgresType(udtName),
 			Nullable:     isNullable == "YES",
 			IsPrimaryKey: isPrimaryKey,
 			IsForeignKey: isForeignKey,
@@ -163,8 +163,8 @@ func introspectTables(ctx context.Context, conn *Connection, schema string) ([]T
 	return tables, nil
 }
 
-func introspectRelations(ctx context.Context, conn *Connection, schema string) ([]Relation, error) {
-	rows, err := conn.Pool.Query(ctx, queryRelations, schema)
+func (p *postgresProvider) introspectRelations(ctx context.Context, schema string) ([]Relation, error) {
+	rows, err := p.pool.Query(ctx, queryRelations, schema)
 	if err != nil {
 		return nil, err
 	}
@@ -193,8 +193,8 @@ func introspectRelations(ctx context.Context, conn *Connection, schema string) (
 	return relations, nil
 }
 
-func introspectEnums(ctx context.Context, conn *Connection, schema string) ([]EnumType, error) {
-	rows, err := conn.Pool.Query(ctx, queryEnums, schema)
+func (p *postgresProvider) introspectEnums(ctx context.Context, schema string) ([]EnumType, error) {
+	rows, err := p.pool.Query(ctx, queryEnums, schema)
 	if err != nil {
 		return nil, err
 	}
