@@ -5,40 +5,6 @@ import (
 	"fmt"
 )
 
-type Field struct {
-	Name         string  `json:"name"`
-	Type         string  `json:"type"`
-	Nullable     bool    `json:"nullable"`
-	IsPrimaryKey bool    `json:"isPrimaryKey"`
-	IsForeignKey bool    `json:"isForeignKey"`
-	DefaultValue *string `json:"defaultValue"`
-}
-
-type Table struct {
-	Name   string  `json:"name"`
-	Schema string  `json:"schema"`
-	Fields []Field `json:"fields"`
-}
-
-type Relation struct {
-	ConstraintName string `json:"constraintName"`
-	SourceTable    string `json:"sourceTable"`
-	SourceField    string `json:"sourceField"`
-	TargetTable    string `json:"targetTable"`
-	TargetField    string `json:"targetField"`
-}
-
-type EnumType struct {
-	Name   string   `json:"name"`
-	Values []string `json:"values"`
-}
-
-type Schema struct {
-	Tables    []Table    `json:"tables"`
-	Relations []Relation `json:"relations"`
-	Enums     []EnumType `json:"enums"`
-}
-
 const queryTables = `
 SELECT
     c.table_schema,

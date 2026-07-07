@@ -8,13 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-type SortDir string
-
-const (
-	SortAsc  SortDir = "asc"
-	SortDesc SortDir = "desc"
-)
-
 func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, offset int, sortCol string, sortDir SortDir, search string) ([]string, []map[string]any, int64, error) {
 	searchCols, err := getTextColumns(ctx, conn, tableName)
 	if err != nil {

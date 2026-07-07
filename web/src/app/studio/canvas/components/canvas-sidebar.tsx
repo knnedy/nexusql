@@ -2,7 +2,19 @@
 
 import { useCallback } from "react";
 import { useTheme } from "next-themes";
-import { LayoutGrid, ImageDown, Sun, Moon, X, Database } from "lucide-react";
+import {
+  LayoutGrid,
+  ImageDown,
+  Sun,
+  Moon,
+  X,
+  Database,
+  GitCompareArrows,
+  Sprout,
+  SquareTerminal,
+  Boxes,
+  Link2,
+} from "lucide-react";
 import { SiPrisma, SiDrizzle } from "react-icons/si";
 import { reapplyLayout } from "@/lib/canvas-utils";
 import { useSchema } from "@/hooks/use-schema";
@@ -15,6 +27,9 @@ interface CanvasSidebarProps {
   onLayoutApply: (nodes: Node<TableNodeData>[]) => void;
   onSelectExport: (type: "png" | "prisma" | "drizzle" | null) => void;
   activeExport: "png" | "prisma" | "drizzle" | null;
+  onOpenMirror?: () => void;
+  onOpenSeedGenerator?: () => void;
+  onOpenSqlConsole?: () => void;
 }
 
 function SectionLabel({ label }: { label: string }) {
@@ -52,10 +67,12 @@ function SidebarItem({
         className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 border border-black/3 dark:border-white/3 transition-colors ${iconWrapperClass}`}>
         {icon}
       </div>
-      <div className="flex flex-col min-w-0 justify-center">
-        <span className="text-base font-semibold text-text-primary group-hover:text-text-primary transition-colors antialiased">
-          {label}
-        </span>
+      <div className="flex flex-col min-w-0 justify-center flex-1">
+        <div className="flex items-center gap-1.5">
+          <span className="text-base font-semibold text-text-primary group-hover:text-text-primary transition-colors antialiased truncate">
+            {label}
+          </span>
+        </div>
         <span className="text-[0.80rem] text-text-tertiary font-normal truncate mt-0.5">
           {description}
         </span>
@@ -70,12 +87,39 @@ function Divider() {
   );
 }
 
+function StatPill({
+  icon,
+  value,
+  label,
+}: {
+  icon: React.ReactNode;
+  value: number;
+  label: string;
+}) {
+  return (
+    <div className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-lg bg-surface-3/60 dark:bg-surface-3/40 border border-black/2 dark:border-white/2">
+      <div className="flex items-center gap-1 text-text-tertiary">
+        {icon}
+        <span className="text-[15px] font-bold text-text-primary tabular-nums leading-none">
+          {value}
+        </span>
+      </div>
+      <span className="text-[9px] font-semibold uppercase tracking-wider text-text-tertiary">
+        {label}
+      </span>
+    </div>
+  );
+}
+
 export default function CanvasSidebar({
   open,
   onClose,
   onLayoutApply,
   onSelectExport,
   activeExport,
+  onOpenMirror,
+  onOpenSeedGenerator,
+  onOpenSqlConsole,
 }: CanvasSidebarProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
@@ -85,6 +129,8 @@ export default function CanvasSidebar({
     "postgres") as DatabaseProvider;
   const projectName = sessionStorage.getItem("nexusql_project_name") ?? "";
   const tableCount = schema?.tables.length ?? 0;
+  const relationCount = schema?.relations.length ?? 0;
+  const enumCount = schema?.enums.length ?? 0;
 
   const handleAutoLayout = useCallback(async () => {
     if (!schema) return;
@@ -130,6 +176,28 @@ export default function CanvasSidebar({
         </div>
 
         <div className="flex flex-col gap-3.5 p-2 flex-1 overflow-y-auto pt-4">
+          <div className="flex flex-col gap-2 px-1">
+            <div className="flex gap-1.5">
+              <StatPill
+                icon={<Boxes size={11} aria-hidden />}
+                value={tableCount}
+                label="Tables"
+              />
+              <StatPill
+                icon={<Link2 size={11} aria-hidden />}
+                value={relationCount}
+                label="Relations"
+              />
+              <StatPill
+                icon={<Database size={11} aria-hidden />}
+                value={enumCount}
+                label="Enums"
+              />
+            </div>
+          </div>
+
+          <Divider />
+
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Layout" />
             <SidebarItem
@@ -138,6 +206,33 @@ export default function CanvasSidebar({
               label="Auto-layout"
               description="Rearrange structural blocks"
               onClick={handleAutoLayout}
+            />
+          </div>
+
+          <Divider />
+
+          <div className="flex flex-col gap-0.5">
+            <SectionLabel label="Database Tools" />
+            <SidebarItem
+              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
+              icon={<GitCompareArrows size={14} aria-hidden />}
+              label="Mirror Database"
+              description="Clone schema and data to a target"
+              onClick={() => onOpenMirror?.()}
+            />
+            <SidebarItem
+              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
+              icon={<Sprout size={14} aria-hidden />}
+              label="Generate Seed Data"
+              description="Populate tables with realistic rows"
+              onClick={() => onOpenSeedGenerator?.()}
+            />
+            <SidebarItem
+              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
+              icon={<SquareTerminal size={14} aria-hidden />}
+              label="SQL Console"
+              description="Run raw queries against this project"
+              onClick={() => onOpenSqlConsole?.()}
             />
           </div>
 
