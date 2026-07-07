@@ -88,7 +88,7 @@ func GeneratePrisma(schema *Schema) string {
 			line := fmt.Sprintf("  %-20s %s%s", f.Name, prismaType, optional)
 
 			if f.IsPrimaryKey {
-				if f.Type == "uuid" {
+				if f.Type == FieldTypeUUID {
 					line += "  @id @default(uuid())"
 				} else {
 					line += "  @id @default(autoincrement())"
@@ -204,112 +204,112 @@ func GenerateDrizzle(schema *Schema) string {
 	return strings.TrimSpace(sb.String())
 }
 
-func mapPrismaType(t string, enumSet map[string]bool) string {
+func mapPrismaType(t FieldType, enumSet map[string]bool) string {
 	switch t {
-	case "int2", "int4", "integer", "smallint", "serial":
+	case FieldTypeSmallint, FieldTypeInteger, FieldTypeSerial:
 		return "Int"
-	case "int8", "bigint", "bigserial":
+	case FieldTypeBigint, FieldTypeBigserial:
 		return "BigInt"
-	case "varchar", "text", "char", "bpchar":
+	case FieldTypeVarchar, FieldTypeText, FieldTypeChar:
 		return "String"
-	case "uuid":
+	case FieldTypeUUID:
 		return "String @db.Uuid"
-	case "bool", "boolean":
+	case FieldTypeBoolean:
 		return "Boolean"
-	case "timestamp", "timestamptz", "timestamp with time zone":
+	case FieldTypeTimestamp, FieldTypeTimestamptz:
 		return "DateTime"
-	case "json", "jsonb":
+	case FieldTypeJSON, FieldTypeJSONB:
 		return "Json"
-	case "numeric", "real", "float4", "float8", "double precision":
+	case FieldTypeNumeric, FieldTypeReal, FieldTypeDoublePrecision:
 		return "Float"
 	default:
-		if enumSet[t] {
-			return capitalize(t)
+		if enumSet[string(t)] {
+			return capitalize(string(t))
 		}
-		return "String // " + t
+		return "String // " + string(t)
 	}
 }
 
-func mapDrizzleType(name, t string, isPk bool, enumSet map[string]bool) string {
+func mapDrizzleType(name string, t FieldType, isPk bool, enumSet map[string]bool) string {
 	if isPk {
-		if t == "uuid" {
+		if t == FieldTypeUUID {
 			return fmt.Sprintf("uuid('%s').primaryKey().defaultRandom()", name)
 		}
 		return fmt.Sprintf("serial('%s').primaryKey()", name)
 	}
 	switch t {
-	case "varchar", "char", "bpchar":
+	case FieldTypeVarchar, FieldTypeChar:
 		return fmt.Sprintf("varchar('%s', { length: 255 })", name)
-	case "text":
+	case FieldTypeText:
 		return fmt.Sprintf("text('%s')", name)
-	case "int4", "integer":
+	case FieldTypeInteger:
 		return fmt.Sprintf("integer('%s')", name)
-	case "int2", "smallint":
+	case FieldTypeSmallint:
 		return fmt.Sprintf("smallint('%s')", name)
-	case "int8", "bigint", "bigserial":
+	case FieldTypeBigint, FieldTypeBigserial:
 		return fmt.Sprintf("bigint('%s', { mode: 'number' })", name)
-	case "bool", "boolean":
+	case FieldTypeBoolean:
 		return fmt.Sprintf("boolean('%s')", name)
-	case "timestamp":
+	case FieldTypeTimestamp:
 		return fmt.Sprintf("timestamp('%s')", name)
-	case "timestamptz", "timestamp with time zone":
+	case FieldTypeTimestamptz:
 		return fmt.Sprintf("timestamp('%s', { withTimezone: true })", name)
-	case "uuid":
+	case FieldTypeUUID:
 		return fmt.Sprintf("uuid('%s')", name)
-	case "json":
+	case FieldTypeJSON:
 		return fmt.Sprintf("json('%s')", name)
-	case "jsonb":
+	case FieldTypeJSONB:
 		return fmt.Sprintf("jsonb('%s')", name)
-	case "numeric":
+	case FieldTypeNumeric:
 		return fmt.Sprintf("numeric('%s')", name)
-	case "real", "float4":
+	case FieldTypeReal:
 		return fmt.Sprintf("real('%s')", name)
-	case "float8", "double precision":
+	case FieldTypeDoublePrecision:
 		return fmt.Sprintf("doublePrecision('%s')", name)
 	default:
-		if enumSet[t] {
-			return fmt.Sprintf("%sEnum('%s')", t, name)
+		if enumSet[string(t)] {
+			return fmt.Sprintf("%sEnum('%s')", string(t), name)
 		}
-		return fmt.Sprintf("text('%s') /* %s */", name, t)
+		return fmt.Sprintf("text('%s') /* %s */", name, string(t))
 	}
 }
 
-func drizzleImports(t string, isPk bool, enumSet map[string]bool) []string {
+func drizzleImports(t FieldType, isPk bool, enumSet map[string]bool) []string {
 	if isPk {
-		if t == "uuid" {
+		if t == FieldTypeUUID {
 			return []string{"uuid"}
 		}
 		return []string{"serial"}
 	}
 	switch t {
-	case "varchar", "char", "bpchar":
+	case FieldTypeVarchar, FieldTypeChar:
 		return []string{"varchar"}
-	case "text":
+	case FieldTypeText:
 		return []string{"text"}
-	case "int4", "integer":
+	case FieldTypeInteger:
 		return []string{"integer"}
-	case "int2", "smallint":
+	case FieldTypeSmallint:
 		return []string{"smallint"}
-	case "int8", "bigint", "bigserial":
+	case FieldTypeBigint, FieldTypeBigserial:
 		return []string{"bigint"}
-	case "bool", "boolean":
+	case FieldTypeBoolean:
 		return []string{"boolean"}
-	case "timestamp", "timestamptz", "timestamp with time zone":
+	case FieldTypeTimestamp, FieldTypeTimestamptz:
 		return []string{"timestamp"}
-	case "uuid":
+	case FieldTypeUUID:
 		return []string{"uuid"}
-	case "json":
+	case FieldTypeJSON:
 		return []string{"json"}
-	case "jsonb":
+	case FieldTypeJSONB:
 		return []string{"jsonb"}
-	case "numeric":
+	case FieldTypeNumeric:
 		return []string{"numeric"}
-	case "real", "float4":
+	case FieldTypeReal:
 		return []string{"real"}
-	case "float8", "double precision":
+	case FieldTypeDoublePrecision:
 		return []string{"doublePrecision"}
 	default:
-		if enumSet[t] {
+		if enumSet[string(t)] {
 			return []string{}
 		}
 		return []string{"text"}
