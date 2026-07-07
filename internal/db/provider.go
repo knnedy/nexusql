@@ -60,20 +60,29 @@ type Connection struct {
 	URI  string
 }
 
+type providerConstructor func(ctx context.Context, uri string) (Provider, error)
+
+var registry = map[ProviderKind]providerConstructor{}
+
+// Register makes a provider constructor available to Connect. Provider
+// packages call this from an init() function so that db never needs to
+// import them directly, avoiding an import cycle.
+func Register(kind ProviderKind, constructor providerConstructor) {
+	registry[kind] = constructor
+}
+
 func Connect(ctx context.Context, uri string) (*Connection, error) {
 	kind, err := DetectProviderKind(uri)
 	if err != nil {
 		return nil, err
 	}
 
-	var impl Provider
-	switch kind {
-	case ProviderKindPostgres:
-		impl, err = connectPostgres(ctx, uri)
-	default:
+	constructor, ok := registry[kind]
+	if !ok {
 		return nil, fmt.Errorf("provider not yet supported: %s", kind)
 	}
 
+	impl, err := constructor(ctx, uri)
 	if err != nil {
 		return nil, err
 	}
