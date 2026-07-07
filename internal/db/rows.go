@@ -8,8 +8,8 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, offset int, sortCol string, sortDir SortDir, search string) ([]string, []map[string]any, int64, error) {
-	searchCols, err := getTextColumns(ctx, conn, tableName)
+func (p *postgresProvider) FetchRows(ctx context.Context, tableName string, limit, offset int, sortCol string, sortDir SortDir, search string) ([]string, []map[string]any, int64, error) {
+	searchCols, err := p.getTextColumns(ctx, tableName)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("get text columns: %w", err)
 	}
@@ -28,7 +28,7 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 
 	var total int64
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %q%s", tableName, whereClause)
-	if err := conn.Pool.QueryRow(ctx, countQuery, searchArgs...).Scan(&total); err != nil {
+	if err := p.pool.QueryRow(ctx, countQuery, searchArgs...).Scan(&total); err != nil {
 		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
 	}
 
@@ -47,7 +47,7 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 
 	dataArgs := append(searchArgs, limit, offset)
 
-	rows, err := conn.Pool.Query(ctx, query, dataArgs...)
+	rows, err := p.pool.Query(ctx, query, dataArgs...)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("query rows: %w", err)
 	}
@@ -79,8 +79,8 @@ func FetchRows(ctx context.Context, conn *Connection, tableName string, limit, o
 	return columns, result, total, nil
 }
 
-func getTextColumns(ctx context.Context, conn *Connection, tableName string) ([]string, error) {
-	rows, err := conn.Pool.Query(ctx,
+func (p *postgresProvider) getTextColumns(ctx context.Context, tableName string) ([]string, error) {
+	rows, err := p.pool.Query(ctx,
 		`SELECT column_name FROM information_schema.columns
 		 WHERE table_schema = 'public'
 		   AND table_name = $1
@@ -107,8 +107,8 @@ func getTextColumns(ctx context.Context, conn *Connection, tableName string) ([]
 	return cols, rows.Err()
 }
 
-func FetchRowWhere(ctx context.Context, conn *Connection, tableName, field, value string) ([]string, []map[string]any, error) {
-	validCols, err := GetTableColumns(ctx, conn, tableName)
+func (p *postgresProvider) FetchRowWhere(ctx context.Context, tableName, field, value string) ([]string, []map[string]any, error) {
+	validCols, err := p.getTableColumns(ctx, tableName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("validate field: %w", err)
 	}
@@ -130,7 +130,7 @@ func FetchRowWhere(ctx context.Context, conn *Connection, tableName, field, valu
 		pgx.Identifier{field}.Sanitize(),
 	)
 
-	rows, err := conn.Pool.Query(ctx, query, value)
+	rows, err := p.pool.Query(ctx, query, value)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query rows: %w", err)
 	}
@@ -172,8 +172,8 @@ func normalizeValue(v any) any {
 	}
 }
 
-func GetTableColumns(ctx context.Context, conn *Connection, tableName string) ([]string, error) {
-	rows, err := conn.Pool.Query(ctx,
+func (p *postgresProvider) getTableColumns(ctx context.Context, tableName string) ([]string, error) {
+	rows, err := p.pool.Query(ctx,
 		`SELECT column_name FROM information_schema.columns
 		 WHERE table_schema = 'public' AND table_name = $1
 		 ORDER BY ordinal_position`,
@@ -195,8 +195,8 @@ func GetTableColumns(ctx context.Context, conn *Connection, tableName string) ([
 	return cols, rows.Err()
 }
 
-func UpdateRow(ctx context.Context, conn *Connection, tableName, pkField, pkValue, targetField, newValue string) error {
-	validCols, err := GetTableColumns(ctx, conn, tableName)
+func (p *postgresProvider) UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error {
+	validCols, err := p.getTableColumns(ctx, tableName)
 	if err != nil {
 		return fmt.Errorf("validate columns: %w", err)
 	}
@@ -220,7 +220,7 @@ func UpdateRow(ctx context.Context, conn *Connection, tableName, pkField, pkValu
 		pgx.Identifier{pkField}.Sanitize(),
 	)
 
-	tag, err := conn.Pool.Exec(ctx, query, newValue, pkValue)
+	tag, err := p.pool.Exec(ctx, query, newValue, pkValue)
 	if err != nil {
 		return fmt.Errorf("update row: %w", err)
 	}
