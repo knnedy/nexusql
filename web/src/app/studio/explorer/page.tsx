@@ -2,13 +2,14 @@
 
 import { useState, useMemo, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useSchema } from "@/hooks/use-schema";
 import {
   useTableRows,
   tableRowsQueryOptions,
   DEFAULT_PAGE_SIZE,
 } from "@/hooks/use-table-rows";
+import { useRowLookup, rowLookupQueryOptions } from "@/hooks/use-row-lookup";
 import { useUpdateRow } from "@/hooks/use-update-row";
 import { useDebouncedValue } from "@/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
@@ -102,6 +103,9 @@ export default function ExplorerPage() {
   const sortCol = searchParams.get("sort") ?? "";
   const sortDir = (searchParams.get("dir") as "asc" | "desc") ?? "asc";
   const urlSearch = searchParams.get("search") ?? "";
+  const filterField = searchParams.get("filterField") ?? "";
+  const filterValue = searchParams.get("filterValue") ?? "";
+  const hasFilter = !!filterField && !!filterValue;
 
   const [searchValue, setSearchValue] = useState(urlSearch);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -140,20 +144,46 @@ export default function ExplorerPage() {
     [schema, selectedTable],
   );
 
-  const {
-    data: rowsData,
-    isLoading,
-    isError,
-    isFetching,
-  } = useTableRows(
+  const tableRowsResult = useTableRows(
     selectedTable ?? "",
-    !!selectedTable,
+    !!selectedTable && !hasFilter,
     page,
     pageSize,
     sortCol,
     sortDir,
     debouncedSearch,
   );
+
+  const lookupResult = useRowLookup(
+    selectedTable ?? "",
+    filterField,
+    filterValue,
+    !!selectedTable && hasFilter,
+  );
+
+  const rowsData = hasFilter
+    ? lookupResult.data
+      ? {
+          tableName: lookupResult.data.tableName,
+          columns: lookupResult.data.columns,
+          rows: lookupResult.data.rows,
+          total: lookupResult.data.rows.length,
+          page: 1,
+          pageSize: lookupResult.data.rows.length,
+          sortCol: "",
+          sortDir: "asc" as const,
+          search: "",
+        }
+      : undefined
+    : tableRowsResult.data;
+
+  const isLoading = hasFilter
+    ? lookupResult.isLoading
+    : tableRowsResult.isLoading;
+  const isError = hasFilter ? lookupResult.isError : tableRowsResult.isError;
+  const isFetching = hasFilter
+    ? lookupResult.isFetching
+    : tableRowsResult.isFetching;
 
   const updateRow = useUpdateRow(selectedTable ?? "");
 
@@ -167,6 +197,8 @@ export default function ExplorerPage() {
       sort: null,
       dir: null,
       search: null,
+      filterField: null,
+      filterValue: null,
     });
   }
 
@@ -191,6 +223,17 @@ export default function ExplorerPage() {
 
   function handleRefresh() {
     if (!selectedTable) return;
+    if (hasFilter) {
+      qc.invalidateQueries({
+        queryKey: rowLookupQueryOptions(
+          selectedTable,
+          filterField,
+          filterValue,
+          true,
+        ).queryKey,
+      });
+      return;
+    }
     qc.invalidateQueries({
       queryKey: tableRowsQueryOptions(
         selectedTable,
@@ -271,6 +314,29 @@ export default function ExplorerPage() {
     setPendingEdits(new Map());
   }
 
+  function handleNavigateFk(
+    targetTable: string,
+    targetField: string,
+    value: string,
+  ) {
+    setSearchValue("");
+    setColumnVisibility({});
+    setPendingEdits(new Map());
+    updateParams({
+      table: targetTable,
+      page: null,
+      sort: null,
+      dir: null,
+      search: null,
+      filterField: targetField,
+      filterValue: value,
+    });
+  }
+
+  function handleClearFilter() {
+    updateParams({ filterField: null, filterValue: null });
+  }
+
   return (
     <div className="w-full h-full flex flex-col bg-canvas-bg">
       <ExplorerToolbar
@@ -289,6 +355,21 @@ export default function ExplorerPage() {
         onDiscardChanges={handleDiscardChanges}
       />
 
+      {hasFilter && (
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-node-border/60 dark:border-node-border/40 bg-teal/5 dark:bg-teal/10 shrink-0">
+          <span className="text-[11px] font-mono text-teal">
+            Filtered by <span className="font-semibold">{filterField}</span> ={" "}
+            <span className="font-semibold">{filterValue}</span>
+          </span>
+          <button
+            onClick={handleClearFilter}
+            className="flex items-center gap-1 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors border-none bg-transparent cursor-pointer">
+            <X size={12} aria-hidden />
+            <span>Clear filter</span>
+          </button>
+        </div>
+      )}
+
       <div className="flex flex-1 overflow-hidden">
         <TableList
           tables={tables}
@@ -301,9 +382,11 @@ export default function ExplorerPage() {
           {selectedTable ? (
             <>
               <DataGrid
+                tableName={selectedTable}
                 columns={rowsData?.columns ?? []}
                 fields={selectedTableFields}
                 enums={schema?.enums ?? []}
+                relations={schema?.relations ?? []}
                 rows={rowsData?.rows ?? []}
                 isLoading={isLoading}
                 isError={isError}
@@ -312,16 +395,19 @@ export default function ExplorerPage() {
                 onSort={handleSort}
                 pendingEdits={pendingEdits}
                 onCellEdit={handleCellEdit}
+                onNavigateFk={handleNavigateFk}
                 columnVisibility={columnVisibility}
                 onColumnVisibilityChange={setColumnVisibility}
               />
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                total={rowsData?.total ?? 0}
-                onPageChange={handlePageChange}
-                onPageSizeChange={setPageSize}
-              />
+              {!hasFilter && (
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={rowsData?.total ?? 0}
+                  onPageChange={handlePageChange}
+                  onPageSizeChange={setPageSize}
+                />
+              )}
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">
