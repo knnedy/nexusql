@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { QUERY_KEYS } from "@/lib/query-keys";
 
@@ -14,4 +14,13 @@ export function rowLookupQueryOptions(
     enabled: enabled && !!tableName && !!field && !!value,
     staleTime: Infinity,
   });
+}
+
+export function useRowLookup(
+  tableName: string,
+  field: string,
+  value: string,
+  enabled: boolean,
+) {
+  return useQuery(rowLookupQueryOptions(tableName, field, value, enabled));
 }
