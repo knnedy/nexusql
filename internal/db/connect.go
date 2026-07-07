@@ -8,18 +8,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type Connection struct {
-	Pool     *pgxpool.Pool
-	Provider Provider
-	URI      string
+type postgresProvider struct {
+	pool *pgxpool.Pool
 }
 
-func Connect(ctx context.Context, uri string) (*Connection, error) {
-	provider, err := DetectProvider(uri)
-	if err != nil {
-		return nil, err
-	}
-
+func connectPostgres(ctx context.Context, uri string) (Provider, error) {
 	cfg, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, fmt.Errorf("invalid connection URI: %w", err)
@@ -36,21 +29,20 @@ func Connect(ctx context.Context, uri string) (*Connection, error) {
 		return nil, fmt.Errorf("failed to create connection pool: %w", err)
 	}
 
-	// verify the connection is live
 	if err := pool.Ping(ctx); err != nil {
 		pool.Close()
 		return nil, fmt.Errorf("database unreachable: %w", err)
 	}
 
-	return &Connection{
-		Pool:     pool,
-		Provider: provider,
-		URI:      uri,
-	}, nil
+	return &postgresProvider{pool: pool}, nil
 }
 
-func (c *Connection) Close() {
-	if c.Pool != nil {
-		c.Pool.Close()
+func (p *postgresProvider) Kind() ProviderKind {
+	return ProviderKindPostgres
+}
+
+func (p *postgresProvider) Close() {
+	if p.pool != nil {
+		p.pool.Close()
 	}
 }
