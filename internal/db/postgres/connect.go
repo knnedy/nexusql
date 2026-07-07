@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"context"
@@ -6,13 +6,20 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/knnedy/nexusql/internal/db"
 )
 
-type postgresProvider struct {
+type provider struct {
 	pool *pgxpool.Pool
 }
 
-func connectPostgres(ctx context.Context, uri string) (Provider, error) {
+func init() {
+	db.Register(db.ProviderKindPostgres, Connect)
+}
+
+// Connect opens a pooled connection to a PostgreSQL database and returns
+// a db.Provider implementation backed by it.
+func Connect(ctx context.Context, uri string) (db.Provider, error) {
 	cfg, err := pgxpool.ParseConfig(uri)
 	if err != nil {
 		return nil, fmt.Errorf("invalid connection URI: %w", err)
@@ -34,14 +41,14 @@ func connectPostgres(ctx context.Context, uri string) (Provider, error) {
 		return nil, fmt.Errorf("database unreachable: %w", err)
 	}
 
-	return &postgresProvider{pool: pool}, nil
+	return &provider{pool: pool}, nil
 }
 
-func (p *postgresProvider) Kind() ProviderKind {
-	return ProviderKindPostgres
+func (p *provider) Kind() db.ProviderKind {
+	return db.ProviderKindPostgres
 }
 
-func (p *postgresProvider) Close() {
+func (p *provider) Close() {
 	if p.pool != nil {
 		p.pool.Close()
 	}
