@@ -1,4 +1,4 @@
-package db
+package postgres
 
 import (
 	"context"
@@ -6,9 +6,10 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/knnedy/nexusql/internal/db"
 )
 
-func (p *postgresProvider) FetchRows(ctx context.Context, tableName string, limit, offset int, sortCol string, sortDir SortDir, search string) ([]string, []map[string]any, int64, error) {
+func (p *provider) FetchRows(ctx context.Context, tableName string, limit, offset int, sortCol string, sortDir db.SortDir, search string) ([]string, []map[string]any, int64, error) {
 	searchCols, err := p.getTextColumns(ctx, tableName)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("get text columns: %w", err)
@@ -36,7 +37,7 @@ func (p *postgresProvider) FetchRows(ctx context.Context, tableName string, limi
 
 	if sortCol != "" {
 		dir := "ASC"
-		if sortDir == SortDesc {
+		if sortDir == db.SortDesc {
 			dir = "DESC"
 		}
 		query += fmt.Sprintf(" ORDER BY %s %s", pgx.Identifier{sortCol}.Sanitize(), dir)
@@ -79,7 +80,7 @@ func (p *postgresProvider) FetchRows(ctx context.Context, tableName string, limi
 	return columns, result, total, nil
 }
 
-func (p *postgresProvider) getTextColumns(ctx context.Context, tableName string) ([]string, error) {
+func (p *provider) getTextColumns(ctx context.Context, tableName string) ([]string, error) {
 	rows, err := p.pool.Query(ctx,
 		`SELECT column_name FROM information_schema.columns
 		 WHERE table_schema = 'public'
@@ -107,7 +108,7 @@ func (p *postgresProvider) getTextColumns(ctx context.Context, tableName string)
 	return cols, rows.Err()
 }
 
-func (p *postgresProvider) FetchRowWhere(ctx context.Context, tableName, field, value string) ([]string, []map[string]any, error) {
+func (p *provider) FetchRowWhere(ctx context.Context, tableName, field, value string) ([]string, []map[string]any, error) {
 	validCols, err := p.getTableColumns(ctx, tableName)
 	if err != nil {
 		return nil, nil, fmt.Errorf("validate field: %w", err)
@@ -172,7 +173,7 @@ func normalizeValue(v any) any {
 	}
 }
 
-func (p *postgresProvider) getTableColumns(ctx context.Context, tableName string) ([]string, error) {
+func (p *provider) getTableColumns(ctx context.Context, tableName string) ([]string, error) {
 	rows, err := p.pool.Query(ctx,
 		`SELECT column_name FROM information_schema.columns
 		 WHERE table_schema = 'public' AND table_name = $1
@@ -195,7 +196,7 @@ func (p *postgresProvider) getTableColumns(ctx context.Context, tableName string
 	return cols, rows.Err()
 }
 
-func (p *postgresProvider) UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error {
+func (p *provider) UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error {
 	validCols, err := p.getTableColumns(ctx, tableName)
 	if err != nil {
 		return fmt.Errorf("validate columns: %w", err)
