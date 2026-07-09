@@ -19,12 +19,12 @@ var (
 )
 
 type Project struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	URI          string      `json:"uri"`
-	Provider     db.Provider `json:"provider"`
-	CreatedAt    time.Time   `json:"createdAt"`
-	LastOpenedAt time.Time   `json:"lastOpenedAt"`
+	ID           string          `json:"id"`
+	Name         string          `json:"name"`
+	URI          string          `json:"uri"`
+	Provider     db.ProviderKind `json:"provider"`
+	CreatedAt    time.Time       `json:"createdAt"`
+	LastOpenedAt time.Time       `json:"lastOpenedAt"`
 }
 
 type store struct {
@@ -36,7 +36,7 @@ type store struct {
 type Store interface {
 	List() []*Project
 	Get(id string) (*Project, error)
-	Create(name, uri string, provider db.Provider) (*Project, error)
+	Create(name, uri string, provider db.ProviderKind) (*Project, error)
 	Rename(id, name string) error
 	Delete(id string) error
 	Touch(id string) error
@@ -85,7 +85,7 @@ func (s *store) Get(id string) (*Project, error) {
 	return p, nil
 }
 
-func (s *store) Create(name, uri string, provider db.Provider) (*Project, error) {
+func (s *store) Create(name, uri string, provider db.ProviderKind) (*Project, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
