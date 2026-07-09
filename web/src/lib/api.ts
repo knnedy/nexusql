@@ -9,6 +9,7 @@ import {
   CreateProjectResponse,
   ProjectsResponse,
 } from "./types/project";
+import { QueryRequest, QueryResponse } from "./types/query";
 import {
   LookupResponse,
   RowsResponse,
@@ -99,6 +100,13 @@ export const api = {
         body: JSON.stringify(body),
       },
     );
+  },
+
+  query(body: QueryRequest): Promise<QueryResponse> {
+    return request<QueryResponse>("/api/query", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
   },
 
   projects: {
