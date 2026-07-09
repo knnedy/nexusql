@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/api"
 	"github.com/knnedy/nexusql/internal/config"
+	_ "github.com/knnedy/nexusql/internal/db/postgres"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
 )
