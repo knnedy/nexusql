@@ -34,20 +34,29 @@ func Router(sess *session.Store, proj projects.Store, isDev bool) *chi.Mux {
 		}))
 	}
 
+	// Health
 	r.Get("/health", h.handleHealth)
 
+	// Connection lifecycle
 	r.Post("/connect", h.handleConnect)
 	r.Post("/disconnect", h.handleDisconnect)
 
+	// Schema
 	r.Get("/schema", h.handleSchema)
 
+	// Rows
 	r.Get("/rows/{tableName}", h.handleRows)
 	r.Get("/rows/{tableName}/lookup", h.handleRowLookup)
 	r.Patch("/rows/{tableName}", h.handleUpdateRow)
 
+	// SQL console
+	r.Post("/query", h.handleQuery)
+
+	// Schema export
 	r.Get("/export/prisma", h.handleExportPrisma)
 	r.Get("/export/drizzle", h.handleExportDrizzle)
 
+	// Projects
 	r.Get("/projects", h.handleListProjects)
 	r.Post("/projects", h.handleCreateProject)
 	r.Patch("/projects/{id}", h.handleRenameProject)
