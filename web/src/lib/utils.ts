@@ -1,5 +1,6 @@
 import { parseISO, formatDistanceToNowStrict } from "date-fns";
-import { DatabaseProvider, FieldType } from "./types";
+import { DatabaseProvider } from "./types/provider";
+import { FieldType } from "./types/schema";
 
 export function formatRelativeTime(iso: string): string {
   if (!iso || typeof iso !== "string") {

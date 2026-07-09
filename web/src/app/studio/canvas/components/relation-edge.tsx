@@ -8,7 +8,7 @@ import {
   type EdgeProps,
   type Edge,
 } from "@xyflow/react";
-import type { RelationEdgeData } from "@/lib/types";
+import { RelationEdgeData } from "@/lib/types/canvas";
 
 function RelationEdge({
   id,

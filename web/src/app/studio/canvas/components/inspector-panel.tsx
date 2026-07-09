@@ -15,11 +15,16 @@ import {
 import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { codeToHtml } from "shiki";
-import type { Table, Field, Relation, DatabaseProvider } from "@/lib/types";
-import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
 import { useSchema } from "@/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
 import { normalizeFieldType } from "@/lib/utils";
+import {
+  Field,
+  FIELD_TYPE_BADGE_MAP,
+  Relation,
+  Table,
+} from "@/lib/types/schema";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 interface InspectorPanelProps {
   table: Table | null;

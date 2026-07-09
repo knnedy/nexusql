@@ -29,19 +29,15 @@ import { toPng } from "html-to-image";
 import { SlidersHorizontal } from "lucide-react";
 import { buildCanvasGraph } from "@/lib/canvas-utils";
 import { useSchema } from "@/hooks/use-schema";
-import type {
-  TableNodeData,
-  RelationEdgeData,
-  Table,
-  DatabaseProvider,
-  Relation,
-} from "@/lib/types";
 import TableNode from "./components/table-node";
 import RelationEdge from "./components/relation-edge";
 import CanvasToolbar from "./components/canvas-toolbar";
 import CanvasSidebar from "./components/canvas-sidebar";
 import ExportPreviewDrawer from "./components/export-preview-drawer";
 import InspectorPanel from "./components/inspector-panel";
+import { RelationEdgeData, TableNodeData } from "@/lib/types/canvas";
+import { Relation, Table } from "@/lib/types/schema";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };

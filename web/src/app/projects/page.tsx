@@ -26,7 +26,8 @@ import {
 } from "@/hooks/use-projects";
 import { useConnect } from "@/hooks/use-connect";
 import { formatRelativeTime } from "@/lib/utils";
-import type { DatabaseProvider, Project } from "@/lib/types";
+import { DatabaseProvider } from "@/lib/types/provider";
+import { Project } from "@/lib/types/project";
 
 const PROVIDER_FILTERS: { label: string; value: DatabaseProvider | "all" }[] = [
   { label: "All", value: "all" },

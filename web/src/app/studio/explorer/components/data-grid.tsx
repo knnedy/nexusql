@@ -16,10 +16,16 @@ import {
   ChevronDown,
   ChevronsUpDown,
 } from "lucide-react";
-import type { DatabaseProvider, EnumType, Field, Relation } from "@/lib/types";
-import { FIELD_TYPE_BADGE_MAP } from "@/lib/types";
-import { normalizeFieldType } from "@/lib/utils";
+
 import { useStudioStore } from "@/lib/store/studio-store";
+import {
+  EnumType,
+  Field,
+  FIELD_TYPE_BADGE_MAP,
+  Relation,
+} from "@/lib/types/schema";
+import { DatabaseProvider } from "@/lib/types/provider";
+import { normalizeFieldType } from "@/lib/utils";
 
 export interface PendingEdit {
   pkField: string;

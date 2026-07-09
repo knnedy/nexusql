@@ -10,14 +10,14 @@ import {
   Link as LinkIcon,
   FolderDot,
 } from "lucide-react";
-import {
-  PROVIDERS,
-  type DatabaseProvider,
-  type ProviderMeta,
-} from "@/lib/types";
 import TopNav from "./components/top-nav";
 import RecentProjects from "./components/recent-projects";
 import { useConnect } from "@/hooks/use-connect";
+import {
+  DatabaseProvider,
+  ProviderMeta,
+  PROVIDERS,
+} from "@/lib/types/provider";
 
 function ProviderCard({
   provider,

@@ -6,7 +6,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import ProviderBadge from "./provider-badge";
 import { useProjects, useTouchProject } from "@/hooks/use-projects";
 import { useConnect } from "@/hooks/use-connect";
-import { DatabaseProvider } from "@/lib/types";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 export default function RecentProjects() {
   const router = useRouter();

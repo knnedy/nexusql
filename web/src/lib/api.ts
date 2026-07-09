@@ -1,17 +1,21 @@
-import type {
+import {
   ConnectRequest,
   ConnectResponse,
+  HealthResponse,
+  OrmExportResponse,
+} from "./types/health";
+import {
   CreateProjectRequest,
   CreateProjectResponse,
-  HealthResponse,
-  LookupResponse,
-  OrmExportResponse,
   ProjectsResponse,
+} from "./types/project";
+import {
+  LookupResponse,
   RowsResponse,
-  SchemaResponse,
   UpdateRowRequest,
   UpdateRowResponse,
-} from "./types";
+} from "./types/rows";
+import { SchemaResponse } from "./types/schema";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 

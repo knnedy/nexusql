@@ -4,7 +4,8 @@ import { api } from "@/lib/api";
 import { projectsQueryOptions } from "@/hooks/use-projects";
 import { schemaQueryOptions } from "@/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
-import type { ConnectRequest, DatabaseProvider } from "@/lib/types";
+import { ConnectRequest } from "@/lib/types/health";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 export function useConnect() {
   const router = useRouter();

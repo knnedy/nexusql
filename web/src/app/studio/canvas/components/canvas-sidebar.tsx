@@ -19,7 +19,8 @@ import { SiPrisma, SiDrizzle } from "react-icons/si";
 import { reapplyLayout } from "@/lib/canvas-utils";
 import { useSchema } from "@/hooks/use-schema";
 import type { Node } from "@xyflow/react";
-import type { TableNodeData, DatabaseProvider } from "@/lib/types";
+import { TableNodeData } from "@/lib/types/canvas";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 interface CanvasSidebarProps {
   open: boolean;

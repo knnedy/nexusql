@@ -1,4 +1,4 @@
-import type { DatabaseProvider } from "@/lib/types";
+import { DatabaseProvider } from "@/lib/types/provider";
 
 export default function ProviderBadge({
   provider,
