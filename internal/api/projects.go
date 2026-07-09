@@ -35,7 +35,7 @@ func (h *handler) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	provider, err := db.DetectProvider(req.URI)
+	provider, err := db.DetectProviderKind(req.URI)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return

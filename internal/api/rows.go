@@ -72,13 +72,26 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 	sortDir := db.SortAsc
 
 	if sc := r.URL.Query().Get("sort"); sc != "" {
-		validCols, colErr := db.GetTableColumns(r.Context(), conn, tableName)
-		if colErr != nil {
-			writeError(w, http.StatusInternalServerError, colErr.Error())
+		schema, schemaErr := conn.Impl.IntrospectSchema(r.Context(), "public")
+		if schemaErr != nil {
+			writeError(w, http.StatusInternalServerError, schemaErr.Error())
 			return
 		}
-		for _, col := range validCols {
-			if col == sc {
+
+		var table *db.Table
+		for i := range schema.Tables {
+			if schema.Tables[i].Name == tableName {
+				table = &schema.Tables[i]
+				break
+			}
+		}
+		if table == nil {
+			writeError(w, http.StatusBadRequest, "unknown table")
+			return
+		}
+
+		for _, f := range table.Fields {
+			if f.Name == sc {
 				sortCol = sc
 				break
 			}
@@ -97,7 +110,7 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 
 	offset := (page - 1) * pageSize
 
-	columns, rows, total, err := db.FetchRows(r.Context(), conn, tableName, pageSize, offset, sortCol, sortDir, search)
+	columns, rows, total, err := conn.Impl.FetchRows(r.Context(), tableName, pageSize, offset, sortCol, sortDir, search)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -141,7 +154,7 @@ func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	columns, rows, err := db.FetchRowWhere(r.Context(), conn, tableName, field, value)
+	columns, rows, err := conn.Impl.FetchRowWhere(r.Context(), tableName, field, value)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
@@ -184,7 +197,7 @@ func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := db.UpdateRow(r.Context(), conn, tableName, req.PKField, req.PKValue, req.TargetField, req.NewValue); err != nil {
+	if err := conn.Impl.UpdateRow(r.Context(), tableName, req.PKField, req.PKValue, req.TargetField, req.NewValue); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}

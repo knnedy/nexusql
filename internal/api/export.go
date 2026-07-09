@@ -23,7 +23,7 @@ func (h *handler) handleExportPrisma(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schema, err := db.IntrospectSchema(r.Context(), conn, "public")
+	schema, err := conn.Impl.IntrospectSchema(r.Context(), "public")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -46,7 +46,7 @@ func (h *handler) handleExportDrizzle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schema, err := db.IntrospectSchema(r.Context(), conn, "public")
+	schema, err := conn.Impl.IntrospectSchema(r.Context(), "public")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

@@ -15,9 +15,9 @@ type connectRequest struct {
 }
 
 type connectResponse struct {
-	OK        bool        `json:"ok"`
-	Provider  db.Provider `json:"provider"`
-	ProjectID string      `json:"projectId"`
+	OK        bool            `json:"ok"`
+	Provider  db.ProviderKind `json:"provider"`
+	ProjectID string          `json:"projectId"`
 }
 
 func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
@@ -51,17 +51,17 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	name := req.Name
 	if name == "" {
-		name = fmt.Sprintf("Project %s", conn.Provider)
+		name = fmt.Sprintf("Project %s", conn.Kind)
 	}
 
-	p, err := h.projects.Create(name, req.URI, conn.Provider)
+	p, err := h.projects.Create(name, req.URI, conn.Kind)
 	if err != nil {
 		// project with same name exists — find by URI and return it
 		for _, existing := range h.projects.List() {
 			if existing.URI == req.URI {
 				writeJSON(w, http.StatusOK, connectResponse{
 					OK:        true,
-					Provider:  conn.Provider,
+					Provider:  conn.Kind,
 					ProjectID: existing.ID,
 				})
 				return
@@ -69,14 +69,14 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 		}
 		writeJSON(w, http.StatusOK, connectResponse{
 			OK:       true,
-			Provider: conn.Provider,
+			Provider: conn.Kind,
 		})
 		return
 	}
 
 	writeJSON(w, http.StatusOK, connectResponse{
 		OK:        true,
-		Provider:  conn.Provider,
+		Provider:  conn.Kind,
 		ProjectID: p.ID,
 	})
 }

@@ -29,7 +29,7 @@ func (h *handler) handleSchema(w http.ResponseWriter, r *http.Request) {
 		schema = "public"
 	}
 
-	result, err := db.IntrospectSchema(r.Context(), conn, schema)
+	result, err := conn.Impl.IntrospectSchema(r.Context(), schema)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
