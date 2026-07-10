@@ -35,6 +35,7 @@ import CanvasToolbar from "./components/canvas-toolbar";
 import CanvasSidebar from "./components/canvas-sidebar";
 import ExportPreviewDrawer from "./components/export-preview-drawer";
 import InspectorPanel from "./components/inspector-panel";
+import SqlConsoleModal from "./components/sql-console-modal";
 import { RelationEdgeData, TableNodeData } from "@/lib/types/canvas";
 import { Relation, Table } from "@/lib/types/schema";
 import { DatabaseProvider } from "@/lib/types/provider";
@@ -70,6 +71,7 @@ function CanvasInner() {
   const [activeExport, setActiveExport] = useState<
     "png" | "prisma" | "drizzle" | null
   >(null);
+  const [sqlConsoleOpen, setSqlConsoleOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<{
     table: Table;
     provider: DatabaseProvider;
@@ -249,6 +251,7 @@ function CanvasInner() {
         onLayoutApply={handleLayoutApply}
         onSelectExport={(type) => setActiveExport(type)}
         activeExport={activeExport}
+        onOpenSqlConsole={() => setSqlConsoleOpen(true)}
       />
 
       <ExportPreviewDrawer
@@ -259,6 +262,11 @@ function CanvasInner() {
         pngDataUrl={pngDataUrl}
         isGeneratingPng={isGeneratingPng}
         onGeneratePng={handleGeneratePng}
+      />
+
+      <SqlConsoleModal
+        open={sqlConsoleOpen}
+        onClose={() => setSqlConsoleOpen(false)}
       />
 
       <div ref={canvasWrapperRef} className="absolute inset-0">
