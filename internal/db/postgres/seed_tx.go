@@ -20,6 +20,13 @@ func (p *provider) BeginSeedTx(ctx context.Context) (db.SeedTx, error) {
 	return &seedTx{tx: tx}, nil
 }
 
+func (s *seedTx) Exec(ctx context.Context, sqlStmt string) error {
+	if _, err := s.tx.Exec(ctx, sqlStmt); err != nil {
+		return fmt.Errorf("exec failed: %w", err)
+	}
+	return nil
+}
+
 func (s *seedTx) InsertReturningPK(ctx context.Context, sqlStmt string, pkColumn string) (string, error) {
 	full := fmt.Sprintf("%s RETURNING %s", sqlStmt, pgx.Identifier{pkColumn}.Sanitize())
 
