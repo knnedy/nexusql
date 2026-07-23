@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useSchema } from "@/hooks/use-schema";
@@ -94,6 +94,14 @@ function Pagination({
 }
 
 export default function ExplorerPage() {
+  return (
+    <Suspense fallback={null}>
+      <ExplorerInner />
+    </Suspense>
+  );
+}
+
+function ExplorerInner() {
   const { data: schema } = useSchema();
   const router = useRouter();
   const searchParams = useSearchParams();
