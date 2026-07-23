@@ -1,9 +1,9 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Terminal, Wifi, WifiOff } from "lucide-react";
 import { createContext, useContext, useState } from "react";
-import { queries } from "@/lib/queries";
+import { api } from "@/lib/api";
 
 // Context
 interface ServerStatusContextValue {
@@ -124,13 +124,16 @@ export function ServerStatusProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const { data, isLoading } = useQuery({
-    ...queries.health(),
-    // Poll every 10 seconds to detect if the server goes down
-    refetchInterval: 10_000,
-    // Do not throw — we handle the offline state ourselves
-    throwOnError: false,
-  });
+  const { data, isLoading } = useQuery(
+    queryOptions({
+      queryKey: ["health"],
+      queryFn: api.health,
+      // Poll every 10 seconds to detect if the server goes down
+      refetchInterval: 10_000,
+      // Do not throw — we handle the offline state ourselves
+      throwOnError: false,
+    }),
+  );
 
   const isOnline = !!data?.status;
   const isChecking = isLoading;

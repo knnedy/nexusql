@@ -9,7 +9,6 @@ import {
   Moon,
   X,
   Database,
-  GitCompareArrows,
   Sprout,
   SquareTerminal,
   Boxes,
@@ -118,7 +117,6 @@ export default function CanvasSidebar({
   onLayoutApply,
   onSelectExport,
   activeExport,
-  onOpenMirror,
   onOpenSeedGenerator,
   onOpenSqlConsole,
 }: CanvasSidebarProps) {
@@ -214,13 +212,6 @@ export default function CanvasSidebar({
 
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Database Tools" />
-            <SidebarItem
-              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
-              icon={<GitCompareArrows size={14} aria-hidden />}
-              label="Mirror Database"
-              description="Clone schema and data to a target"
-              onClick={() => onOpenMirror?.()}
-            />
             <SidebarItem
               iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
               icon={<SquareTerminal size={14} aria-hidden />}
