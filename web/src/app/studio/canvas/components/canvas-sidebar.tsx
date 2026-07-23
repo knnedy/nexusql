@@ -99,13 +99,13 @@ function StatPill({
 }) {
   return (
     <div className="flex-1 flex flex-col items-center gap-1 py-2.5 rounded-lg bg-surface-3/60 dark:bg-surface-3/40 border border-black/2 dark:border-white/2">
-      <div className="flex items-center gap-1 text-text-tertiary">
+      <div className="flex items-center gap-2 text-text-tertiary">
         {icon}
         <span className="text-[15px] font-bold text-text-primary tabular-nums leading-none">
           {value}
         </span>
       </div>
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-text-tertiary">
+      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-text-tertiary">
         {label}
       </span>
     </div>
@@ -180,17 +180,17 @@ export default function CanvasSidebar({
           <div className="flex flex-col gap-2 px-1">
             <div className="flex gap-1.5">
               <StatPill
-                icon={<Boxes size={11} aria-hidden />}
+                icon={<Boxes size={14} aria-hidden />}
                 value={tableCount}
                 label="Tables"
               />
               <StatPill
-                icon={<Link2 size={11} aria-hidden />}
+                icon={<Link2 size={14} aria-hidden />}
                 value={relationCount}
                 label="Relations"
               />
               <StatPill
-                icon={<Database size={11} aria-hidden />}
+                icon={<Database size={14} aria-hidden />}
                 value={enumCount}
                 label="Enums"
               />

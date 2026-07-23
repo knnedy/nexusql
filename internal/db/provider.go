@@ -36,6 +36,16 @@ func (k ProviderKind) Validate() error {
 	}
 }
 
+// SeedTx represents an open transaction used for seeding. Callers must
+// call Commit or Rollback exactly once.
+type SeedTx interface {
+	// InsertReturningPK executes an INSERT ... RETURNING <pkColumn> statement
+	// and returns the generated primary key as a string.
+	InsertReturningPK(ctx context.Context, sql string, pkColumn string) (string, error)
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+}
+
 // Provider is implemented once per database engine (postgres, mysql, sqlite).
 // Each implementation owns its own driver connection and translates its
 // native SQL dialect and type system into the canonical shapes in types.go.
@@ -49,6 +59,8 @@ type Provider interface {
 	UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error
 
 	ExecuteQuery(ctx context.Context, sql string) (columns []string, rows []map[string]any, rowsAffected int64, isWrite bool, err error)
+
+	BeginSeedTx(ctx context.Context) (SeedTx, error)
 
 	Close()
 }
