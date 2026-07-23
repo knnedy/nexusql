@@ -150,9 +150,7 @@ func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOp
 				}
 				insertedThisTable = append(insertedThisTable, pkVal)
 			} else {
-				// No PK column to capture — plain insert via a 1-row RETURNING
-				// on some harmless expression isn't needed; just execute directly.
-				if _, err := tx.InsertReturningPK(ctx, sql, "1"); err != nil {
+				if err := tx.Exec(ctx, sql); err != nil {
 					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
 				}
 			}

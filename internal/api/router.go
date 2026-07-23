@@ -52,6 +52,9 @@ func Router(sess *session.Store, proj projects.Store, isDev bool) *chi.Mux {
 	// SQL console
 	r.Post("/query", h.handleQuery)
 
+	// Seed data
+	r.Post("/seed", h.handleSeed)
+
 	// Schema export
 	r.Get("/export/prisma", h.handleExportPrisma)
 	r.Get("/export/drizzle", h.handleExportDrizzle)
