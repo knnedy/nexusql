@@ -2,9 +2,11 @@
 
 A local-first SQL data studio with a visual ERD canvas, spreadsheet-style data explorer, SQL console, and fake data seeding — supports Postgres, MySQL, and SQLite. No installation required — just download and run a single binary.
 
-![NexusQL Studio](https://raw.githubusercontent.com/knnedy/nexusql/main/preview.png)
+![NexusQL Canvas](https://raw.githubusercontent.com/knnedy/nexusql/main/preview-canvas.png)
+_Canvas — interactive ERD with auto-layout, relation edges, and an inspector panel._
 
-![NexusQL Explorer](https://raw.githubusercontent.com/knnedy/nexusql/main/preview.png)
+![NexusQL Explorer](https://raw.githubusercontent.com/knnedy/nexusql/main/preview-explorer.png)
+_Explorer — spreadsheet-style data grid with inline editing and foreign-key navigation._
 
 ---
 
@@ -113,15 +115,20 @@ make build
 ./bin/nexusql
 ```
 
-For frontend-only development with hot reload:
+`make build` builds the frontend as a static export, embeds it into `cmd/nexusql/out`, then compiles the Go binary to `bin/nexusql`.
+
+For development with hot reload (Go backend via `air` on `:7080`, Next.js dev server on `:3000`):
 
 ```bash
-cd web
-pnpm install
-pnpm dev
+make dev
 ```
 
-> `make build` and any additional targets (e.g. `make dev`) should be confirmed against the project's actual `Makefile` — update this section if the target names differ.
+Other targets:
+
+```bash
+make run    # build then run ./bin/nexusql
+make clean  # remove build artifacts (web/out, web/.next, bin, cmd/nexusql/out)
+```
 
 ---
 
