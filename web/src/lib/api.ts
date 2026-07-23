@@ -17,6 +17,7 @@ import {
   UpdateRowResponse,
 } from "./types/rows";
 import { SchemaResponse } from "./types/schema";
+import { SeedRequest, SeedResponse } from "./types/seed";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -104,6 +105,13 @@ export const api = {
 
   query(body: QueryRequest): Promise<QueryResponse> {
     return request<QueryResponse>("/api/query", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  seed(body: SeedRequest): Promise<SeedResponse> {
+    return request<SeedResponse>("/api/seed", {
       method: "POST",
       body: JSON.stringify(body),
     });
