@@ -223,17 +223,17 @@ export default function CanvasSidebar({
             />
             <SidebarItem
               iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
-              icon={<Sprout size={14} aria-hidden />}
-              label="Generate Seed Data"
-              description="Populate tables with realistic rows"
-              onClick={() => onOpenSeedGenerator?.()}
-            />
-            <SidebarItem
-              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
               icon={<SquareTerminal size={14} aria-hidden />}
               label="SQL Console"
               description="Run raw queries against this project"
               onClick={() => onOpenSqlConsole?.()}
+            />
+            <SidebarItem
+              iconWrapperClass="bg-teal/10 text-teal dark:bg-teal/15 dark:text-teal"
+              icon={<Sprout size={14} aria-hidden />}
+              label="Generate Seed Data"
+              description="Populate tables with realistic rows"
+              onClick={() => onOpenSeedGenerator?.()}
             />
           </div>
 

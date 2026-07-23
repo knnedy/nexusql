@@ -39,6 +39,7 @@ import SqlConsoleModal from "./components/sql-console-modal";
 import { RelationEdgeData, TableNodeData } from "@/lib/types/canvas";
 import { Relation, Table } from "@/lib/types/schema";
 import { DatabaseProvider } from "@/lib/types/provider";
+import SeedDataModal from "./components/seed-data-modal";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -71,6 +72,7 @@ function CanvasInner() {
   const [activeExport, setActiveExport] = useState<
     "png" | "prisma" | "drizzle" | null
   >(null);
+  const [seedOpen, setSeedOpen] = useState(false);
   const [sqlConsoleOpen, setSqlConsoleOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<{
     table: Table;
@@ -252,6 +254,7 @@ function CanvasInner() {
         onSelectExport={(type) => setActiveExport(type)}
         activeExport={activeExport}
         onOpenSqlConsole={() => setSqlConsoleOpen(true)}
+        onOpenSeedGenerator={() => setSeedOpen(true)}
       />
 
       <ExportPreviewDrawer
@@ -268,6 +271,8 @@ function CanvasInner() {
         open={sqlConsoleOpen}
         onClose={() => setSqlConsoleOpen(false)}
       />
+
+      <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
 
       <div ref={canvasWrapperRef} className="absolute inset-0">
         <ReactFlow
