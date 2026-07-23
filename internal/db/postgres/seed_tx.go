@@ -34,7 +34,7 @@ func (s *seedTx) InsertReturningPK(ctx context.Context, sqlStmt string, pkColumn
 	if err := s.tx.QueryRow(ctx, full).Scan(&pk); err != nil {
 		return "", fmt.Errorf("insert failed: %w", err)
 	}
-	return fmt.Sprintf("%v", pk), nil
+	return formatPKValue(pk), nil
 }
 
 func (s *seedTx) Commit(ctx context.Context) error {
@@ -43,4 +43,27 @@ func (s *seedTx) Commit(ctx context.Context) error {
 
 func (s *seedTx) Rollback(ctx context.Context) error {
 	return s.tx.Rollback(ctx)
+}
+
+// formatPKValue converts a scanned primary key into the string form needed
+// for embedding in later INSERT statements. pgx decodes uuid columns as
+// [16]byte rather than a string when scanned into `any`, so that case needs
+// explicit hex formatting; everything else (int64, string, etc.) is safe to
+// format with %v.
+func formatPKValue(pk any) string {
+	switch v := pk.(type) {
+	case [16]byte:
+		return formatUUIDBytes(v[:])
+	case []byte:
+		if len(v) == 16 {
+			return formatUUIDBytes(v)
+		}
+		return string(v)
+	default:
+		return fmt.Sprintf("%v", pk)
+	}
+}
+
+func formatUUIDBytes(b []byte) string {
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
 }
