@@ -187,7 +187,17 @@ func buildInsertSQL(table Table, fkByField map[string]Relation, generatedPKs map
 	for _, f := range table.Fields {
 		if f.IsPrimaryKey {
 			hasPK = true
-			continue // let the DB assign it; we read it back via RETURNING
+			if f.DefaultValue != nil {
+				// DB has a default (serial sequence, gen_random_uuid(), etc.) —
+				// omit the column and let the DB assign it; we read it back
+				// via RETURNING either way.
+				continue
+			}
+			// No DB-level default — we have to supply a value ourselves or
+			// Postgres will send NULL through and violate NOT NULL.
+			cols = append(cols, quoteIdent(f.Name))
+			vals = append(vals, generatePKValue(f))
+			continue
 		}
 
 		var v string
@@ -238,6 +248,18 @@ func buildInsertSQL(table Table, fkByField map[string]Relation, generatedPKs map
 		strings.Join(cols, ", "),
 		strings.Join(vals, ", "),
 	), hasPK
+}
+
+func generatePKValue(f Field) string {
+	switch f.Type {
+	case FieldTypeUUID:
+		return quoteLiteral(gofakeit.UUID())
+	case FieldTypeText, FieldTypeVarchar, FieldTypeChar:
+		return quoteLiteral(gofakeit.UUID())
+	default:
+		// integer-ish PK with no sequence/default behind it
+		return fmt.Sprintf("%d", gofakeit.Number(100000, 9999999))
+	}
 }
 
 func needsQuoting(t FieldType) bool {
