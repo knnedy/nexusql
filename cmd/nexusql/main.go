@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"charm.land/lipgloss/v2"
 	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/api"
 	"github.com/knnedy/nexusql/internal/config"
@@ -23,6 +24,49 @@ import (
 // Version is set at build time via -ldflags "-X main.Version=..."
 // (see .goreleaser.yaml). Defaults to "dev" for local builds.
 var Version = "dev"
+
+const wordmark = `
+███╗   ██╗███████╗██╗  ██╗██╗   ██╗███████╗ ██████╗ ██╗
+████╗  ██║██╔════╝╚██╗██╔╝██║   ██║██╔════╝██╔═══██╗██║
+██╔██╗ ██║█████╗   ╚███╔╝ ██║   ██║███████╗██║   ██║██║
+██║╚██╗██║██╔══╝   ██╔██╗ ██║   ██║╚════██║██║▄▄ ██║██║
+██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║╚██████╔╝███████╗
+╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝ ╚══▀▀═╝ ╚══════╝`
+
+func printBanner(addr string, isDev bool) {
+	teal := lipgloss.Color("#5DCAA5")
+	coral := lipgloss.Color("#D85A30")
+	textPrimary := lipgloss.Color("#F0EFEA")
+	textSecondary := lipgloss.Color("#8A8A86")
+	textTertiary := lipgloss.Color("#606060")
+
+	logo := lipgloss.NewStyle().Foreground(teal).Render(wordmark)
+
+	version := lipgloss.NewStyle().Foreground(textTertiary).Render("v" + Version)
+
+	tagline := lipgloss.NewStyle().Foreground(textSecondary).
+		Render("local-first SQL data studio")
+
+	url := lipgloss.NewStyle().Bold(true).Foreground(textPrimary).
+		Render("http://" + addr)
+
+	mode := "production"
+	modeColor := teal
+	if isDev {
+		mode = "development"
+		modeColor = coral
+	}
+	modeStyled := lipgloss.NewStyle().Foreground(modeColor).Render(mode)
+
+	label := lipgloss.NewStyle().Foreground(textTertiary)
+
+	fmt.Println(logo)
+	fmt.Println()
+	fmt.Printf("  %s   %s\n", version, tagline)
+	fmt.Printf("  %s  %s\n", label.Render("running at"), url)
+	fmt.Printf("  %s        %s\n", label.Render("mode"), modeStyled)
+	fmt.Println()
+}
 
 func main() {
 	host := flag.String("host", "", "network interface to bind (default 127.0.0.1)")
@@ -65,7 +109,7 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
-		fmt.Printf("NexusQL running on http://%s\n", cfg.Addr())
+		printBanner(cfg.Addr(), cfg.IsDev)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
