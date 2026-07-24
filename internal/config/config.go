@@ -8,12 +8,19 @@ type Config struct {
 	IsDev bool
 }
 
-func Load() Config {
-	return Config{
+func Load(hostOverride, portOverride string) Config {
+	cfg := Config{
 		Port:  "7080",
 		Host:  "127.0.0.1",
 		IsDev: os.Getenv("NEXUSQL_ENV") == "development",
 	}
+	if hostOverride != "" {
+		cfg.Host = hostOverride
+	}
+	if portOverride != "" {
+		cfg.Port = portOverride
+	}
+	return cfg
 }
 
 func (c Config) Addr() string {

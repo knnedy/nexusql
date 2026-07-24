@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -19,8 +20,22 @@ import (
 	"github.com/knnedy/nexusql/internal/session"
 )
 
+// Version is set at build time via -ldflags "-X main.Version=..."
+// (see .goreleaser.yaml). Defaults to "dev" for local builds.
+var Version = "dev"
+
 func main() {
-	cfg := config.Load()
+	host := flag.String("host", "", "network interface to bind (default 127.0.0.1)")
+	port := flag.String("port", "", "TCP port for the web server (default 7080)")
+	showVersion := flag.Bool("version", false, "print version and exit")
+	flag.Parse()
+
+	if *showVersion {
+		fmt.Println("nexusql", Version)
+		return
+	}
+
+	cfg := config.Load(*host, *port)
 
 	proj, err := projects.NewStore()
 	if err != nil {

@@ -12,7 +12,7 @@ _Explorer — spreadsheet-style data grid with inline editing and foreign-key na
 
 ## Features
 
-- **Single binary** — no Node.js, no separate services. One file, run it anywhere.
+- **Single binary** — no separate services. One file, run it anywhere.
 - **Visual ERD canvas** — interactive schema graph with automatic layout, relation edges, and an inspector panel for tables and relations.
 - **Data explorer** — spreadsheet-style grid with inline cell editing, server-side sorting/search/pagination, foreign-key navigation, and CSV export.
 - **SQL console** — syntax-highlighted editor with query history, a confirmation gate on destructive queries, and JSON/CSV export of results.
