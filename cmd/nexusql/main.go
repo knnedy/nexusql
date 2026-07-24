@@ -17,6 +17,7 @@ import (
 	"github.com/knnedy/nexusql/internal/api"
 	"github.com/knnedy/nexusql/internal/config"
 	_ "github.com/knnedy/nexusql/internal/db/postgres"
+	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
 )
