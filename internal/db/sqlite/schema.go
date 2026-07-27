@@ -238,6 +238,9 @@ func (p *provider) primaryKeyColumn(ctx context.Context, tableName string) (stri
 			return name, nil
 		}
 	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
 	return "", fmt.Errorf("no single-column primary key found for %s", tableName)
 }
 
