@@ -24,7 +24,7 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 	}
 
 	tables := make([]db.Table, 0, len(tableNames))
-	var relations []db.Relation
+	relations := make([]db.Relation, 0)
 
 	for _, name := range tableNames {
 		fkRows, err := p.foreignKeyRows(ctx, name)
