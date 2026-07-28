@@ -1,45 +1,12 @@
-package db
+package postgres
 
 import (
 	"fmt"
 	"sort"
 	"strings"
+
+	"github.com/knnedy/nexusql/internal/db"
 )
-
-var migrationTables = map[string]bool{
-	"goose_db_version":      true,
-	"schema_migrations":     true,
-	"flyway_schema_history": true,
-	"_prisma_migrations":    true,
-	"_sqlx_migrations":      true,
-}
-
-func isUserTable(name string) bool {
-	return !migrationTables[name]
-}
-
-func buildRelationLookup(relations []Relation) map[string]Relation {
-	m := make(map[string]Relation, len(relations))
-	for _, r := range relations {
-		m[r.SourceTable+"."+r.SourceField] = r
-	}
-	return m
-}
-
-func buildEnumSet(enums []EnumType) map[string]bool {
-	m := make(map[string]bool, len(enums))
-	for _, e := range enums {
-		m[e.Name] = true
-	}
-	return m
-}
-
-func capitalize(s string) string {
-	if s == "" {
-		return ""
-	}
-	return strings.ToUpper(s[:1]) + s[1:]
-}
 
 func needsSqlHelper(d string) bool {
 	return strings.Contains(d, "()")
@@ -55,16 +22,16 @@ func formatDefault(d string) string {
 	return d
 }
 
-func GeneratePrisma(schema *Schema) string {
+func GeneratePrisma(schema *db.Schema) string {
 	var sb strings.Builder
-	relLookup := buildRelationLookup(schema.Relations)
-	enumSet := buildEnumSet(schema.Enums)
+	relLookup := db.BuildRelationLookup(schema.Relations)
+	enumSet := db.BuildEnumSet(schema.Enums)
 
 	sb.WriteString("datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n")
 	sb.WriteString("generator client {\n  provider = \"prisma-client-js\"\n}\n\n")
 
 	for _, e := range schema.Enums {
-		sb.WriteString(fmt.Sprintf("enum %s {\n", capitalize(e.Name)))
+		sb.WriteString(fmt.Sprintf("enum %s {\n", db.Capitalize(e.Name)))
 		for _, v := range e.Values {
 			sb.WriteString(fmt.Sprintf("  %s\n", strings.ToUpper(v)))
 		}
@@ -72,11 +39,11 @@ func GeneratePrisma(schema *Schema) string {
 	}
 
 	for _, t := range schema.Tables {
-		if !isUserTable(t.Name) {
+		if !db.IsUserTable(t.Name) {
 			continue
 		}
 
-		sb.WriteString(fmt.Sprintf("model %s {\n", capitalize(t.Name)))
+		sb.WriteString(fmt.Sprintf("model %s {\n", db.Capitalize(t.Name)))
 
 		for _, f := range t.Fields {
 			prismaType := mapPrismaType(f.Type, enumSet)
@@ -88,7 +55,7 @@ func GeneratePrisma(schema *Schema) string {
 			line := fmt.Sprintf("  %-20s %s%s", f.Name, prismaType, optional)
 
 			if f.IsPrimaryKey {
-				if f.Type == FieldTypeUUID {
+				if f.Type == db.FieldTypeUUID {
 					line += "  @id @default(uuid())"
 				} else {
 					line += "  @id @default(autoincrement())"
@@ -109,7 +76,7 @@ func GeneratePrisma(schema *Schema) string {
 				continue
 			}
 			addedRelations[rel.TargetTable] = true
-			refModel := capitalize(rel.TargetTable)
+			refModel := db.Capitalize(rel.TargetTable)
 			nullable := ""
 			if f.Nullable {
 				nullable = "?"
@@ -124,17 +91,17 @@ func GeneratePrisma(schema *Schema) string {
 	return strings.TrimSpace(sb.String())
 }
 
-func GenerateDrizzle(schema *Schema) string {
+func GenerateDrizzle(schema *db.Schema) string {
 	var sb strings.Builder
-	relLookup := buildRelationLookup(schema.Relations)
-	enumSet := buildEnumSet(schema.Enums)
+	relLookup := db.BuildRelationLookup(schema.Relations)
+	enumSet := db.BuildEnumSet(schema.Enums)
 
 	importsSet := map[string]bool{"pgTable": true}
 	if len(schema.Enums) > 0 {
 		importsSet["pgEnum"] = true
 	}
 	for _, t := range schema.Tables {
-		if !isUserTable(t.Name) {
+		if !db.IsUserTable(t.Name) {
 			continue
 		}
 		for _, f := range t.Fields {
@@ -144,7 +111,7 @@ func GenerateDrizzle(schema *Schema) string {
 		}
 	}
 	for _, t := range schema.Tables {
-		if !isUserTable(t.Name) {
+		if !db.IsUserTable(t.Name) {
 			continue
 		}
 		for _, f := range t.Fields {
@@ -172,7 +139,7 @@ func GenerateDrizzle(schema *Schema) string {
 	}
 
 	for _, t := range schema.Tables {
-		if !isUserTable(t.Name) {
+		if !db.IsUserTable(t.Name) {
 			continue
 		}
 
@@ -204,67 +171,67 @@ func GenerateDrizzle(schema *Schema) string {
 	return strings.TrimSpace(sb.String())
 }
 
-func mapPrismaType(t FieldType, enumSet map[string]bool) string {
+func mapPrismaType(t db.FieldType, enumSet map[string]bool) string {
 	switch t {
-	case FieldTypeSmallint, FieldTypeInteger, FieldTypeSerial:
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial:
 		return "Int"
-	case FieldTypeBigint, FieldTypeBigserial:
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
 		return "BigInt"
-	case FieldTypeVarchar, FieldTypeText, FieldTypeChar:
+	case db.FieldTypeVarchar, db.FieldTypeText, db.FieldTypeChar:
 		return "String"
-	case FieldTypeUUID:
+	case db.FieldTypeUUID:
 		return "String @db.Uuid"
-	case FieldTypeBoolean:
+	case db.FieldTypeBoolean:
 		return "Boolean"
-	case FieldTypeTimestamp, FieldTypeTimestamptz:
+	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
 		return "DateTime"
-	case FieldTypeJSON, FieldTypeJSONB:
+	case db.FieldTypeJSON, db.FieldTypeJSONB:
 		return "Json"
-	case FieldTypeNumeric, FieldTypeReal, FieldTypeDoublePrecision:
+	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
 		return "Float"
 	default:
 		if enumSet[string(t)] {
-			return capitalize(string(t))
+			return db.Capitalize(string(t))
 		}
 		return "String // " + string(t)
 	}
 }
 
-func mapDrizzleType(name string, t FieldType, isPk bool, enumSet map[string]bool) string {
+func mapDrizzleType(name string, t db.FieldType, isPk bool, enumSet map[string]bool) string {
 	if isPk {
-		if t == FieldTypeUUID {
+		if t == db.FieldTypeUUID {
 			return fmt.Sprintf("uuid('%s').primaryKey().defaultRandom()", name)
 		}
 		return fmt.Sprintf("serial('%s').primaryKey()", name)
 	}
 	switch t {
-	case FieldTypeVarchar, FieldTypeChar:
+	case db.FieldTypeVarchar, db.FieldTypeChar:
 		return fmt.Sprintf("varchar('%s', { length: 255 })", name)
-	case FieldTypeText:
+	case db.FieldTypeText:
 		return fmt.Sprintf("text('%s')", name)
-	case FieldTypeInteger:
+	case db.FieldTypeInteger:
 		return fmt.Sprintf("integer('%s')", name)
-	case FieldTypeSmallint:
+	case db.FieldTypeSmallint:
 		return fmt.Sprintf("smallint('%s')", name)
-	case FieldTypeBigint, FieldTypeBigserial:
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
 		return fmt.Sprintf("bigint('%s', { mode: 'number' })", name)
-	case FieldTypeBoolean:
+	case db.FieldTypeBoolean:
 		return fmt.Sprintf("boolean('%s')", name)
-	case FieldTypeTimestamp:
+	case db.FieldTypeTimestamp:
 		return fmt.Sprintf("timestamp('%s')", name)
-	case FieldTypeTimestamptz:
+	case db.FieldTypeTimestamptz:
 		return fmt.Sprintf("timestamp('%s', { withTimezone: true })", name)
-	case FieldTypeUUID:
+	case db.FieldTypeUUID:
 		return fmt.Sprintf("uuid('%s')", name)
-	case FieldTypeJSON:
+	case db.FieldTypeJSON:
 		return fmt.Sprintf("json('%s')", name)
-	case FieldTypeJSONB:
+	case db.FieldTypeJSONB:
 		return fmt.Sprintf("jsonb('%s')", name)
-	case FieldTypeNumeric:
+	case db.FieldTypeNumeric:
 		return fmt.Sprintf("numeric('%s')", name)
-	case FieldTypeReal:
+	case db.FieldTypeReal:
 		return fmt.Sprintf("real('%s')", name)
-	case FieldTypeDoublePrecision:
+	case db.FieldTypeDoublePrecision:
 		return fmt.Sprintf("doublePrecision('%s')", name)
 	default:
 		if enumSet[string(t)] {
@@ -274,39 +241,39 @@ func mapDrizzleType(name string, t FieldType, isPk bool, enumSet map[string]bool
 	}
 }
 
-func drizzleImports(t FieldType, isPk bool, enumSet map[string]bool) []string {
+func drizzleImports(t db.FieldType, isPk bool, enumSet map[string]bool) []string {
 	if isPk {
-		if t == FieldTypeUUID {
+		if t == db.FieldTypeUUID {
 			return []string{"uuid"}
 		}
 		return []string{"serial"}
 	}
 	switch t {
-	case FieldTypeVarchar, FieldTypeChar:
+	case db.FieldTypeVarchar, db.FieldTypeChar:
 		return []string{"varchar"}
-	case FieldTypeText:
+	case db.FieldTypeText:
 		return []string{"text"}
-	case FieldTypeInteger:
+	case db.FieldTypeInteger:
 		return []string{"integer"}
-	case FieldTypeSmallint:
+	case db.FieldTypeSmallint:
 		return []string{"smallint"}
-	case FieldTypeBigint, FieldTypeBigserial:
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
 		return []string{"bigint"}
-	case FieldTypeBoolean:
+	case db.FieldTypeBoolean:
 		return []string{"boolean"}
-	case FieldTypeTimestamp, FieldTypeTimestamptz:
+	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
 		return []string{"timestamp"}
-	case FieldTypeUUID:
+	case db.FieldTypeUUID:
 		return []string{"uuid"}
-	case FieldTypeJSON:
+	case db.FieldTypeJSON:
 		return []string{"json"}
-	case FieldTypeJSONB:
+	case db.FieldTypeJSONB:
 		return []string{"jsonb"}
-	case FieldTypeNumeric:
+	case db.FieldTypeNumeric:
 		return []string{"numeric"}
-	case FieldTypeReal:
+	case db.FieldTypeReal:
 		return []string{"real"}
-	case FieldTypeDoublePrecision:
+	case db.FieldTypeDoublePrecision:
 		return []string{"doublePrecision"}
 	default:
 		if enumSet[string(t)] {
