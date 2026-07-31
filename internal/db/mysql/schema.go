@@ -292,3 +292,10 @@ func parseEnumValues(columnType string) ([]string, error) {
 
 	return values, nil
 }
+
+// DefaultSchema returns "" so callers fall through to resolveSchema's
+// SELECT DATABASE() fallback, rather than a hardcoded literal that would
+// never match the user's actual database name.
+func (p *provider) DefaultSchema() string {
+	return ""
+}

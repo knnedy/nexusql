@@ -247,3 +247,10 @@ func (p *provider) primaryKeyColumn(ctx context.Context, tableName string) (stri
 func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
+
+// DefaultSchema returns "" — SQLite's IntrospectSchema ignores its schema
+// parameter entirely (see queryTableNames), so there's no literal to
+// return here.
+func (p *provider) DefaultSchema() string {
+	return ""
+}

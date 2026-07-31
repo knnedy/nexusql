@@ -76,6 +76,13 @@ type Provider interface {
 	// syntax and requires "INSERT INTO t () VALUES ()" instead.
 	EmptyInsertSQL(t Table) string
 
+	// DefaultSchema returns the schema name to introspect when the caller
+	// doesn't specify one. Postgres returns "public"; MySQL and SQLite have
+	// no equivalent default-schema literal (MySQL resolves the connection's
+	// current database dynamically, SQLite ignores schema entirely) and
+	// return "" so callers fall through to each provider's own resolution.
+	DefaultSchema() string
+
 	Close()
 }
 

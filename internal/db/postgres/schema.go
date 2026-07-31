@@ -228,3 +228,7 @@ func (p *provider) introspectEnums(ctx context.Context, schema string) ([]db.Enu
 
 	return enums, nil
 }
+
+func (p *provider) DefaultSchema() string {
+	return "public"
+}
