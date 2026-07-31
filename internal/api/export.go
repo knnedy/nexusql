@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/db/mysql"
 	"github.com/knnedy/nexusql/internal/db/postgres"
 	"github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/session"
@@ -21,6 +22,8 @@ func generatePrisma(kind db.ProviderKind, schema *db.Schema) (string, error) {
 		return postgres.GeneratePrisma(schema), nil
 	case db.ProviderKindSQLite:
 		return sqlite.GeneratePrisma(schema), nil
+	case db.ProviderKindMySQL:
+		return mysql.GeneratePrisma(schema), nil
 	default:
 		return "", fmt.Errorf("prisma export not supported for provider: %s", kind)
 	}
@@ -32,6 +35,8 @@ func generateDrizzle(kind db.ProviderKind, schema *db.Schema) (string, error) {
 		return postgres.GenerateDrizzle(schema), nil
 	case db.ProviderKindSQLite:
 		return sqlite.GenerateDrizzle(schema), nil
+	case db.ProviderKindMySQL:
+		return mysql.GenerateDrizzle(schema), nil
 	default:
 		return "", fmt.Errorf("drizzle export not supported for provider: %s", kind)
 	}
@@ -48,7 +53,7 @@ func (h *handler) handleExportPrisma(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schema, err := conn.Impl.IntrospectSchema(r.Context(), "public")
+	schema, err := conn.Impl.IntrospectSchema(r.Context(), conn.Impl.DefaultSchema())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -77,7 +82,7 @@ func (h *handler) handleExportDrizzle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	schema, err := conn.Impl.IntrospectSchema(r.Context(), "public")
+	schema, err := conn.Impl.IntrospectSchema(r.Context(), conn.Impl.DefaultSchema())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
