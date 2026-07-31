@@ -48,6 +48,29 @@ func (s *seedTx) Rollback(ctx context.Context) error {
 	return s.tx.Rollback()
 }
 
+// QuoteIdentifier, QuoteTable, and EmptyInsertSQL were previously
+// free-standing functions in db/seed.go (quoteIdent, quoteTable, and an
+// inline "INSERT INTO t DEFAULT VALUES" literal). Moved onto the provider
+// per the shared Provider interface. quoteIdent itself (used elsewhere in
+// this package, e.g. schema.go/rows.go) is unchanged — QuoteIdentifier just
+// delegates to it.
+
+func (p *provider) QuoteIdentifier(name string) string {
+	return quoteIdent(name)
+}
+
+// QuoteTable ignores t.Schema — SQLite has no schema-qualification concept
+// at the connection level the way Postgres does (a "schema" there is
+// either the single implicit database or an ATTACHed database, not
+// something IntrospectSchema populates for this provider).
+func (p *provider) QuoteTable(t db.Table) string {
+	return quoteIdent(t.Name)
+}
+
+func (p *provider) EmptyInsertSQL(t db.Table) string {
+	return fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", p.QuoteTable(t))
+}
+
 // formatPKValue converts a scanned primary key into the string form needed
 // for embedding in later INSERT statements. database/sql with
 // modernc.org/sqlite returns int64 for INTEGER PRIMARY KEY columns (the
