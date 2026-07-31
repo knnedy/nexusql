@@ -60,6 +60,22 @@ type Provider interface {
 
 	BeginSeedTx(ctx context.Context) (SeedTx, error)
 
+	// QuoteIdentifier quotes a single identifier (column or table name)
+	// per the provider's SQL dialect — double quotes for Postgres/SQLite,
+	// backticks for MySQL.
+	QuoteIdentifier(name string) string
+
+	// QuoteTable quotes a table name, including its schema qualifier when
+	// the provider uses one (Postgres). Providers with no schema concept
+	// (MySQL, SQLite) ignore Table.Schema and behave like QuoteIdentifier.
+	QuoteTable(t Table) string
+
+	// EmptyInsertSQL returns the dialect-correct statement for inserting a
+	// single all-default row (no explicit columns). Postgres and SQLite
+	// both use "INSERT INTO t DEFAULT VALUES"; MySQL has no DEFAULT VALUES
+	// syntax and requires "INSERT INTO t () VALUES ()" instead.
+	EmptyInsertSQL(t Table) string
+
 	Close()
 }
 

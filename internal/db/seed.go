@@ -18,6 +18,27 @@ type SeedResult struct {
 	RowsInserted map[string]int // tableName -> rows inserted
 }
 
+// pkInsertMode describes how a generated INSERT statement's primary key
+// value needs to be recovered after execution, since the three providers
+// differ in what they can hand back:
+//   - pkNone: table has no PK field (or this row omits it), plain Exec.
+//   - pkNeedsReturning: PK has a DB-side default (serial, AUTO_INCREMENT,
+//     gen_random_uuid()) — the value only exists after the DB assigns it,
+//     so it must be read back via InsertReturningPK.
+//   - pkSelfGenerated: PK was generated client-side and is already
+//     embedded in the INSERT's VALUES clause — the value is already known,
+//     so a round-trip through InsertReturningPK would be redundant (and,
+//     for MySQL, impossible for non-integer PKs, since MySQL has no
+//     RETURNING clause and LAST_INSERT_ID() only reports AUTO_INCREMENT
+//     values).
+type pkInsertMode int
+
+const (
+	pkNone pkInsertMode = iota
+	pkNeedsReturning
+	pkSelfGenerated
+)
+
 // TopoSortTables orders tables so every table appears after all tables it
 // has a (non-self-referential) foreign key into.
 func TopoSortTables(schema *Schema) ([]string, error) {
@@ -95,9 +116,11 @@ func sortStrings(s []string) {
 }
 
 // RunSeed generates and inserts fake rows for every table in schema, in FK
-// dependency order, inside a single transaction. Primary keys are captured
-// via RETURNING as each row is inserted, so serial/bigserial sequences stay
-// correct and child tables always reference real parent PKs.
+// dependency order, inside a single transaction. PK values that the DB
+// assigns (serial/AUTO_INCREMENT/etc.) are captured via InsertReturningPK
+// as each row is inserted; PK values generated client-side are already
+// known and reused directly, without a redundant round-trip. Either way,
+// child tables always reference real parent PKs.
 func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOptions) (*SeedResult, error) {
 	if opts.RowsPerTable <= 0 {
 		return nil, fmt.Errorf("rowsPerTable must be positive")
@@ -137,20 +160,26 @@ func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOp
 
 	for _, tableName := range order {
 		table := tablesByName[tableName]
-		pkField := findPKField(table)
 
 		var insertedThisTable []string
 		for i := 0; i < opts.RowsPerTable; i++ {
-			sql, hasPK := buildInsertSQL(table, fkByField, generatedPKs, enumsByName, opts.NullChance)
+			sqlStmt, pkMode, selfPK := buildInsertSQL(provider, table, fkByField, generatedPKs, enumsByName, opts.NullChance)
 
-			if pkField != nil && hasPK {
-				pkVal, err := tx.InsertReturningPK(ctx, sql, pkField.Name)
+			switch pkMode {
+			case pkNeedsReturning:
+				pkField := findPKField(table)
+				pkVal, err := tx.InsertReturningPK(ctx, sqlStmt, pkField.Name)
 				if err != nil {
 					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
 				}
 				insertedThisTable = append(insertedThisTable, pkVal)
-			} else {
-				if err := tx.Exec(ctx, sql); err != nil {
+			case pkSelfGenerated:
+				if err := tx.Exec(ctx, sqlStmt); err != nil {
+					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
+				}
+				insertedThisTable = append(insertedThisTable, selfPK)
+			default:
+				if err := tx.Exec(ctx, sqlStmt); err != nil {
 					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
 				}
 			}
@@ -177,26 +206,39 @@ func findPKField(table Table) *Field {
 	return nil
 }
 
-// buildInsertSQL builds "INSERT INTO t (cols) VALUES (vals)" with no
-// RETURNING clause (the caller appends that). The PK column is omitted
-// entirely from the statement so the database (sequence/default) assigns
-// it — we only ever read PKs back via RETURNING, never write them.
-func buildInsertSQL(table Table, fkByField map[string]Relation, generatedPKs map[string][]string, enums map[string]EnumType, nullChance float64) (sql string, hasPK bool) {
+// buildInsertSQL builds an INSERT statement for one row of table, using
+// provider for all dialect-specific quoting. The PK column is either
+// omitted (DB assigns it — pkNeedsReturning) or included with a
+// client-generated value (pkSelfGenerated); pkNone means the table has no
+// PK field at all. selfGeneratedPK is only meaningful when pkMode is
+// pkSelfGenerated, and is the raw (unquoted) value already embedded in the
+// statement — the same shape InsertReturningPK's implementations return,
+// so callers can treat both sources identically afterward.
+func buildInsertSQL(provider Provider, table Table, fkByField map[string]Relation, generatedPKs map[string][]string, enums map[string]EnumType, nullChance float64) (sql string, pkMode pkInsertMode, selfGeneratedPK string) {
 	var cols, vals []string
 
 	for _, f := range table.Fields {
 		if f.IsPrimaryKey {
-			hasPK = true
 			if f.DefaultValue != nil {
-				// DB has a default (serial sequence, gen_random_uuid(), etc.) —
-				// omit the column and let the DB assign it; we read it back
-				// via RETURNING either way.
+				// DB has a default (serial sequence, gen_random_uuid(),
+				// AUTO_INCREMENT, etc.) — omit the column and let the DB
+				// assign it; read it back via InsertReturningPK.
+				pkMode = pkNeedsReturning
 				continue
 			}
-			// No DB-level default — we have to supply a value ourselves or
-			// Postgres will send NULL through and violate NOT NULL.
-			cols = append(cols, quoteIdent(f.Name))
-			vals = append(vals, generatePKValue(f))
+			// No DB-level default — generate a value ourselves. It's
+			// already known at this point, so there's nothing to read
+			// back afterward.
+			pkMode = pkSelfGenerated
+			raw := generatePKValue(f)
+			selfGeneratedPK = raw
+
+			cols = append(cols, provider.QuoteIdentifier(f.Name))
+			if needsQuoting(f.Type) {
+				vals = append(vals, quoteLiteral(raw))
+			} else {
+				vals = append(vals, raw)
+			}
 			continue
 		}
 
@@ -234,28 +276,32 @@ func buildInsertSQL(table Table, fkByField map[string]Relation, generatedPKs map
 			v = valueOrNull(f, enums, nullChance)
 		}
 
-		cols = append(cols, quoteIdent(f.Name))
+		cols = append(cols, provider.QuoteIdentifier(f.Name))
 		vals = append(vals, v)
 	}
 
 	if len(cols) == 0 {
-		return fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", quoteTable(table)), hasPK
+		return provider.EmptyInsertSQL(table), pkMode, selfGeneratedPK
 	}
 
 	return fmt.Sprintf(
 		"INSERT INTO %s (%s) VALUES (%s)",
-		quoteTable(table),
+		provider.QuoteTable(table),
 		strings.Join(cols, ", "),
 		strings.Join(vals, ", "),
-	), hasPK
+	), pkMode, selfGeneratedPK
 }
 
+// generatePKValue returns a raw (unquoted) client-generated primary key
+// value. Callers quote it themselves via needsQuoting/quoteLiteral when
+// embedding it in SQL — kept raw here so the same value can also be stored
+// directly in generatedPKs without stripping quotes back off.
 func generatePKValue(f Field) string {
 	switch f.Type {
 	case FieldTypeUUID:
-		return quoteLiteral(gofakeit.UUID())
+		return gofakeit.UUID()
 	case FieldTypeText, FieldTypeVarchar, FieldTypeChar:
-		return quoteLiteral(gofakeit.UUID())
+		return gofakeit.UUID()
 	default:
 		// integer-ish PK with no sequence/default behind it
 		return fmt.Sprintf("%d", gofakeit.Number(100000, 9999999))
@@ -276,17 +322,6 @@ func valueOrNull(f Field, enums map[string]EnumType, nullChance float64) string 
 		return "NULL"
 	}
 	return GenerateFakeValue(f, enums)
-}
-
-func quoteIdent(name string) string {
-	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
-}
-
-func quoteTable(t Table) string {
-	if t.Schema == "" {
-		return quoteIdent(t.Name)
-	}
-	return quoteIdent(t.Schema) + "." + quoteIdent(t.Name)
 }
 
 func quoteLiteral(s string) string {
