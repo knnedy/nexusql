@@ -45,6 +45,26 @@ func (s *seedTx) Rollback(ctx context.Context) error {
 	return s.tx.Rollback(ctx)
 }
 
+// QuoteIdentifier, QuoteTable, and EmptyInsertSQL were previously
+// free-standing functions in db/seed.go (quoteIdent, quoteTable, and an
+// inline "INSERT INTO t DEFAULT VALUES" literal). Moved onto the provider
+// per the shared Provider interface, unchanged in behavior for Postgres.
+
+func (p *provider) QuoteIdentifier(name string) string {
+	return pgx.Identifier{name}.Sanitize()
+}
+
+func (p *provider) QuoteTable(t db.Table) string {
+	if t.Schema == "" {
+		return p.QuoteIdentifier(t.Name)
+	}
+	return pgx.Identifier{t.Schema, t.Name}.Sanitize()
+}
+
+func (p *provider) EmptyInsertSQL(t db.Table) string {
+	return fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", p.QuoteTable(t))
+}
+
 // formatPKValue converts a scanned primary key into the string form needed
 // for embedding in later INSERT statements. pgx decodes uuid columns as
 // [16]byte rather than a string when scanned into `any`, so that case needs
