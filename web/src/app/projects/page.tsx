@@ -16,6 +16,8 @@ import {
   Eye,
   EyeOff,
   ServerCrash,
+  LayoutGrid,
+  Table2,
 } from "lucide-react";
 import TopNav from "@/app/components/top-nav";
 import ProviderBadge from "@/app/components/provider-badge";
@@ -49,8 +51,8 @@ function maskUri(uri: string): string {
 function EmptyState({ hasFilter }: { hasFilter: boolean }) {
   const router = useRouter();
   return (
-    <div className="flex flex-col items-center justify-center gap-5 py-28 text-center rounded-2xl border border-dashed border-border/60 bg-surface-1/50">
-      <div className="w-14 h-14 rounded-2xl bg-surface-2 border border-border/50 flex items-center justify-center shadow-sm">
+    <div className="flex flex-col items-center justify-center gap-5 py-28 text-center rounded-2xl border border-border bg-surface-1">
+      <div className="w-14 h-14 rounded-2xl bg-surface-2 border border-border flex items-center justify-center">
         {hasFilter ? (
           <ServerCrash size={24} className="text-text-tertiary" />
         ) : (
@@ -70,9 +72,9 @@ function EmptyState({ hasFilter }: { hasFilter: boolean }) {
       {!hasFilter && (
         <button
           onClick={() => router.push("/")}
-          className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-coral text-white hover:bg-coral-hover hover:shadow-md hover:shadow-coral/20 transition-all cursor-pointer border-none active:scale-95">
+          className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-coral text-white hover:bg-coral-hover transition-colors cursor-pointer border-none active:scale-95">
           <Database size={14} />
-          Connect Database
+          Connect database
         </button>
       )}
     </div>
@@ -86,6 +88,7 @@ function ProjectRow({
   project: Project;
   isConnected: boolean;
 }) {
+  const router = useRouter();
   const connect = useConnect();
   const deleteProject = useDeleteProject();
   const renameProject = useRenameProject();
@@ -94,12 +97,21 @@ function ProjectRow({
   const [nameInput, setNameInput] = useState(project.name);
   const [uriVisible, setUriVisible] = useState(false);
 
-  function handleOpen() {
-    connect.mutate({
-      uri: project.uri,
-      provider: project.provider,
-      name: project.name,
-    });
+  function handleOpen(mode: "canvas" | "explorer") {
+    connect.mutate(
+      {
+        uri: project.uri,
+        provider: project.provider,
+        name: project.name,
+      },
+      {
+        onSuccess: () => {
+          router.push(
+            mode === "explorer" ? "/studio/explorer/" : "/studio/canvas/",
+          );
+        },
+      },
+    );
   }
 
   function handleDelete(e: React.MouseEvent) {
@@ -128,10 +140,10 @@ function ProjectRow({
 
   return (
     <div
-      onClick={handleOpen}
-      className="group relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 bg-surface-1 hover:bg-surface-2 border-b border-border/40 last:border-b-0 transition-all cursor-pointer overflow-hidden">
+      onClick={() => handleOpen("canvas")}
+      className="group relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 bg-surface-1 hover:bg-surface-2 border-b border-border last:border-b-0 transition-colors cursor-pointer overflow-hidden">
       {/* Icon */}
-      <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 bg-linear-to-br from-surface-2 to-surface-3 border border-border shadow-sm">
+      <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 bg-surface-2 border border-border">
         <Database size={16} className="text-coral" />
       </div>
 
@@ -152,7 +164,7 @@ function ProjectRow({
                   setNameInput(project.name);
                 }
               }}
-              className="text-[14px] font-semibold text-text-primary bg-surface-3 border border-coral/40 rounded-lg px-2.5 py-1 outline-none focus:border-coral focus:ring-1 focus:ring-coral/20 transition-all w-56 shadow-inner"
+              className="text-[14px] font-semibold text-text-primary bg-surface-3 border border-coral/40 rounded-lg px-2.5 py-1 outline-none focus:border-coral focus:ring-1 focus:ring-coral/20 transition-all w-56"
             />
             <div className="flex items-center gap-1 bg-surface-3 border border-border rounded-lg p-0.5">
               <button
@@ -178,7 +190,7 @@ function ProjectRow({
               {project.name}
             </span>
             {isConnected && (
-              <div className="flex items-center gap-1.5 bg-teal/10 dark:bg-teal/15 border border-teal/20 px-2 py-0.5 rounded-full shrink-0">
+              <div className="flex items-center gap-1.5 bg-teal/10 dark:bg-teal/15 border border-teal/20 px-2 py-0.5 rounded-md shrink-0">
                 <div className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
                 <span className="text-[9px] font-bold text-teal tracking-wider uppercase">
                   Active
@@ -197,14 +209,14 @@ function ProjectRow({
           </span>
           <button
             onClick={() => setUriVisible((v) => !v)}
-            className="shrink-0 text-text-tertiary/50 hover:text-text-secondary hover:bg-surface-3 p-1 rounded-md transition-colors border-none bg-transparent cursor-pointer">
+            className="shrink-0 text-text-tertiary/60 hover:text-text-secondary hover:bg-surface-3 p-1 rounded-md transition-colors border-none bg-transparent cursor-pointer">
             {uriVisible ? <EyeOff size={12} /> : <Eye size={12} />}
           </button>
         </div>
       </div>
 
       {/* Metadata & Desktop Actions */}
-      <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-64 shrink-0 mt-2 sm:mt-0">
+      <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-72 shrink-0 mt-2 sm:mt-0">
         {/* Metadata (Fades out on hover to make room for actions) */}
         <div className="flex items-center gap-4 transition-all duration-200 sm:group-hover:opacity-0 sm:group-hover:translate-x-4">
           <ProviderBadge provider={project.provider} />
@@ -218,7 +230,7 @@ function ProjectRow({
         <div
           className="flex sm:absolute sm:right-5 items-center gap-1.5 sm:opacity-0 sm:translate-x-4 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 transition-all duration-200"
           onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center bg-surface-3 border border-border/60 rounded-lg p-0.5 shadow-sm">
+          <div className="flex items-center bg-surface-3 border border-border rounded-lg p-0.5">
             <button
               title="Rename project"
               onClick={(e) => {
@@ -228,7 +240,7 @@ function ProjectRow({
               className="flex items-center justify-center w-8 h-8 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-1 transition-colors cursor-pointer border-none bg-transparent">
               <Pencil size={14} />
             </button>
-            <div className="w-px h-4 bg-border/50 mx-0.5" />
+            <div className="w-px h-4 bg-border mx-0.5" />
             <button
               title="Delete project"
               onClick={handleDelete}
@@ -241,19 +253,37 @@ function ProjectRow({
               )}
             </button>
           </div>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpen();
-            }}
-            disabled={connect.isPending}
-            className="flex items-center gap-1.5 px-4 h-9 ml-1 rounded-lg text-[12px] font-bold text-white bg-coral hover:bg-coral-hover hover:shadow-md hover:shadow-coral/20 transition-all cursor-pointer border-none disabled:opacity-60 active:scale-95">
-            {connect.isPending ? (
-              <Loader2 size={13} className="animate-spin" />
-            ) : (
-              "Open Canvas"
-            )}
-          </button>
+
+          <div className="flex items-center gap-1 ml-1">
+            <button
+              title="Open in Explorer"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpen("explorer");
+              }}
+              disabled={connect.isPending}
+              className="flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-semibold text-text-primary bg-surface-3 border border-border hover:bg-surface-1 transition-colors cursor-pointer disabled:opacity-60">
+              <Table2 size={13} />
+              Explorer
+            </button>
+            <button
+              title="Open in Canvas"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpen("canvas");
+              }}
+              disabled={connect.isPending}
+              className="flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-bold text-white bg-coral hover:bg-coral-hover transition-colors cursor-pointer border-none disabled:opacity-60 active:scale-95">
+              {connect.isPending ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <>
+                  <LayoutGrid size={13} />
+                  Canvas
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -311,7 +341,7 @@ export default function ProjectsPage() {
               <ArrowLeft size={18} />
             </button>
             <div className="flex flex-col">
-              <h1 className="text-xl font-bold text-text-primary tracking-tight">
+              <h1 className="text-[18px] font-semibold text-text-primary tracking-tight">
                 Projects
               </h1>
               <span className="text-[12px] text-text-tertiary">
@@ -323,7 +353,7 @@ export default function ProjectsPage() {
 
           {/* Controls */}
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex items-center gap-2.5 flex-1 h-10 px-3.5 rounded-xl border border-border bg-surface-1 focus-within:border-coral/50 focus-within:ring-2 focus-within:ring-coral/10 transition-all shadow-sm">
+            <div className="flex items-center gap-2.5 flex-1 h-10 px-3.5 rounded-xl border border-border bg-surface-1 focus-within:border-coral/50 focus-within:ring-2 focus-within:ring-coral/10 transition-all">
               <Search size={14} className="text-text-tertiary shrink-0" />
               <input
                 type="text"
@@ -334,14 +364,14 @@ export default function ProjectsPage() {
               />
             </div>
 
-            <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-surface-1 shadow-sm overflow-x-auto no-scrollbar">
+            <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-surface-1 overflow-x-auto no-scrollbar">
               {PROVIDER_FILTERS.map((f) => (
                 <button
                   key={f.value}
                   onClick={() => setProviderFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-all cursor-pointer border-none ${
+                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-colors cursor-pointer border-none ${
                     providerFilter === f.value
-                      ? "bg-surface-3 text-text-primary shadow-sm"
+                      ? "bg-surface-3 text-text-primary"
                       : "bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-surface-2"
                   }`}>
                   {f.label}
@@ -354,14 +384,14 @@ export default function ProjectsPage() {
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-32 gap-3 text-text-tertiary">
               <Loader2 size={24} className="animate-spin text-coral" />
-              <span className="text-[13px] font-medium animate-pulse">
-                Loading workspace...
+              <span className="text-[13px] font-medium">
+                Loading workspace…
               </span>
             </div>
           ) : projects.length === 0 ? (
             <EmptyState hasFilter={hasFilter} />
           ) : (
-            <div className="rounded-2xl overflow-hidden border border-border/80 bg-surface-1 shadow-sm">
+            <div className="rounded-2xl overflow-hidden border border-border bg-surface-1">
               {projects.map((project) => (
                 <ProjectRow
                   key={project.id}
