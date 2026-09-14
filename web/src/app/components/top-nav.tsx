@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { Database, FolderOpen, Moon, Sun } from "lucide-react";
+import Image from "next/image";
+import { FolderOpen, Moon, Sun } from "lucide-react";
+import icon from "../icon.png";
 
 export default function TopNav() {
   const router = useRouter();
@@ -17,10 +19,15 @@ export default function TopNav() {
 
   return (
     <nav className="fixed top-0 inset-x-0 z-40 flex items-center justify-between px-5 h-12 bg-surface-1 border-b-[0.5px] border-border">
-      <div className="flex items-center gap-2.5">
-        <div className="flex items-center justify-center w-6 h-6 rounded-md shrink-0 bg-coral">
-          <Database size={13} color="#fff" aria-hidden />
-        </div>
+      <div className="flex items-center">
+        <Image
+          src={icon}
+          alt=""
+          width={40}
+          height={40}
+          className="rounded-md shrink-0"
+          priority
+        />
         <span className="text-base font-semibold text-text-primary tracking-[-0.02em]">
           NexusQL
         </span>

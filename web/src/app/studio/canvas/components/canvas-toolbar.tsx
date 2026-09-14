@@ -1,10 +1,11 @@
 "use client";
 
-import { Database } from "lucide-react";
+import Image from "next/image";
 import { useSchema } from "@/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../../components/mode-switcher";
 import DisconnectButton from "../../components/disconnect-button";
+import icon from "../../../icon.png";
 
 export default function CanvasToolbar() {
   const { data: schema } = useSchema();
@@ -15,10 +16,14 @@ export default function CanvasToolbar() {
 
   return (
     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-10 flex items-stretch h-12 overflow-hidden rounded-2xl bg-node-bg/85 dark:bg-node-bg/90 backdrop-blur-md border border-node-border/80 dark:border-node-border/40 shadow-[0_8px_32px_rgba(0,0,0,0.06)] dark:shadow-[0_12px_42px_rgba(0,0,0,0.5)] transition-all duration-200">
-      <div className="flex items-center gap-3 pl-4 pr-3 self-center">
-        <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-coral/10 dark:bg-coral/15 text-coral shrink-0 border border-coral/20">
-          <Database size={14} aria-hidden />
-        </div>
+      <div className="flex items-center pl-4 pr-3 self-center">
+        <Image
+          src={icon}
+          alt=""
+          width={42}
+          height={42}
+          className="rounded-lg shrink-0"
+        />
         <div className="flex flex-col min-w-0 justify-center">
           <span className="text-[13px] font-bold text-text-primary tracking-tight leading-none mb-0.5 antialiased">
             {projectName}

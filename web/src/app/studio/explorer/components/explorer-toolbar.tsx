@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import {
-  Database,
   Search,
   RotateCw,
   Columns3,
@@ -16,6 +16,7 @@ import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../../components/mode-switcher";
 import DisconnectButton from "../../components/disconnect-button";
 import ThemeToggle from "./theme-toggle";
+import icon from "../../../icon.png";
 
 interface ExplorerToolbarProps {
   tableSelected: boolean;
@@ -88,12 +89,16 @@ export default function ExplorerToolbar({
 
   return (
     <div className="flex items-center h-14 px-4 gap-3 border-b border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 shrink-0">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-coral/10 dark:bg-coral/15 text-coral shrink-0 border border-coral/20">
-          <Database size={16} aria-hidden />
-        </div>
+      <div className="flex items-center min-w-0">
+        <Image
+          src={icon}
+          alt=""
+          width={48}
+          height={48}
+          className="rounded-lg shrink-0"
+        />
         <div className="flex flex-col min-w-0 justify-center">
-          <span className="text-lg font-bold text-text-primary truncate leading-none antialiased">
+          <span className="text-[16px] font-bold text-text-primary truncate leading-none antialiased">
             {projectName}
           </span>
           <span className="text-xs font-mono text-text-tertiary leading-none mt-0.5">
