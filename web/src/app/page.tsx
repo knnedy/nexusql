@@ -5,7 +5,6 @@ import {
   HardDrive,
   Loader2,
   ArrowRight,
-  Database,
   ShieldAlert,
   Link as LinkIcon,
   FolderDot,
@@ -19,7 +18,7 @@ import {
   PROVIDERS,
 } from "@/lib/types/provider";
 
-function ProviderCard({
+function ProviderTab({
   provider,
   selected,
   onSelect,
@@ -31,34 +30,13 @@ function ProviderCard({
   return (
     <button
       onClick={onSelect}
-      className={`group relative flex flex-col gap-1.5 rounded-lg p-2.5 text-left transition-all duration-200 cursor-pointer outline-none overflow-hidden ${
+      className={`flex-1 flex flex-col items-center gap-1 rounded-md py-2 px-2 transition-colors cursor-pointer outline-none ${
         selected
-          ? "bg-surface-1 border-coral/50 shadow-[0_2px_10px_-2px_rgba(255,107,107,0.1)] ring-1 ring-coral/20"
-          : "bg-surface-2 border-border/60 hover:bg-surface-3 hover:border-border"
+          ? "bg-surface-1 text-coral shadow-sm"
+          : "text-text-tertiary hover:text-text-secondary"
       }`}>
-      {selected && (
-        <div className="absolute top-0 right-0 w-12 h-12 bg-coral/10 blur-xl rounded-full -mr-6 -mt-6 pointer-events-none" />
-      )}
-
-      <div className="flex items-center justify-between w-full relative z-10">
-        <span
-          className={`text-[13px] font-medium ${
-            selected ? "text-coral" : "text-text-primary"
-          }`}>
-          {provider.label}
-        </span>
-        <div
-          className={`w-2.5 h-2.5 rounded-full border-2 transition-all ${
-            selected
-              ? "border-coral bg-surface-1 shadow-[0_0_6px_rgba(255,107,107,0.3)]"
-              : "border-border-strong bg-surface-2 group-hover:border-text-tertiary"
-          }`}
-        />
-      </div>
-      <span
-        className={`text-[11px] leading-none font-mono relative z-10 ${
-          selected ? "text-coral/80" : "text-text-tertiary"
-        }`}>
+      <span className="text-[12.5px] font-medium">{provider.label}</span>
+      <span className="text-[10px] font-mono leading-none">
         {provider.uriPrefixes[0]}
       </span>
     </button>
@@ -141,45 +119,33 @@ export default function HomePage() {
   return (
     <>
       <TopNav />
-      <main className="flex flex-col items-center justify-center min-h-screen pt-16 pb-12 px-4 bg-canvas-bg selection:bg-coral/20">
-        <div className="w-full max-w-120 flex flex-col gap-6">
+      <main className="flex flex-col items-center min-h-screen pt-24 pb-16 px-4 bg-canvas-bg selection:bg-coral/20">
+        <div className="w-full max-w-110 flex flex-col gap-7">
           {/* Header */}
-          <div className="flex flex-col items-center text-center gap-1.5 mb-1">
-            <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-surface-1 border border-border shadow-sm mb-1">
-              <Database size={18} className="text-coral" />
-            </div>
-            <h1 className="text-lg font-semibold text-text-primary tracking-tight">
-              Connect Database
+          <div className="flex flex-col gap-1">
+            <h1 className="text-[16px] font-semibold text-text-primary tracking-tight">
+              New connection
             </h1>
-            <p className="text-[13px] text-text-secondary">
-              Paste your connection string to generate your schema.
+            <p className="text-[12.5px] text-text-secondary">
+              Paste a connection string to explore its schema.
             </p>
           </div>
 
-          {/* Main Card */}
+          {/* Main Panel */}
           <div className="rounded-xl p-5 flex flex-col gap-5 bg-surface-1 border border-border shadow-sm">
             {/* Provider Selection */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[12px] font-medium text-text-secondary">
-                Database Engine
-              </label>
-              <div
-                className="grid gap-2"
-                style={{
-                  gridTemplateColumns: `repeat(${PROVIDERS.length}, 1fr)`,
-                }}>
-                {PROVIDERS.map((p) => (
-                  <ProviderCard
-                    key={p.id}
-                    provider={p}
-                    selected={selectedProvider === p.id}
-                    onSelect={() => {
-                      setSelectedProvider(p.id);
-                      setUriError(null);
-                    }}
-                  />
-                ))}
-              </div>
+            <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-2 border border-border">
+              {PROVIDERS.map((p) => (
+                <ProviderTab
+                  key={p.id}
+                  provider={p}
+                  selected={selectedProvider === p.id}
+                  onSelect={() => {
+                    setSelectedProvider(p.id);
+                    setUriError(null);
+                  }}
+                />
+              ))}
             </div>
 
             {/* Inputs */}
@@ -188,7 +154,7 @@ export default function HomePage() {
                 <label
                   htmlFor="project-name"
                   className="text-[12px] font-medium text-text-secondary flex items-center justify-between">
-                  Project Name
+                  Project name
                   {projectNameError && (
                     <span className="text-red-500 flex items-center gap-1 text-[11px]">
                       <ShieldAlert size={10} /> Required
@@ -207,7 +173,7 @@ export default function HomePage() {
                     value={projectName}
                     onChange={handleProjectNameChange}
                     onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none transition-colors ${
+                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none transition-colors border ${
                       projectNameError
                         ? "bg-red-500/5 border-red-500 text-red-500 placeholder:text-red-500/50 focus:ring-2 focus:ring-red-500/10"
                         : "bg-surface-2 border-border text-text-primary placeholder:text-text-tertiary focus:bg-surface-1 focus:border-coral focus:ring-2 focus:ring-coral/10"
@@ -239,7 +205,7 @@ export default function HomePage() {
                     value={uri}
                     onChange={handleUriChange}
                     onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none font-mono transition-colors ${
+                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none font-mono transition-colors border ${
                       uriError
                         ? "bg-red-500/5 border-red-500 text-red-500 placeholder:text-red-500/50 focus:ring-2 focus:ring-red-500/10"
                         : "bg-surface-2 border-border text-text-primary placeholder:text-text-tertiary/70 focus:bg-surface-1 focus:border-coral focus:ring-2 focus:ring-coral/10"
@@ -265,15 +231,15 @@ export default function HomePage() {
             <button
               onClick={handleConnect}
               disabled={connect.isPending || !uri.trim() || !projectName.trim()}
-              className="flex items-center justify-center gap-1.5 w-full h-9 mt-1 rounded-lg text-[13px] font-medium text-white bg-coral hover:bg-coral-hover shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] transition-colors disabled:opacity-60 disabled:cursor-not-allowed border-none active:scale-[0.98]">
+              className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg text-[13px] font-medium text-white bg-coral hover:bg-coral-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed border-none active:scale-[0.98]">
               {connect.isPending ? (
                 <>
                   <Loader2 size={14} className="animate-spin" aria-hidden />
-                  Connecting...
+                  Connecting…
                 </>
               ) : (
                 <>
-                  Connect Database
+                  Connect
                   <ArrowRight size={14} aria-hidden />
                 </>
               )}
@@ -283,11 +249,9 @@ export default function HomePage() {
           <RecentProjects />
 
           {/* Footer Note */}
-          <div className="flex items-center justify-center pt-2">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-surface-1/50 border border-border/50 text-[11px] text-text-tertiary">
-              <HardDrive size={12} className="text-teal" />
-              Projects are stored locally on your machine
-            </div>
+          <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-text-tertiary">
+            <HardDrive size={12} className="text-teal" />
+            Projects are stored locally on your machine
           </div>
         </div>
       </main>
