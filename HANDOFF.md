@@ -55,13 +55,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - refactor(web): `use-table-rows`/`use-row-lookup` moved to `shared/hooks`: console, seed
   and disconnect invalidate their caches, so they are shared data access, not Explorer
   internals (lint rule `prefer-query-options` requires keys from the factories).
+- refactor(web): `features/console` (SQL console modal + use-run-query), `features/seed`
+  (seed modal + use-seed), `features/export` (export preview drawer).
 
 ## Next 3 steps
 
-1. refactor(web): move console/seed/export into their own features (before canvas, so
-   canvas never imports app/).
-2. refactor(web): move canvas into features/canvas.
-3. refactor(web): move explorer into features/explorer.
+1. refactor(web): move canvas into features/canvas (route page becomes a thin wrapper).
+2. refactor(web): move explorer into features/explorer.
+3. refactor(web): move connect/projects/studio into features; drop src/hooks and src/lib.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 

@@ -33,13 +33,13 @@ import TableNode from "@/app/studio/canvas/_components/table-node";
 import RelationEdge from "@/app/studio/canvas/_components/relation-edge";
 import CanvasToolbar from "@/app/studio/canvas/_components/canvas-toolbar";
 import CanvasSidebar from "@/app/studio/canvas/_components/canvas-sidebar";
-import ExportPreviewDrawer from "@/app/studio/canvas/_components/export-preview-drawer";
+import ExportPreviewDrawer from "@/features/export/_components/export-preview-drawer";
 import InspectorPanel from "@/app/studio/canvas/_components/inspector-panel";
-import SqlConsoleModal from "@/app/studio/canvas/_components/sql-console-modal";
+import SqlConsoleModal from "@/features/console/_components/sql-console-modal";
 import { RelationEdgeData, TableNodeData } from "@/shared/types/canvas";
 import { Relation, Table } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
-import SeedDataModal from "@/app/studio/canvas/_components/seed-data-modal";
+import SeedDataModal from "@/features/seed/_components/seed-data-modal";
 import { studioSession } from "@/shared/lib/session-storage";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };

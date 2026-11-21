@@ -19,7 +19,7 @@ import {
   CheckCircle2,
   Command,
 } from "lucide-react";
-import { useRunQuery } from "@/hooks/use-run-query";
+import { useRunQuery } from "@/features/console/hooks/use-run-query";
 
 interface SqlConsoleModalProps {
   open: boolean;

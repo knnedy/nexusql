@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Sprout, X, AlertTriangle, Loader2, CheckCircle2 } from "lucide-react";
-import { useSeed } from "@/hooks/use-seed";
+import { useSeed } from "@/features/seed/hooks/use-seed";
 
 interface SeedDataModalProps {
   open: boolean;
