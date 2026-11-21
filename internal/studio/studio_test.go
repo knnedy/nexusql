@@ -307,3 +307,62 @@ func TestConnectTimeout(t *testing.T) {
 		t.Fatalf("err=%v after %s, want an error within the connect timeout", err, time.Since(start))
 	}
 }
+
+func TestReadOnly(t *testing.T) {
+	ctx := context.Background()
+	if _, err := newService(t).ReadOnly(); !errors.Is(err, studio.ErrNoConnection) {
+		t.Fatalf("ReadOnly without a connection: err = %v, want ErrNoConnection", err)
+	}
+
+	s := connected(t)
+	if on, err := s.ReadOnly(); err != nil || on {
+		t.Fatalf("new connection: read-only = %v err=%v, want false", on, err)
+	}
+	if err := s.SetReadOnly(true); err != nil {
+		t.Fatal(err)
+	}
+	usersLeft := func(t *testing.T) int64 {
+		t.Helper()
+		page, err := s.Rows(ctx, studio.RowsQuery{Table: "users", Limit: 10})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return page.Total
+	}
+
+	t.Run("writes go to the database unconfirmed and are refused there", func(t *testing.T) {
+		res, err := s.Query(ctx, "DELETE FROM users", false)
+		if res.RequiresConfirmation || !errors.Is(err, studio.ErrInvalid) || usersLeft(t) != 2 {
+			t.Fatalf("got %+v err=%v rows=%d, want a database error and 2 rows", res, err, usersLeft(t))
+		}
+	})
+	t.Run("statements that would leave read-only mode are not run", func(t *testing.T) {
+		_, err := s.Query(ctx, "PRAGMA query_only = OFF; DELETE FROM users", false)
+		if !errors.Is(err, studio.ErrInvalid) || !strings.Contains(err.Error(), "read-only") || usersLeft(t) != 2 {
+			t.Fatalf("err=%v rows=%d, want a read-only refusal and 2 rows", err, usersLeft(t))
+		}
+	})
+	t.Run("reads still work", func(t *testing.T) {
+		if res, err := s.Query(ctx, "SELECT email FROM users", false); err != nil || len(res.Rows) != 2 {
+			t.Fatalf("got %+v err=%v", res, err)
+		}
+	})
+	t.Run("row edits and seeding are refused", func(t *testing.T) {
+		v := "z@x.io"
+		err := s.UpdateRow(ctx, studio.RowUpdate{Table: "users", Key: map[string]string{"id": "1"}, Column: "email", Value: &v})
+		if !errors.Is(err, studio.ErrConflict) {
+			t.Errorf("UpdateRow: err = %v, want ErrConflict", err)
+		}
+		if _, err := s.Seed(ctx, seed.Options{RowsPerTable: 1}); !errors.Is(err, studio.ErrConflict) {
+			t.Errorf("Seed: err = %v, want ErrConflict", err)
+		}
+	})
+	t.Run("a new connection starts read-write", func(t *testing.T) {
+		if _, err := s.Connect(ctx, sqliteURI(t), "other"); err != nil {
+			t.Fatal(err)
+		}
+		if on, _ := s.ReadOnly(); on {
+			t.Fatal("read-only carried over to a new connection")
+		}
+	})
+}

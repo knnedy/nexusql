@@ -9,6 +9,7 @@ import (
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/db/dbtest"
 	"github.com/knnedy/nexusql/internal/db/sqlite"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 func TestConformance(t *testing.T) {
@@ -81,9 +82,16 @@ func TestInMemoryDatabaseSurvivesRuns(t *testing.T) {
 			t.Fatalf("%q: %v", sql, err)
 		}
 	}
+	ro := db.ScriptOptions{ReadOnly: true}
+	if _, err := p.ExecuteScript(ctx, sqlscan.Split("INSERT INTO t VALUES (3)", p.Syntax()), ro); err == nil {
+		t.Fatal("write succeeded in read-only mode")
+	}
 	res, err := dbtest.Script(ctx, p, "SELECT count(*) AS n FROM t", 0)
 	if err != nil || fmt.Sprint(res.Rows[0]["n"]) != "1" {
 		t.Fatalf("rows %v err %v, want the table kept with only the committed row", res.Rows, err)
+	}
+	if _, err := dbtest.Script(ctx, p, "INSERT INTO t VALUES (4)", 0); err != nil {
+		t.Fatalf("read-only mode outlived its run: %v", err)
 	}
 }
 

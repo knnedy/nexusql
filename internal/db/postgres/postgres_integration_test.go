@@ -11,6 +11,7 @@ import (
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/db/dbtest"
 	"github.com/knnedy/nexusql/internal/db/postgres"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 func TestConformance(t *testing.T) {
@@ -115,5 +116,41 @@ func TestReturningRows(t *testing.T) {
 		"CREATE TABLE ret (id serial PRIMARY KEY, v text); INSERT INTO ret (v) VALUES ('a'), ('b') RETURNING id", 0)
 	if err != nil || len(res.Rows) != 2 || !res.IsWrite {
 		t.Fatalf("got %+v err %v, want the 2 returned ids", res, err)
+	}
+}
+
+func TestReadOnlyCannotBeLeft(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	ctx := context.Background()
+	for _, sql := range []string{
+		"SET TRANSACTION READ WRITE; CREATE TABLE escaped_a (x int)",
+		"COMMIT; CREATE TABLE escaped_b (x int)",
+		"SELECT set_config('default_transaction_read_only', 'off', false); COMMIT; BEGIN; CREATE TABLE escaped_c (x int)",
+	} {
+		_, err := p.ExecuteScript(ctx, sqlscan.Split(sql, p.Syntax()), db.ScriptOptions{ReadOnly: true})
+		if err == nil {
+			t.Errorf("%q succeeded in read-only mode", sql)
+		}
+	}
+	res, err := dbtest.Script(ctx, p, "SELECT count(*) AS n FROM pg_tables WHERE tablename LIKE 'escaped_%'", 0)
+	if err != nil || fmt.Sprint(res.Rows[0]["n"]) != "0" {
+		t.Fatalf("tables made in read-only mode: %v (err %v)", res.Rows, err)
+	}
+}
+
+func TestOneStatementPerMessage(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	// What a mis-split would hand the provider: two statements as one.
+	stmts := []sqlscan.Statement{{Text: "SELECT 1; CREATE TABLE smuggled (x int)", Write: true}}
+	if _, err := p.ExecuteScript(context.Background(), stmts, db.ScriptOptions{}); err == nil {
+		t.Fatal("two statements ran from one message")
 	}
 }

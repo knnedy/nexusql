@@ -59,6 +59,12 @@ type QueryResult struct {
 	Truncated    bool // more rows existed beyond the cap
 }
 
+// ScriptOptions shape one console run.
+type ScriptOptions struct {
+	MaxRows  int  // rows returned from the last statement; 0 means no cap
+	ReadOnly bool // the database itself refuses every write in the run
+}
+
 // KeyValue pins one primary-key column of a row.
 type KeyValue struct {
 	Field Field
@@ -94,8 +100,8 @@ type Provider interface {
 	// Syntax is the dialect's lexical rules, for splitting console SQL.
 	Syntax() sqlscan.Syntax
 	// ExecuteScript runs stmts in order in one session that ends with the call;
-	// rows come from the last statement, at most maxRows of them (0: no cap).
-	ExecuteScript(ctx context.Context, stmts []sqlscan.Statement, maxRows int) (QueryResult, error)
+	// rows come from the last statement.
+	ExecuteScript(ctx context.Context, stmts []sqlscan.Statement, opts ScriptOptions) (QueryResult, error)
 
 	BeginSeedTx(ctx context.Context) (SeedTx, error)
 

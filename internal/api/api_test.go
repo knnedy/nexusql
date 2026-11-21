@@ -130,3 +130,32 @@ func TestQueryResultsAlwaysCarryArrays(t *testing.T) {
 		}
 	}
 }
+
+func TestReadOnlySwitch(t *testing.T) {
+	h := newAPI(t)
+	if w := call(h, "GET", "/connection/read-only", ""); w.Code != http.StatusUnauthorized {
+		t.Fatalf("without a connection: %d %s, want 401", w.Code, w.Body)
+	}
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "ro.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"ro"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	call(h, "POST", "/query", `{"sql":"CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t VALUES (1, 'a')","confirmed":true}`)
+
+	for _, c := range []struct{ method, body, want string }{
+		{"GET", "", `{"readOnly":false}`},
+		{"PUT", `{"readOnly":true}`, `{"readOnly":true}`},
+		{"GET", "", `{"readOnly":true}`},
+	} {
+		w := call(h, c.method, "/connection/read-only", c.body)
+		if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != c.want {
+			t.Fatalf("%s %s: %d %s, want %s", c.method, c.body, w.Code, w.Body, c.want)
+		}
+	}
+	if w := call(h, "PUT", "/connection/read-only", `{}`); w.Code != http.StatusBadRequest {
+		t.Errorf("missing readOnly: %d, want 400", w.Code)
+	}
+	if w := call(h, "PATCH", "/rows/t", `{"key":{"id":"1"},"column":"v","value":"b"}`); w.Code != http.StatusConflict {
+		t.Errorf("edit while read-only: %d %s, want 409", w.Code, w.Body)
+	}
+}

@@ -33,6 +33,20 @@ type Statement struct {
 	// (nextval, set_config) are invisible to it.
 	Write bool
 	Rows  bool // expected to return a result set
+
+	words []string // upper-cased words outside strings and comments
+}
+
+// LeavesReadOnly reports whether the statement names a way out of read-only
+// mode (READ WRITE, *_READ_ONLY settings, SQLite's query_only).
+func (s Statement) LeavesReadOnly() bool {
+	for i, w := range s.words {
+		if w == "QUERY_ONLY" || strings.HasSuffix(w, "READ_ONLY") ||
+			(w == "READ" && i+1 < len(s.words) && s.words[i+1] == "WRITE") {
+			return true
+		}
+	}
+	return false
 }
 
 // AnyWrite reports whether any statement may write.
@@ -173,7 +187,7 @@ func classify(text string, words []string) Statement {
 		}
 		return false
 	}
-	s := Statement{Text: text}
+	s := Statement{Text: text, words: words}
 	switch words[0] {
 	case "SELECT":
 		into := has("INTO")

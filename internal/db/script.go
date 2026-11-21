@@ -17,29 +17,45 @@ func InStatement(err error, i, n int) error {
 	return fmt.Errorf("statement %d of %d: %w", i+1, n, err)
 }
 
-// RunScript is ExecuteScript for database/sql drivers; scan reads one result set,
-// stopping at maxRows. keepSession reuses the connection (an in-memory database).
-func RunScript(ctx context.Context, pool *sql.DB, stmts []sqlscan.Statement, maxRows int,
-	scan func(*sql.Rows, int) (QueryResult, error), keepSession bool) (res QueryResult, err error) {
-	c, err := pool.Conn(ctx)
+// SQLSession is how a database/sql dialect runs a console session.
+type SQLSession struct {
+	Pool        *sql.DB
+	Scan        func(*sql.Rows, int) (QueryResult, error) // one result set, capped
+	ReadOnlyOn  string                                    // makes the session refuse writes
+	ReadOnlyOff string                                    // undoes ReadOnlyOn on a kept session
+	Keep        bool                                      // the connection is the database (in-memory)
+}
+
+// RunScript is ExecuteScript for database/sql drivers.
+func RunScript(ctx context.Context, s SQLSession, stmts []sqlscan.Statement, opts ScriptOptions) (res QueryResult, err error) {
+	c, err := s.Pool.Conn(ctx)
 	if err != nil {
 		return QueryResult{}, fmt.Errorf("acquire connection: %w", err)
 	}
 	defer func() {
 		switch {
-		case err == nil && !res.Truncated && sqlscan.OnlyReads(stmts):
-		case keepSession: // closing would drop the database; end the transaction instead
-			_, _ = c.ExecContext(context.Background(), "ROLLBACK")
+		case err == nil && !res.Truncated && !opts.ReadOnly && sqlscan.OnlyReads(stmts):
+		case s.Keep: // closing would drop the database; undo the session instead
+			bg := context.Background()
+			_, _ = c.ExecContext(bg, "ROLLBACK")
+			if opts.ReadOnly {
+				_, _ = c.ExecContext(bg, s.ReadOnlyOff)
+			}
 		default: // closing ends any transaction, setting or temp table the run left
 			_ = c.Raw(func(any) error { return driver.ErrBadConn })
 		}
 		_ = c.Close()
 	}()
 
+	if opts.ReadOnly {
+		if _, err = c.ExecContext(ctx, s.ReadOnlyOn); err != nil {
+			return QueryResult{}, fmt.Errorf("enter read-only mode: %w", err)
+		}
+	}
 	var affected int64
 	for i, st := range stmts {
 		if i == len(stmts)-1 && st.Rows {
-			res, err = queryCapped(ctx, c, st.Text, maxRows, scan)
+			res, err = queryCapped(ctx, c, st.Text, opts.MaxRows, s.Scan)
 		} else {
 			res, err = QueryResult{}, nil
 			var r sql.Result

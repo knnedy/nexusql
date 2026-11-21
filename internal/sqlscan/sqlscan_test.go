@@ -133,3 +133,22 @@ func TestOnlyReads(t *testing.T) {
 		}
 	}
 }
+
+func TestLeavesReadOnly(t *testing.T) {
+	for sql, want := range map[string]bool{
+		"SET TRANSACTION READ WRITE":                            true,
+		"SET SESSION CHARACTERISTICS AS TRANSACTION READ WRITE": true,
+		"START TRANSACTION READ WRITE":                          true,
+		"SET SESSION transaction_read_only = 0":                 true,
+		"SET @@session.tx_read_only = OFF":                      true,
+		"PRAGMA query_only = OFF":                               true,
+		"pragma QUERY_ONLY(0)":                                  true,
+		"SELECT 'read write', 'query_only' -- read_only":        false,
+		"SELECT read_count, write_count FROM stats":             false,
+		"BEGIN": false,
+	} {
+		if got := sqlscan.Split(sql, sqlscan.MySQL)[0].LeavesReadOnly(); got != want {
+			t.Errorf("LeavesReadOnly(%q) = %v, want %v", sql, got, want)
+		}
+	}
+}

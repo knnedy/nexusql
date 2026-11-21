@@ -18,8 +18,11 @@ import {
   Eraser,
   CheckCircle2,
   Command,
+  Lock,
+  LockOpen,
 } from "lucide-react";
 import { useRunQuery } from "@/features/console/hooks/use-run-query";
+import { useReadOnly } from "@/features/console/hooks/use-read-only";
 
 interface SqlConsoleModalProps {
   open: boolean;
@@ -69,6 +72,7 @@ export default function SqlConsoleModal({
   const historyRef = useRef<HTMLDivElement>(null);
   const editorWrapRef = useRef<HTMLDivElement>(null);
   const runQuery = useRunQuery();
+  const { readOnly, setReadOnly, isPending: readOnlyPending } = useReadOnly();
 
   useEffect(() => {
     if (!historyOpen) return;
@@ -262,6 +266,32 @@ export default function SqlConsoleModal({
               className="flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-node-border/60 dark:border-node-border/40 text-[12px] font-medium text-text-secondary hover:text-text-primary hover:bg-black/2 dark:hover:bg-white/2 transition-colors cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed">
               <Eraser size={12} aria-hidden />
               <span>Clear</span>
+            </button>
+
+            <button
+              onClick={() => {
+                setReadOnly(!readOnly);
+                setPendingConfirm(false);
+                runQuery.reset();
+              }}
+              disabled={readOnlyPending}
+              aria-pressed={readOnly}
+              title={
+                readOnly
+                  ? "The database refuses every write. Click to allow writes."
+                  : "Click to make the database refuse every write."
+              }
+              className={`flex items-center gap-1.5 h-7 px-2.5 rounded-md border text-[12px] font-medium transition-colors cursor-pointer bg-transparent disabled:opacity-40 disabled:cursor-not-allowed ${
+                readOnly
+                  ? "border-teal/40 text-teal bg-teal/5"
+                  : "border-node-border/60 dark:border-node-border/40 text-text-secondary hover:text-text-primary hover:bg-black/2 dark:hover:bg-white/2"
+              }`}>
+              {readOnly ? (
+                <Lock size={12} aria-hidden />
+              ) : (
+                <LockOpen size={12} aria-hidden />
+              )}
+              <span>{readOnly ? "Read-only" : "Read-write"}</span>
             </button>
           </div>
 

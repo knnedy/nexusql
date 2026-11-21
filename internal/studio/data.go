@@ -105,6 +105,9 @@ func (s *Service) UpdateRow(ctx context.Context, u RowUpdate) error {
 	if err != nil {
 		return err
 	}
+	if s.access.is(conn) {
+		return errReadOnly
+	}
 	t, err := s.table(ctx, conn, u.Table)
 	if err != nil {
 		return err
@@ -173,13 +176,21 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 	if len(stmts) == 0 {
 		return QueryResult{}, invalid(errors.New("sql is required"))
 	}
-	if sqlscan.AnyWrite(stmts) && !confirmed {
+	readOnly := s.access.is(conn)
+	switch {
+	case readOnly: // nothing can change, so nothing needs confirming
+		for i, st := range stmts {
+			if st.LeavesReadOnly() {
+				return QueryResult{}, invalid(fmt.Errorf("statement %d would leave read-only mode; switch it off first", i+1))
+			}
+		}
+	case sqlscan.AnyWrite(stmts) && !confirmed:
 		return QueryResult{RequiresConfirmation: true, Statements: len(stmts)}, nil
 	}
 
 	qctx, cancel := s.bounded(ctx)
 	defer cancel()
-	res, err := conn.Impl.ExecuteScript(qctx, stmts, s.cfg.MaxRows)
+	res, err := conn.Impl.ExecuteScript(qctx, stmts, db.ScriptOptions{MaxRows: s.cfg.MaxRows, ReadOnly: readOnly})
 	if res.IsWrite || err != nil {
 		s.schemas.invalidate() // may have run DDL, even if a later part failed
 	}
@@ -197,6 +208,9 @@ func (s *Service) Seed(ctx context.Context, opts seed.Options) (*seed.Result, er
 	conn, err := s.conn()
 	if err != nil {
 		return nil, err
+	}
+	if s.access.is(conn) {
+		return nil, errReadOnly
 	}
 	schema, err := s.schemas.get(ctx, conn, true)
 	if err != nil {

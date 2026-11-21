@@ -7,6 +7,7 @@ import (
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/seed"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 func testQuery(t *testing.T, h Harness) {
@@ -116,6 +117,34 @@ func testQuery(t *testing.T, h Harness) {
 		_, err := Script(ctx, p, "SELECT 1; SELEC 2", 0)
 		if err == nil || !strings.Contains(err.Error(), "statement 2 of 2") {
 			t.Fatalf("err = %v, want it to name statement 2 of 2", err)
+		}
+	})
+
+	t.Run("read-only runs are refused writes by the database", func(t *testing.T) {
+		ro := func(sql string) (db.QueryResult, error) {
+			return p.ExecuteScript(ctx, sqlscan.Split(sql, p.Syntax()), db.ScriptOptions{ReadOnly: true})
+		}
+		if res, err := ro("SELECT email FROM users WHERE id = 1"); err != nil || len(res.Rows) != 1 {
+			t.Fatalf("read in read-only mode: %+v %v", res, err)
+		}
+		for _, sql := range []string{
+			"INSERT INTO users (id, email) VALUES (200, 'ro@x')",
+			"BEGIN; INSERT INTO users (id, email) VALUES (200, 'ro@x'); COMMIT",
+			"UPDATE users SET email = 'ro@x' WHERE id = 1",
+			"CREATE TABLE ro_made (x INT)",
+		} {
+			if _, err := ro(sql); err == nil {
+				t.Errorf("%q succeeded in read-only mode", sql)
+			}
+		}
+		if n := count(t, "id = 200 OR email = 'ro@x'"); n != "0" {
+			t.Fatalf("%s rows written in read-only mode", n)
+		}
+		if _, err := Script(ctx, p, "SELECT * FROM ro_made", 0); err == nil {
+			t.Fatal("a table was created in read-only mode")
+		}
+		if _, err := Script(ctx, p, "INSERT INTO users (id, email) VALUES (201, 'rw@x')", 0); err != nil {
+			t.Fatalf("read-only mode outlived its run: %v", err)
 		}
 	})
 

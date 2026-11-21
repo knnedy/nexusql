@@ -144,14 +144,22 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   SQLite keeps its connection (ROLLBACK only). `db.IsDestructiveQuery`/`IsSelectQuery`
   removed. Console shows RETURNING rows and "last of N statements"; API query results
   always carry `columns`/`rows` arrays.
+- feat(console): read-only switch per connection (ADR 0011; `GET`/`PUT
+  /api/connection/read-only`, console toolbar toggle). Enforced by the database inside the
+  run's session: Postgres `BEGIN READ ONLY` + snapshot + tx-status check before each
+  statement (console statements now use the extended protocol: one statement per
+  message); MySQL session-level `SET SESSION TRANSACTION READ ONLY` (transaction-level
+  let DDL through, verified); SQLite `query_only`. Studio refuses statements naming
+  READ WRITE/`*_read_only`/`query_only`; edits and seeding return 409. Not persisted.
 
 ## Next 3 steps
 
-1. feat(console): read-only toggle enforced by the database (PG `BEGIN READ ONLY`, MySQL
-   `START TRANSACTION READ ONLY`, SQLite `query_only`), inside ExecuteScript's session.
-2. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
-   type-aware rendering; Playwright setup (cover the console run/confirm flow too).
-3. fix(web): query keys scoped by project; disconnect clears lookup/export caches.
+1. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
+   type-aware rendering; Testing Library + Playwright setup. Cover the console flows
+   (run/confirm, read-only toggle) and disable grid editing while read-only.
+2. fix(web): query keys scoped by project; disconnect clears lookup/export caches
+   (also drop the read-only hook's always-refetch workaround).
+3. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
 
 ## Half-done files
 

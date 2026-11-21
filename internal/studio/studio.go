@@ -52,6 +52,7 @@ type Service struct {
 	session  *session.Store
 	projects projects.Store
 	schemas  schemaCache
+	access   accessMode
 	cfg      Config
 }
 

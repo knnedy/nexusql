@@ -9,7 +9,11 @@ import {
   CreateProjectResponse,
   ProjectsResponse,
 } from "@/shared/types/project";
-import { QueryRequest, QueryResponse } from "@/shared/types/query";
+import {
+  QueryRequest,
+  QueryResponse,
+  ReadOnlyState,
+} from "@/shared/types/query";
 import {
   LookupResponse,
   RowsResponse,
@@ -108,6 +112,19 @@ export const api = {
       method: "POST",
       body: JSON.stringify(body),
     });
+  },
+
+  readOnly: {
+    get(): Promise<ReadOnlyState> {
+      return request<ReadOnlyState>("/api/connection/read-only");
+    },
+
+    set(body: ReadOnlyState): Promise<ReadOnlyState> {
+      return request<ReadOnlyState>("/api/connection/read-only", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+    },
   },
 
   seed(body: SeedRequest): Promise<SeedResponse> {

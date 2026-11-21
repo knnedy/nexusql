@@ -55,7 +55,7 @@ func mustExec(t *testing.T, p db.Provider, sql string) {
 
 // Script runs console SQL the way studio does: split with the provider's syntax.
 func Script(ctx context.Context, p db.Provider, sql string, maxRows int) (db.QueryResult, error) {
-	return p.ExecuteScript(ctx, sqlscan.Split(sql, p.Syntax()), maxRows)
+	return p.ExecuteScript(ctx, sqlscan.Split(sql, p.Syntax()), db.ScriptOptions{MaxRows: maxRows})
 }
 
 // str renders a scanned value dialect-neutrally (int32 vs int64, []byte vs string).

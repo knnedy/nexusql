@@ -3,6 +3,11 @@ export interface QueryRequest {
   confirmed?: boolean;
 }
 
+/** The active connection's access mode; read-only is enforced by the database. */
+export interface ReadOnlyState {
+  readOnly: boolean;
+}
+
 export interface QueryResponse {
   columns: string[];
   rows: Record<string, unknown>[];

@@ -33,7 +33,7 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 	if cfg.IsDev {
 		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
-			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},
+			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions},
 			AllowedHeaders:   []string{"Content-Type"},
 			AllowCredentials: false,
 			MaxAge:           300,
@@ -46,6 +46,8 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 	// Connection lifecycle
 	r.Post("/connect", h.handleConnect)
 	r.Post("/disconnect", h.handleDisconnect)
+	r.Get("/connection/read-only", h.handleGetReadOnly)
+	r.Put("/connection/read-only", h.handleSetReadOnly)
 
 	// Schema
 	r.Get("/schema", h.handleSchema)
