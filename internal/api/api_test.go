@@ -92,15 +92,19 @@ func TestUpdateRowBody(t *testing.T) {
 		}
 	}
 
-	for body, want := range map[string]int{
-		`{"key":{"id":"1"},"column":"v","value":"b"}`:  http.StatusOK,
-		`{"key":{"id":"1"},"column":"v","value":null}`: http.StatusOK,
-		`{"key":{"id":"1"},"column":"v"}`:              http.StatusBadRequest, // value omitted
-		`{"key":{"id":"1"},"column":"v","value":5}`:    http.StatusBadRequest,
-		`{"key":{"id":"9"},"column":"v","value":"b"}`:  http.StatusNotFound,
+	// In order: the null update must be the last successful one.
+	for _, c := range []struct {
+		body string
+		want int
+	}{
+		{`{"key":{"id":"1"},"column":"v","value":"b"}`, http.StatusOK},
+		{`{"key":{"id":"1"},"column":"v","value":null}`, http.StatusOK},
+		{`{"key":{"id":"1"},"column":"v"}`, http.StatusBadRequest}, // value omitted
+		{`{"key":{"id":"1"},"column":"v","value":5}`, http.StatusBadRequest},
+		{`{"key":{"id":"9"},"column":"v","value":"b"}`, http.StatusNotFound},
 	} {
-		if w := call(h, "PATCH", "/rows/t", body); w.Code != want {
-			t.Errorf("%s: %d %s, want %d", body, w.Code, w.Body, want)
+		if w := call(h, "PATCH", "/rows/t", c.body); w.Code != c.want {
+			t.Errorf("%s: %d %s, want %d", c.body, w.Code, w.Body, c.want)
 		}
 	}
 	w := call(h, "GET", "/rows/t/lookup?field=id&value=1", "")

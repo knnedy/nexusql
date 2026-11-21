@@ -112,6 +112,8 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   unsafe ints and decimals as strings, NaN/Inf as strings (NaN used to break the whole
   response), naive timestamps without `Z`, dates as dates, JSON as JSON, binary as `\x`
   hex. `Values` fixture per harness. MySQL session `time_zone` pinned to UTC.
+- test(api): TestUpdateRowBody ranged over a map, so case order was random and the
+  final NULL check flaked; cases are now ordered. (2f5efc3 was committed while it failed.)
 
 ## Next 3 steps
 
