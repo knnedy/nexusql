@@ -28,6 +28,7 @@ interface ExplorerToolbarProps {
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
   onExportCsv: () => void;
   pendingEditsCount: number;
+  failedEditsCount: number;
   isSaving: boolean;
   onSaveChanges: () => void;
   onDiscardChanges: () => void;
@@ -44,6 +45,7 @@ export default function ExplorerToolbar({
   onColumnVisibilityChange,
   onExportCsv,
   pendingEditsCount,
+  failedEditsCount,
   isSaving,
   onSaveChanges,
   onDiscardChanges,
@@ -224,6 +226,7 @@ export default function ExplorerToolbar({
             <span className="w-1.5 h-1.5 rounded-full bg-coral shrink-0" />
             {pendingEditsCount} unsaved{" "}
             {pendingEditsCount === 1 ? "change" : "changes"}
+            {failedEditsCount > 0 && ` · ${failedEditsCount} failed`}
           </span>
 
           <button

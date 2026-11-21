@@ -22,7 +22,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import { useRunQuery } from "@/features/console/hooks/use-run-query";
-import { useReadOnly } from "@/features/console/hooks/use-read-only";
+import { useReadOnly } from "@/shared/hooks/use-read-only";
 
 interface SqlConsoleModalProps {
   open: boolean;

@@ -25,6 +25,24 @@ import { SeedRequest, SeedResponse } from "@/shared/types/seed";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
+/** The server's {"error": "..."} message, or the raw body when it has none. */
+function errorMessage(body: string): string {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (
+      parsed &&
+      typeof parsed === "object" &&
+      "error" in parsed &&
+      typeof parsed.error === "string"
+    ) {
+      return parsed.error;
+    }
+  } catch {
+    // not JSON: use the body as it is
+  }
+  return body.trim();
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${BASE_URL}${path}`, {
     headers: { "Content-Type": "application/json" },
@@ -32,8 +50,10 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    const message = await response.text();
-    throw new Error(message || `Request failed with status ${response.status}`);
+    throw new Error(
+      errorMessage(await response.text()) ||
+        `Request failed with status ${response.status}`,
+    );
   }
 
   return response.json() as Promise<T>;

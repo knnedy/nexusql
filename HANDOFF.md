@@ -156,15 +156,23 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   a throwaway HOME. New dev deps pinned to releases at least two weeks old (jest-dom
   7.0.1 not 8.0.0, user-event 14.6.8, Playwright 1.65.0). First run locally:
   `cd web && pnpm exec playwright install chromium`.
+- fix(explorer): Set NULL button (nullable columns) and NULL in enum/boolean pickers
+  (enum "null" used to send ''); NULL vs '' shown apart (`null` / `empty`); unchanged
+  commits record nothing (JSON cells were always "changed" via `[object Object]`); a
+  failed save keeps its edit with the server's message on the cell and "N failed" in the
+  toolbar (was silent); saved values stay until the batch refetch lands (no flash back),
+  one invalidation per batch incl. lookups; grid says why it is read-only (no primary
+  key / read-only connection). Boolean picker, tabular numerals, pretty JSON tooltip.
+  API client errors show the server's message, not the JSON envelope (connect page too).
+  `useReadOnly` moved to `shared/hooks`. Component tests + 4 Playwright explorer flows.
 
 ## Next 3 steps
 
-1. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
-   type-aware rendering; Testing Library + Playwright setup. Cover the console flows
-   (run/confirm, read-only toggle) and disable grid editing while read-only.
-2. fix(web): query keys scoped by project; disconnect clears lookup/export caches
-   (also drop the read-only hook's always-refetch workaround).
-3. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
+1. fix(web): query keys scoped by project; disconnect clears lookup/export caches
+   (then drop `useReadOnly`'s always-refetch workaround).
+2. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
+3. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
+   constraints, enums per dialect (may split in 2-3 commits).
 
 ## Half-done files
 

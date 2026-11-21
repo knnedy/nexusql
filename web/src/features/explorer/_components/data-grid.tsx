@@ -9,9 +9,11 @@ import {
 } from "@tanstack/react-table";
 import { useMemo, useRef, useState } from "react";
 import {
+  AlertCircle,
   Key,
   Link,
   Hash,
+  Lock,
   ChevronUp,
   ChevronDown,
   ChevronsUpDown,
@@ -27,12 +29,14 @@ import {
 import { DatabaseProvider } from "@/shared/types/provider";
 import { normalizeFieldType } from "@/shared/lib/utils";
 import { editKey as cellKey, rowKey, type RowKey } from "../lib/row-key";
+import { cellText, isUnchanged } from "../lib/cell";
 
 export interface PendingEdit {
   key: RowKey;
   column: string;
-  newValue: string;
+  newValue: string | null; // null writes SQL NULL
   originalValue: unknown;
+  error?: string; // why the last save of this edit failed
 }
 
 export type CellEditPayload = PendingEdit;
@@ -58,28 +62,42 @@ interface DataGridProps {
   ) => void;
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
+  /** Why rows cannot be edited (e.g. a read-only connection); null when they can. */
+  readOnlyReason: string | null;
 }
 
-function isNullish(value: unknown): boolean {
-  return value === null || value === undefined;
-}
+const NULL_OPTION = "\u0000null"; // a value no enum or boolean option can have
+const BOOLEAN_OPTIONS = ["true", "false"];
+const NUMERIC_TYPES = new Set([
+  "integer", "bigint", "smallint", "serial", "bigserial",
+  "numeric", "real", "double precision",
+]);
 
 function formatCellValue(value: unknown): string {
-  if (isNullish(value)) return "null";
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
+  return cellText(value) ?? "null";
+}
+
+function Marker({ children, tone }: { children: string; tone: "muted" | "coral" }) {
+  return (
+    <span
+      className={`italic font-mono text-[10.5px] ${
+        tone === "coral" ? "text-coral font-semibold" : "text-text-tertiary/50"
+      }`}>
+      {children}
+    </span>
+  );
 }
 
 interface EditableCellProps {
   value: unknown;
   field: Field;
-  enumValues: string[] | null;
+  options: string[] | null; // a picker instead of free text (enums, booleans)
+  numeric: boolean;
   canEdit: boolean;
   isEditing: boolean;
-  isPending: boolean;
-  pendingValue: string | undefined;
+  pending: PendingEdit | undefined;
   onStartEdit: () => void;
-  onCommit: (newValue: string) => void;
+  onCommit: (next: string | null) => void;
   onCancel: () => void;
   onNavigate: (() => void) | null;
 }
@@ -87,33 +105,33 @@ interface EditableCellProps {
 function EditableCell({
   value,
   field,
-  enumValues,
+  options,
+  numeric,
   canEdit,
   isEditing,
-  isPending,
-  pendingValue,
+  pending,
   onStartEdit,
   onCommit,
   onCancel,
   onNavigate,
 }: EditableCellProps) {
-  const initialValue = isPending
-    ? (pendingValue ?? "")
-    : formatCellValue(value);
-  const [localValue, setLocalValue] = useState(initialValue);
+  const current = pending ? pending.newValue : cellText(value);
+  const [localValue, setLocalValue] = useState(current ?? "");
   const suppressBlurRef = useRef(false);
 
   if (isEditing) {
-    if (enumValues) {
+    if (options) {
       return (
         <select
           autoFocus
-          defaultValue={localValue}
-          onChange={(e) => onCommit(e.target.value)}
+          defaultValue={current ?? NULL_OPTION}
+          onChange={(e) =>
+            onCommit(e.target.value === NULL_OPTION ? null : e.target.value)
+          }
           onBlur={onCancel}
           className="w-full h-6 rounded border border-teal bg-node-bg text-[11px] font-mono text-text-primary px-1 outline-none ring-1 ring-teal/40">
-          {field.nullable && <option value="">null</option>}
-          {enumValues.map((v) => (
+          {field.nullable && <option value={NULL_OPTION}>NULL</option>}
+          {options.map((v) => (
             <option key={v} value={v}>
               {v}
             </option>
@@ -123,36 +141,54 @@ function EditableCell({
     }
 
     return (
-      <input
-        autoFocus
-        value={localValue}
-        onChange={(e) => setLocalValue(e.target.value)}
-        onFocus={(e) => e.currentTarget.select()}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            suppressBlurRef.current = true;
+      <div className="flex items-center gap-1">
+        <input
+          autoFocus
+          value={localValue}
+          onChange={(e) => setLocalValue(e.target.value)}
+          onFocus={(e) => e.currentTarget.select()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              suppressBlurRef.current = true;
+              onCommit(localValue);
+            } else if (e.key === "Escape") {
+              suppressBlurRef.current = true;
+              onCancel();
+            }
+          }}
+          onBlur={() => {
+            if (suppressBlurRef.current) {
+              suppressBlurRef.current = false;
+              return;
+            }
             onCommit(localValue);
-          } else if (e.key === "Escape") {
-            suppressBlurRef.current = true;
-            onCancel();
-          }
-        }}
-        onBlur={() => {
-          if (suppressBlurRef.current) {
-            suppressBlurRef.current = false;
-            return;
-          }
-          onCommit(localValue);
-        }}
-        className="w-full h-6 rounded border border-teal bg-node-bg text-[11px] font-mono text-text-primary px-1 outline-none ring-1 ring-teal/40"
-      />
+          }}
+          className="min-w-0 flex-1 h-6 rounded border border-teal bg-node-bg text-[11px] font-mono text-text-primary px-1 outline-none ring-1 ring-teal/40"
+        />
+        {field.nullable && (
+          <button
+            type="button"
+            aria-label="Set NULL"
+            title="Set NULL"
+            // keep focus in the input so its blur does not commit the text first
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => {
+              suppressBlurRef.current = true;
+              onCommit(null);
+            }}
+            className="shrink-0 h-6 px-1.5 rounded border border-node-border/60 dark:border-node-border/40 bg-transparent text-[9.5px] font-mono font-semibold text-text-tertiary hover:text-text-primary hover:border-teal/60 transition-colors cursor-pointer">
+            NULL
+          </button>
+        )}
+      </div>
     );
   }
 
-  const displayValue = isPending
-    ? (pendingValue ?? "")
-    : formatCellValue(value);
-  const isDisplayNull = !isPending && isNullish(value);
+  const error = pending?.error;
+  const title =
+    typeof value === "object" && value !== null && !pending
+      ? JSON.stringify(value, null, 2)
+      : (current ?? undefined);
 
   return (
     <div
@@ -161,24 +197,35 @@ function EditableCell({
         canEdit ? "cursor-text" : ""
       }`}>
       <div className="flex items-center gap-1.5 min-w-0">
-        {isPending && (
-          <span
-            className="w-1.5 h-1.5 rounded-full bg-coral shrink-0"
-            title="Unsaved change"
-            aria-hidden
-          />
+        {error ? (
+          <AlertCircle
+            size={11}
+            className="text-coral shrink-0"
+            aria-label={`Save failed: ${error}`}
+            role="img"
+          >
+            <title>{`Save failed: ${error}`}</title>
+          </AlertCircle>
+        ) : (
+          pending && (
+            <span
+              className="w-1.5 h-1.5 rounded-full bg-coral shrink-0"
+              title="Unsaved change"
+              aria-hidden
+            />
+          )
         )}
-        {isDisplayNull ? (
-          <span className="text-text-tertiary/50 italic font-mono text-[10.5px]">
-            null
-          </span>
+        {current === null ? (
+          <Marker tone={pending ? "coral" : "muted"}>null</Marker>
+        ) : current === "" ? (
+          <Marker tone={pending ? "coral" : "muted"}>empty</Marker>
         ) : (
           <span
-            title={displayValue}
-            className={`block truncate font-mono text-[11px] ${
-              isPending ? "text-coral font-semibold" : "text-text-secondary/90"
+            title={title}
+            className={`block truncate font-mono text-[11px] ${numeric ? "tabular-nums" : ""} ${
+              pending ? "text-coral font-semibold" : "text-text-secondary/90"
             }`}>
-            {displayValue}
+            {current}
           </span>
         )}
       </div>
@@ -323,6 +370,7 @@ export default function DataGrid({
   onNavigateFk,
   columnVisibility,
   onColumnVisibilityChange,
+  readOnlyReason,
 }: DataGridProps) {
   "use no memo";
 
@@ -354,6 +402,11 @@ export default function DataGrid({
   );
 
   const hasPrimaryKey = useMemo(() => fields.some((f) => f.isPrimaryKey), [fields]);
+  const lockedReason =
+    readOnlyReason ??
+    (hasPrimaryKey
+      ? null
+      : "This table has no primary key, so its rows cannot be edited.");
 
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () => [
@@ -361,7 +414,13 @@ export default function DataGrid({
       ...columns.map((col): ColumnDef<Record<string, unknown>> => {
         const field = fieldMap.get(col);
         const enumType = field ? enumMap.get(field.type) : undefined;
-        const canEdit = !!field && hasPrimaryKey && !field.isPrimaryKey;
+        const canonical = field ? normalizeFieldType(field.type, provider) : null;
+        const options = enumType
+          ? enumType.values
+          : canonical === "boolean"
+            ? BOOLEAN_OPTIONS
+            : null;
+        const canEdit = !!field && !lockedReason && !field.isPrimaryKey;
         const relation = relationMap.get(col);
 
         return {
@@ -399,27 +458,25 @@ export default function DataGrid({
                 key={isEditing ? "editing" : "display"}
                 value={cellValue}
                 field={field}
-                enumValues={enumType ? enumType.values : null}
+                options={options}
+                numeric={!!canonical && NUMERIC_TYPES.has(canonical)}
                 canEdit={canEdit}
                 isEditing={isEditing}
-                isPending={!!pending}
-                pendingValue={pending?.newValue}
+                pending={pending}
                 onStartEdit={() =>
                   setEditingCell({ rowId: row.id, columnId: col })
                 }
                 onCancel={() => setEditingCell(null)}
                 onCommit={(newValue) => {
-                  if (!key) return;
-                  onCellEdit({
-                    key,
-                    column: col,
-                    newValue,
-                    originalValue: row.original[col],
-                  });
                   setEditingCell(null);
+                  const original = row.original[col];
+                  if (!key || (!pending && isUnchanged(original, newValue))) {
+                    return;
+                  }
+                  onCellEdit({ key, column: col, newValue, originalValue: original });
                 }}
                 onNavigate={
-                  relation && !isNullish(cellValue)
+                  relation && cellText(cellValue) !== null
                     ? () =>
                         onNavigateFk(
                           relation.targetTable,
@@ -441,7 +498,7 @@ export default function DataGrid({
       enumMap,
       relationMap,
       fields,
-      hasPrimaryKey,
+      lockedReason,
       sortCol,
       sortDir,
       onSort,
@@ -502,6 +559,14 @@ export default function DataGrid({
 
   return (
     <div className="flex-1 overflow-auto">
+      {lockedReason && (
+        <div
+          role="status"
+          className="sticky left-0 flex items-center gap-1.5 px-3 py-1.5 text-[11px] text-text-tertiary border-b border-node-border/60 dark:border-node-border/40 bg-node-header-bg/60">
+          <Lock size={11} aria-hidden />
+          <span>{lockedReason}</span>
+        </div>
+      )}
       <table
         className="text-[11px] font-mono border-collapse table-fixed"
         style={{ width: table.getTotalSize() }}>

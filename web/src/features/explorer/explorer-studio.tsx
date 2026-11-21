@@ -20,6 +20,8 @@ import DataGrid, {
   type CellEditPayload,
 } from "@/features/explorer/_components/data-grid";
 import { editKey } from "@/features/explorer/lib/row-key";
+import { isUnchanged } from "@/features/explorer/lib/cell";
+import { useReadOnly } from "@/shared/hooks/use-read-only";
 import ExplorerToolbar from "@/features/explorer/_components/explorer-toolbar";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
@@ -194,6 +196,8 @@ function ExplorerInner() {
     : tableRowsResult.isFetching;
 
   const updateRow = useUpdateRow(selectedTable ?? "");
+  const { readOnly } = useReadOnly();
+  const failedCount = [...pendingEdits.values()].filter((e) => e.error).length;
 
   function handleSelectTable(name: string) {
     setSearchValue("");
@@ -270,13 +274,11 @@ function ExplorerInner() {
 
     setPendingEdits((prev) => {
       const next = new Map(prev);
-
-      if (edit.newValue === String(edit.originalValue ?? "")) {
-        next.delete(key);
-        return next;
+      if (isUnchanged(edit.originalValue, edit.newValue)) {
+        next.delete(key); // edited back to what the database holds
+      } else {
+        next.set(key, { ...edit, error: undefined });
       }
-
-      next.set(key, edit);
       return next;
     });
   }
@@ -285,25 +287,39 @@ function ExplorerInner() {
     if (!selectedTable || pendingEdits.size === 0) return;
 
     setIsSaving(true);
-    const failedKeys: string[] = [];
+    const batch = new Map(pendingEdits);
+    const failed = new Map<string, string>();
 
-    for (const [key, edit] of pendingEdits) {
+    for (const [key, edit] of batch) {
       try {
         await updateRow.mutateAsync({
           key: edit.key,
           column: edit.column,
           value: edit.newValue,
         });
-      } catch {
-        failedKeys.push(key);
+      } catch (err) {
+        failed.set(key, err instanceof Error ? err.message : "Save failed");
       }
     }
 
+    // Saved cells keep showing their new value until the refetch has it,
+    // so they never flash back to the old one.
+    await Promise.all([
+      qc.invalidateQueries({
+        queryKey: tableRowsQueryOptions(selectedTable, false).queryKey.slice(0, 2),
+      }),
+      qc.invalidateQueries({
+        queryKey: rowLookupQueryOptions(selectedTable, "", "", false).queryKey.slice(0, 2),
+      }),
+    ]);
+
     setPendingEdits((prev) => {
-      const next = new Map<string, PendingEdit>();
-      for (const key of failedKeys) {
-        const edit = prev.get(key);
-        if (edit) next.set(key, edit);
+      const next = new Map(prev);
+      for (const [key, edit] of batch) {
+        if (next.get(key) !== edit) continue; // edited again while saving
+        const error = failed.get(key);
+        if (error) next.set(key, { ...edit, error });
+        else next.delete(key);
       }
       return next;
     });
@@ -351,6 +367,7 @@ function ExplorerInner() {
         onColumnVisibilityChange={setColumnVisibility}
         onExportCsv={handleExportCsv}
         pendingEditsCount={pendingEdits.size}
+        failedEditsCount={failedCount}
         isSaving={isSaving}
         onSaveChanges={handleSaveChanges}
         onDiscardChanges={handleDiscardChanges}
@@ -399,6 +416,11 @@ function ExplorerInner() {
                 onNavigateFk={handleNavigateFk}
                 columnVisibility={columnVisibility}
                 onColumnVisibilityChange={setColumnVisibility}
+                readOnlyReason={
+                  readOnly
+                    ? "The connection is read-only. Switch it off in the SQL console to edit rows."
+                    : null
+                }
               />
               {!hasFilter && (
                 <Pagination
