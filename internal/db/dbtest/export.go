@@ -38,7 +38,9 @@ func testExport(t *testing.T, h Harness) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	golden(t, "testdata/export.prisma", export.Prisma(export.Build(schema, dialect)))
+	m := export.Build(schema, dialect)
+	golden(t, "testdata/export.prisma", export.Prisma(m))
+	golden(t, "testdata/export.ts", export.Drizzle(m))
 }
 
 func golden(t *testing.T, path, got string) {

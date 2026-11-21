@@ -16,18 +16,6 @@ func IsUserTable(name string) bool {
 	return !migrationTables[name]
 }
 
-// BuildRelationLookup indexes single-column relations by "sourceTable.sourceField";
-// the Drizzle exporters cannot express composite keys yet, so those are left out.
-func BuildRelationLookup(relations []Relation) map[string]Relation {
-	m := make(map[string]Relation, len(relations))
-	for _, r := range relations {
-		if !r.IsComposite() {
-			m[r.SourceTable+"."+r.SourceField] = r
-		}
-	}
-	return m
-}
-
 // BuildEnumSet indexes enum names for O(1) "is this FieldType actually an
 // enum name" checks during export.
 func BuildEnumSet(enums []EnumType) map[string]bool {
@@ -51,4 +39,9 @@ func TypeArgs(native string) (string, []string) {
 		args = append(args, strings.TrimSpace(a))
 	}
 	return strings.TrimSpace(strings.Join(strings.Fields(n[:open]+" "+n[end+1:]), " ")), args
+}
+
+// JSString quotes s as a single-quoted JavaScript string literal.
+func JSString(s string) string {
+	return "'" + strings.NewReplacer(`\`, `\\`, "'", `\'`, "\n", `\n`, "\r", `\r`).Replace(s) + "'"
 }

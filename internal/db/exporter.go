@@ -9,8 +9,12 @@ import (
 // Exporter gives the shared schema exporters (internal/export) the facts of
 // one dialect; output structure and naming live there (ADR 0012).
 type Exporter interface {
-	// Drizzle renders the schema as drizzle-orm table definitions.
-	Drizzle(schema *Schema) string
+	// Drizzle names the dialect's drizzle-orm module and builders.
+	Drizzle() DrizzleDialect
+	// DrizzleColumn is the column builder call for a non-enum field, given its
+	// name as a JS string literal, and the names it imports; "" means
+	// unsupported (rendered as a customType of the declared type).
+	DrizzleColumn(f Field, name string) (call string, imports []string)
 	// PrismaProvider names the Prisma datasource provider.
 	PrismaProvider() string
 	// PrismaType maps a non-enum field to a Prisma scalar and an optional native
@@ -18,6 +22,17 @@ type Exporter interface {
 	PrismaType(f Field) (scalar, native string)
 	// Default classifies the field's default expression.
 	Default(f Field) Default
+}
+
+// DrizzleDialect describes one drizzle-orm dialect module.
+type DrizzleDialect struct {
+	Module     string // e.g. "drizzle-orm/pg-core"
+	Table      string // table builder, e.g. "pgTable"
+	AnyColumn  string // column type for typed references, e.g. "AnyPgColumn"
+	Enum       string // enum builder; "" when the dialect has none
+	NamedEnums bool   // enums are declared once and shared (pgEnum)
+	DefaultNow bool   // timestamp columns take .defaultNow()
+	BigInt     bool   // bigint columns hold JS bigint values
 }
 
 // DefaultKind classifies a column default for exporters.

@@ -8,6 +8,8 @@
     "check": "node check.mjs"
   },
   "devDependencies": {
-    "prisma": "7.10.1"
+    "drizzle-orm": "0.45.4",
+    "prisma": "7.10.1",
+    "typescript": "5.9.3"
   }
 }

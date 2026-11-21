@@ -247,7 +247,7 @@ func (s *Service) Export(ctx context.Context, target ExportTarget) (string, erro
 		return "", invalid(err)
 	}
 	if target == ExportDrizzle {
-		return dialect.Drizzle(schema), nil
+		return export.Drizzle(export.Build(schema, dialect)), nil
 	}
 	return export.Prisma(export.Build(schema, dialect)), nil
 }
