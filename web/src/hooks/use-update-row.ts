@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
-import { UpdateRowRequest } from "@/lib/types/rows";
+import { UpdateRowRequest } from "@/shared/types/rows";
 
 export function useUpdateRow(tableName: string) {
   const qc = useQueryClient();

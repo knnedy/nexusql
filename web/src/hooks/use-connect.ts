@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { projectsQueryOptions } from "@/hooks/use-projects";
-import { schemaQueryOptions } from "@/hooks/use-schema";
+import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
-import { ConnectRequest } from "@/lib/types/health";
-import { DatabaseProvider } from "@/lib/types/provider";
+import { ConnectRequest } from "@/shared/types/health";
+import { DatabaseProvider } from "@/shared/types/provider";
 
 export function useConnect() {
   const router = useRouter();

@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { QUERY_KEYS } from "@/lib/query-keys";
+import { api } from "@/shared/api/client";
+import { QUERY_KEYS } from "@/shared/api/query-keys";
 
 export const DEFAULT_PAGE_SIZE = 50;
 

@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
 import { rowLookupQueryOptions } from "@/hooks/use-row-lookup";
-import type { SeedRequest } from "@/lib/types/seed";
+import type { SeedRequest } from "@/shared/types/seed";
 
 export function useSeed() {
   const qc = useQueryClient();

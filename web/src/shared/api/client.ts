@@ -3,21 +3,21 @@ import {
   ConnectResponse,
   HealthResponse,
   OrmExportResponse,
-} from "./types/health";
+} from "@/shared/types/health";
 import {
   CreateProjectRequest,
   CreateProjectResponse,
   ProjectsResponse,
-} from "./types/project";
-import { QueryRequest, QueryResponse } from "./types/query";
+} from "@/shared/types/project";
+import { QueryRequest, QueryResponse } from "@/shared/types/query";
 import {
   LookupResponse,
   RowsResponse,
   UpdateRowRequest,
   UpdateRowResponse,
-} from "./types/rows";
-import { SchemaResponse } from "./types/schema";
-import { SeedRequest, SeedResponse } from "./types/seed";
+} from "@/shared/types/rows";
+import { SchemaResponse } from "@/shared/types/schema";
+import { SeedRequest, SeedResponse } from "@/shared/types/seed";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 

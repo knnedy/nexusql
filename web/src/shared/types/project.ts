@@ -1,4 +1,4 @@
-import type { DatabaseProvider } from "./provider";
+import type { DatabaseProvider } from "@/shared/types/provider";
 
 export interface Project {
   id: string;

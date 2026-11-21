@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useSchema } from "@/hooks/use-schema";
+import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../../components/mode-switcher";
 import DisconnectButton from "../../components/disconnect-button";

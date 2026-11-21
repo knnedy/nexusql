@@ -1,4 +1,4 @@
-import type { DatabaseProvider, OrmTarget } from "./provider";
+import type { DatabaseProvider, OrmTarget } from "@/shared/types/provider";
 
 export interface HealthResponse {
   status: "ok";

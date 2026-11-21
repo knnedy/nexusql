@@ -1,5 +1,5 @@
-import type { Table, Relation } from "./schema";
-import type { DatabaseProvider } from "./provider";
+import type { Table, Relation } from "@/shared/types/schema";
+import type { DatabaseProvider } from "@/shared/types/provider";
 
 export interface TableNodeData extends Record<string, unknown> {
   table: Table;

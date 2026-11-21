@@ -19,17 +19,17 @@ import {
   LayoutGrid,
   Table2,
 } from "lucide-react";
-import TopNav from "@/app/components/top-nav";
-import ProviderBadge from "@/app/components/provider-badge";
+import TopNav from "@/shared/components/top-nav";
+import ProviderBadge from "@/shared/components/provider-badge";
 import {
   useProjects,
   useDeleteProject,
   useRenameProject,
 } from "@/hooks/use-projects";
 import { useConnect } from "@/hooks/use-connect";
-import { formatRelativeTime } from "@/lib/utils";
-import { DatabaseProvider } from "@/lib/types/provider";
-import { Project } from "@/lib/types/project";
+import { formatRelativeTime } from "@/shared/lib/utils";
+import { DatabaseProvider } from "@/shared/types/provider";
+import { Project } from "@/shared/types/project";
 
 const PROVIDER_FILTERS: { label: string; value: DatabaseProvider | "all" }[] = [
   { label: "All", value: "all" },

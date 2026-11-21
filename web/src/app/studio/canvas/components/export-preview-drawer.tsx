@@ -4,10 +4,10 @@ import { useState, useEffect } from "react";
 import { X, Copy, Check, Download, FileCode, ImageIcon } from "lucide-react";
 import { codeToHtml } from "shiki";
 import { useQuery, queryOptions } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { QUERY_KEYS } from "@/lib/query-keys";
+import { QUERY_KEYS } from "@/shared/api/query-keys";
 
 interface ExportPreviewDrawerProps {
   type: "png" | "prisma" | "drizzle" | null;

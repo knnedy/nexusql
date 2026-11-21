@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { projectsQueryOptions } from "@/hooks/use-projects";
-import { schemaQueryOptions } from "@/hooks/use-schema";
+import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
 import { useStudioStore } from "@/lib/store/studio-store";
-import { QUERY_KEYS } from "@/lib/query-keys";
+import { QUERY_KEYS } from "@/shared/api/query-keys";
 
 export function useDisconnect() {
   const router = useRouter();

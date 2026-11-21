@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
 import { rowLookupQueryOptions } from "@/hooks/use-row-lookup";
-import type { QueryRequest } from "@/lib/types/query";
+import type { QueryRequest } from "@/shared/types/query";
 
 export function useRunQuery() {
   const qc = useQueryClient();

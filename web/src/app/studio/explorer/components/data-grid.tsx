@@ -23,9 +23,9 @@ import {
   Field,
   FIELD_TYPE_BADGE_MAP,
   Relation,
-} from "@/lib/types/schema";
-import { DatabaseProvider } from "@/lib/types/provider";
-import { normalizeFieldType } from "@/lib/utils";
+} from "@/shared/types/schema";
+import { DatabaseProvider } from "@/shared/types/provider";
+import { normalizeFieldType } from "@/shared/lib/utils";
 
 export interface PendingEdit {
   pkField: string;

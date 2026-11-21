@@ -3,7 +3,7 @@
 import { useState, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import { useSchema } from "@/hooks/use-schema";
+import { useSchema } from "@/shared/hooks/use-schema";
 import {
   useTableRows,
   tableRowsQueryOptions,
@@ -11,9 +11,9 @@ import {
 } from "@/hooks/use-table-rows";
 import { useRowLookup, rowLookupQueryOptions } from "@/hooks/use-row-lookup";
 import { useUpdateRow } from "@/hooks/use-update-row";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
-import { exportToCsv } from "@/lib/utils";
+import { exportToCsv } from "@/shared/lib/utils";
 import TableList from "./components/table-list";
 import DataGrid, {
   buildEditKey,

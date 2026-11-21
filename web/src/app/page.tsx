@@ -9,14 +9,14 @@ import {
   Link as LinkIcon,
   FolderDot,
 } from "lucide-react";
-import TopNav from "./components/top-nav";
+import TopNav from "@/shared/components/top-nav";
 import RecentProjects from "./components/recent-projects";
 import { useConnect } from "@/hooks/use-connect";
 import {
   DatabaseProvider,
   ProviderMeta,
   PROVIDERS,
-} from "@/lib/types/provider";
+} from "@/shared/types/provider";
 
 function ProviderTab({
   provider,

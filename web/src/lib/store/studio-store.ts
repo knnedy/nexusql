@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { DatabaseProvider } from "../types/provider";
+import { DatabaseProvider } from "@/shared/types/provider";
 
 interface StudioState {
   provider: DatabaseProvider;

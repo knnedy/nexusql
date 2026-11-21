@@ -3,9 +3,9 @@ import ELK, {
   type ElkExtendedEdge,
 } from "elkjs/lib/elk.bundled.js";
 import type { Edge, Node } from "@xyflow/react";
-import { SchemaResponse } from "./types/schema";
-import { RelationEdgeData, TableNodeData } from "./types/canvas";
-import { DatabaseProvider } from "./types/provider";
+import { SchemaResponse } from "@/shared/types/schema";
+import { RelationEdgeData, TableNodeData } from "@/shared/types/canvas";
+import { DatabaseProvider } from "@/shared/types/provider";
 
 const NODE_WIDTH = 260;
 const NODE_HEIGHT_BASE = 44;

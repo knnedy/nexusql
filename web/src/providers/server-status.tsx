@@ -3,7 +3,7 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { Terminal, Wifi, WifiOff } from "lucide-react";
 import { createContext, useContext, useState } from "react";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 
 // Context
 interface ServerStatusContextValue {

@@ -16,10 +16,10 @@ import {
 } from "lucide-react";
 import { SiPrisma, SiDrizzle } from "react-icons/si";
 import { reapplyLayout } from "@/lib/canvas-utils";
-import { useSchema } from "@/hooks/use-schema";
+import { useSchema } from "@/shared/hooks/use-schema";
 import type { Node } from "@xyflow/react";
-import { TableNodeData } from "@/lib/types/canvas";
-import { DatabaseProvider } from "@/lib/types/provider";
+import { TableNodeData } from "@/shared/types/canvas";
+import { DatabaseProvider } from "@/shared/types/provider";
 
 interface CanvasSidebarProps {
   open: boolean;

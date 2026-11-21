@@ -4,7 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "@/shared/api/client";
 
 export const projectsQueryOptions = queryOptions({
   queryKey: ["projects"],

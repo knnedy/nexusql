@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import Image from "next/image";
 import { FolderOpen, Moon, Sun } from "lucide-react";
-import icon from "../icon.png";
+import icon from "@/app/icon.png";
 
 export default function TopNav() {
   const router = useRouter();

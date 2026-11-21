@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
-import { api } from "@/lib/api";
-import { QUERY_KEYS } from "@/lib/query-keys";
+import { api } from "@/shared/api/client";
+import { QUERY_KEYS } from "@/shared/api/query-keys";
 
 function getProjectId(): string {
   if (typeof window === "undefined") return "";

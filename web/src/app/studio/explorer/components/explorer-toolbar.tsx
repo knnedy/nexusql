@@ -15,7 +15,7 @@ import {
 import { useStudioStore } from "@/lib/store/studio-store";
 import ModeSwitcher from "../../components/mode-switcher";
 import DisconnectButton from "../../components/disconnect-button";
-import ThemeToggle from "./theme-toggle";
+import ThemeToggle from "@/shared/components/theme-toggle";
 import icon from "../../../icon.png";
 
 interface ExplorerToolbarProps {

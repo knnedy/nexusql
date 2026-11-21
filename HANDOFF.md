@@ -45,12 +45,15 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   a class (`ErrNoConnection/ErrInvalid/ErrNotFound/ErrConflict`) mapped once in
   `api.writeServiceError`. A 45-request battery matched the previous binary except one
   intended change: malformed body + no connection now returns 400 (was 401).
+- refactor(web): `src/shared/` created: api client + query keys (`shared/api`), types,
+  utils, `use-schema`/`use-debounced-value`, top-nav/provider-badge/theme-toggle.
+  `app/icon.png` stays in app (Next metadata convention) and is imported as `@/app/icon.png`.
 
 ## Next 3 steps
 
-1. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
-2. refactor(web): move canvas into features/canvas.
-3. refactor(web): move explorer into features/explorer.
+1. refactor(web): rename component folders to `_components` (user request; scope pending).
+2. refactor(web): centralise sessionStorage keys in shared/lib/session-storage.
+3. refactor(web): move canvas into features/canvas.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
