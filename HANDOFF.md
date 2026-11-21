@@ -23,12 +23,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - ci: PR/main workflow: gofmt, vet, test, Go-only build; pnpm typecheck, lint, build.
 - chore(deps): Go modules bumped (lipgloss 2.1.1, gofakeit 7.18.10, chi 5.5.0, mysql
   1.10.2, pgx 5.13.0, modernc sqlite 1.62.0). SQLite API smoke test passed.
+- ci: Actions moved to Node 24 majors (checkout/setup-go/setup-node v7,
+  goreleaser-action v7, pnpm/action-setup v6); force-Node24 env removed.
 
 ## Next 3 steps
 
-1. ci: move GitHub Actions to Node 24 majors (fixes deprecation warnings).
-2. chore(deps): update web minor/patch (next + eslint-config-next together).
-3. chore(deps): elkjs 0.12; @types/node ^22.
+1. chore(deps): update web minor/patch (next + eslint-config-next together).
+2. chore(deps): elkjs 0.12; @types/node ^22.
+3. refactor(seed): move seeding to internal/seed.
 
 ## Half-done files
 
