@@ -29,12 +29,16 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   Query 5.108, tailwind 4.3.5, zustand 5.1, shiki 4.6, lucide 1.77, react-icons 5.7.
   html-to-image kept at exact 1.11.11.
 - chore(deps): elkjs 0.12.1; canvas layout options verified on a sample FK graph.
+- chore(deps): @types/node ^22 to match the CI Node version.
 
 ## Next 3 steps
 
-1. chore(deps): @types/node ^22 (match CI Node).
-2. refactor(seed): move seeding to internal/seed.
-3. refactor(db): Exporter registry; drop dialect imports from api.
+1. refactor(seed): move seeding to internal/seed.
+2. refactor(db): Exporter registry; drop dialect imports from api.
+3. refactor(server): extract HTTP server setup from main.go; health reports real Version.
+
+Remaining Stage 1 after that: api respond helpers + session guard, studio service
+layer, web shared/ + features/ moves (one feature per commit), README structure docs.
 
 ## Half-done files
 
