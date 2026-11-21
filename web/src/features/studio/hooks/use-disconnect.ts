@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { api } from "@/shared/api/client";
-import { projectsQueryOptions } from "@/hooks/use-projects";
+import { projectsQueryOptions } from "@/shared/hooks/use-projects";
 import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { tableRowsQueryOptions } from "@/shared/hooks/use-table-rows";
-import { useStudioStore } from "@/lib/store/studio-store";
+import { useStudioStore } from "@/shared/store/studio-store";
 import { QUERY_KEYS } from "@/shared/api/query-keys";
 import { studioSession } from "@/shared/lib/session-storage";
 

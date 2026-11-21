@@ -1,7 +1,7 @@
 "use client";
 
 import { Unplug, Loader2 } from "lucide-react";
-import { useDisconnect } from "@/hooks/use-disconnect";
+import { useDisconnect } from "@/features/studio/hooks/use-disconnect";
 
 interface DisconnectButtonProps {
   className?: string;

@@ -57,6 +57,8 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   internals (lint rule `prefer-query-options` requires keys from the factories).
 - refactor(web): `features/console` (SQL console modal + use-run-query), `features/seed`
   (seed modal + use-seed), `features/export` (export preview drawer).
+- refactor(web): `features/studio` (mode switcher, disconnect button, use-disconnect);
+  studio store to `shared/store`, `use-projects` to `shared/hooks` (cross-feature).
 
 ## Next 3 steps
 

@@ -17,7 +17,7 @@ import {
   ChevronsUpDown,
 } from "lucide-react";
 
-import { useStudioStore } from "@/lib/store/studio-store";
+import { useStudioStore } from "@/shared/store/studio-store";
 import {
   EnumType,
   Field,

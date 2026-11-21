@@ -25,7 +25,7 @@ import {
   useProjects,
   useDeleteProject,
   useRenameProject,
-} from "@/hooks/use-projects";
+} from "@/shared/hooks/use-projects";
 import { useConnect } from "@/hooks/use-connect";
 import { formatRelativeTime } from "@/shared/lib/utils";
 import { DatabaseProvider } from "@/shared/types/provider";

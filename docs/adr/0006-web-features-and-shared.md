@@ -22,7 +22,8 @@ web/src/
   components/  shared, feature-agnostic UI (the only plain "components" folder)
   features/    connect, projects, studio, canvas, explorer, console, seed, export
                each with _components/, hooks/, lib/ as needed
-  shared/      api/ (client, endpoints, query keys), types/, hooks/,
+  shared/      api/ (client, query keys), types/, store/ (cross-mode Zustand state),
+               hooks/ (data access whose cache several features read or invalidate),
                lib/ (utils, session-storage)
   providers/   app-wide React providers
 ```

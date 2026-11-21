@@ -16,7 +16,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "next-themes";
 import { codeToHtml } from "shiki";
 import { useSchema } from "@/shared/hooks/use-schema";
-import { useStudioStore } from "@/lib/store/studio-store";
+import { useStudioStore } from "@/shared/store/studio-store";
 import { normalizeFieldType } from "@/shared/lib/utils";
 import {
   Field,

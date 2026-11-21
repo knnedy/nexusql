@@ -12,9 +12,9 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { useStudioStore } from "@/lib/store/studio-store";
-import ModeSwitcher from "@/app/studio/_components/mode-switcher";
-import DisconnectButton from "@/app/studio/_components/disconnect-button";
+import { useStudioStore } from "@/shared/store/studio-store";
+import ModeSwitcher from "@/features/studio/_components/mode-switcher";
+import DisconnectButton from "@/features/studio/_components/disconnect-button";
 import ThemeToggle from "@/components/theme-toggle";
 import icon from "@/app/icon.png";
 
