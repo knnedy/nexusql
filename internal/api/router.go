@@ -6,8 +6,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/knnedy/nexusql/internal/projects"
-	"github.com/knnedy/nexusql/internal/session"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 // Config carries build- and run-time settings the API needs.
@@ -17,16 +16,15 @@ type Config struct {
 }
 
 type handler struct {
-	session  *session.Store
-	projects projects.Store
-	version  string
+	studio  *studio.Service
+	version string
 }
 
-func Router(sess *session.Store, proj projects.Store, cfg Config) *chi.Mux {
+// Router returns the JSON API; mount it under /api.
+func Router(svc *studio.Service, cfg Config) *chi.Mux {
 	h := &handler{
-		session:  sess,
-		projects: proj,
-		version:  cfg.Version,
+		studio:  svc,
+		version: cfg.Version,
 	}
 
 	r := chi.NewRouter()

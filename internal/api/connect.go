@@ -1,11 +1,11 @@
 package api
 
 import (
-	"context"
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 type connectRequest struct {
@@ -26,56 +26,24 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.URI == "" {
-		writeError(w, http.StatusBadRequest, "uri is required")
-		return
-	}
-
-	// auto-disconnect any existing connection before reconnecting
-	if h.session.IsConnected() {
-		h.session.Clear()
-	}
-
-	conn, err := db.Connect(context.Background(), req.URI)
+	res, err := h.studio.Connect(r.Context(), req.URI, req.Name)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	if err := h.session.Set(conn); err != nil {
-		conn.Close()
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	name := req.Name
-	if name == "" {
-		name = fmt.Sprintf("Project %s", conn.Kind)
-	}
-
-	p, err := h.projects.Create(name, req.URI, conn.Kind)
-	if err != nil {
-		// project with same name exists — find by URI and return it
-		for _, existing := range h.projects.List() {
-			if existing.URI == req.URI {
-				writeJSON(w, http.StatusOK, connectResponse{
-					OK:        true,
-					Provider:  conn.Kind,
-					ProjectID: existing.ID,
-				})
-				return
-			}
-		}
-		writeJSON(w, http.StatusOK, connectResponse{
-			OK:       true,
-			Provider: conn.Kind,
-		})
+		writeServiceError(w, err)
 		return
 	}
 
 	writeJSON(w, http.StatusOK, connectResponse{
 		OK:        true,
-		Provider:  conn.Kind,
-		ProjectID: p.ID,
+		Provider:  res.Provider,
+		ProjectID: res.ProjectID,
 	})
+}
+
+func (h *handler) handleDisconnect(w http.ResponseWriter, r *http.Request) {
+	if err := h.studio.Disconnect(); errors.Is(err, studio.ErrNoConnection) {
+		writeError(w, http.StatusConflict, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
 }

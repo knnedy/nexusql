@@ -11,6 +11,7 @@ import (
 	"github.com/knnedy/nexusql/internal/api"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
+	"github.com/knnedy/nexusql/internal/studio"
 	"github.com/knnedy/nexusql/internal/ui"
 )
 
@@ -28,7 +29,7 @@ type Options struct {
 // New builds the server: the JSON API under /api, the embedded UI everywhere else.
 func New(o Options) *http.Server {
 	r := chi.NewRouter()
-	r.Mount("/api", api.Router(o.Session, o.Projects, api.Config{IsDev: o.IsDev, Version: o.Version}))
+	r.Mount("/api", api.Router(studio.New(o.Session, o.Projects), api.Config{IsDev: o.IsDev, Version: o.Version}))
 	r.Handle("/*", ui.Handler())
 
 	return &http.Server{

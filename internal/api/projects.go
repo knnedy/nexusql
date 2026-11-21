@@ -4,13 +4,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/projects"
 )
 
 func (h *handler) handleListProjects(w http.ResponseWriter, r *http.Request) {
-	list := h.projects.List()
-	writeJSON(w, http.StatusOK, map[string]any{"projects": list})
+	writeJSON(w, http.StatusOK, map[string]any{"projects": h.studio.Projects()})
 }
 
 func (h *handler) handleCreateProject(w http.ResponseWriter, r *http.Request) {
@@ -24,29 +21,9 @@ func (h *handler) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
-		return
-	}
-
-	if req.URI == "" {
-		writeError(w, http.StatusBadRequest, "uri is required")
-		return
-	}
-
-	provider, err := db.DetectProviderKind(req.URI)
+	p, err := h.studio.CreateProject(req.Name, req.URI)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
-		return
-	}
-
-	p, err := h.projects.Create(req.Name, req.URI, provider)
-	if err == projects.ErrProjectExists {
-		writeError(w, http.StatusConflict, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -69,16 +46,8 @@ func (h *handler) handleRenameProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == "" {
-		writeError(w, http.StatusBadRequest, "name is required")
-		return
-	}
-
-	if err := h.projects.Rename(id, req.Name); err == projects.ErrProjectNotFound {
-		writeError(w, http.StatusNotFound, err.Error())
-		return
-	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	if err := h.studio.RenameProject(id, req.Name); err != nil {
+		writeServiceError(w, err)
 		return
 	}
 
@@ -92,11 +61,23 @@ func (h *handler) handleDeleteProject(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.projects.Delete(id); err == projects.ErrProjectNotFound {
-		writeError(w, http.StatusNotFound, err.Error())
+	if err := h.studio.DeleteProject(id); err != nil {
+		writeServiceError(w, err)
 		return
-	} else if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	}
+
+	writeJSON(w, http.StatusOK, map[string]bool{"ok": true})
+}
+
+func (h *handler) handleTouchProject(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		writeError(w, http.StatusBadRequest, "id is required")
+		return
+	}
+
+	if err := h.studio.TouchProject(id); err != nil {
+		writeServiceError(w, err)
 		return
 	}
 

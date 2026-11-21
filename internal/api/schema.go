@@ -13,19 +13,14 @@ type schemaResponse struct {
 }
 
 func (h *handler) handleSchema(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	schema := r.URL.Query().Get("schema")
 	if schema == "" {
 		schema = "public"
 	}
 
-	result, err := conn.Impl.IntrospectSchema(r.Context(), schema)
+	result, err := h.studio.Schema(r.Context(), schema)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 

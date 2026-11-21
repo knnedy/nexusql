@@ -16,11 +16,6 @@ type seedResponse struct {
 }
 
 func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	var req seedRequest
 	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
@@ -34,18 +29,12 @@ func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
 		req.NullChance = 0.2
 	}
 
-	schema, err := conn.Impl.IntrospectSchema(r.Context(), "public")
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	result, err := seed.Run(r.Context(), conn.Impl, schema, seed.Options{
+	result, err := h.studio.Seed(r.Context(), seed.Options{
 		RowsPerTable: req.RowsPerTable,
 		NullChance:   req.NullChance,
 	})
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 

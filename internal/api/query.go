@@ -2,8 +2,6 @@ package api
 
 import (
 	"net/http"
-
-	"github.com/knnedy/nexusql/internal/db"
 )
 
 type queryRequest struct {
@@ -20,39 +18,23 @@ type queryResponse struct {
 }
 
 func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	var req queryRequest
 	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	if req.SQL == "" {
-		writeError(w, http.StatusBadRequest, "sql is required")
-		return
-	}
-
-	if db.IsDestructiveQuery(req.SQL) && !req.Confirmed {
-		writeJSON(w, http.StatusOK, queryResponse{
-			RequiresConfirmation: true,
-		})
-		return
-	}
-
-	columns, rows, rowsAffected, isWrite, err := conn.Impl.ExecuteQuery(r.Context(), req.SQL)
+	res, err := h.studio.Query(r.Context(), req.SQL, req.Confirmed)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
 	writeJSON(w, http.StatusOK, queryResponse{
-		Columns:      columns,
-		Rows:         rows,
-		RowsAffected: rowsAffected,
-		IsWrite:      isWrite,
+		Columns:              res.Columns,
+		Rows:                 res.Rows,
+		RowsAffected:         res.RowsAffected,
+		IsWrite:              res.IsWrite,
+		RequiresConfirmation: res.RequiresConfirmation,
 	})
 }

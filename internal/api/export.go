@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 type exportResponse struct {
@@ -12,33 +12,22 @@ type exportResponse struct {
 }
 
 func (h *handler) handleExportPrisma(w http.ResponseWriter, r *http.Request) {
-	h.export(w, r, "prisma", db.Exporter.Prisma)
+	h.export(w, r, studio.ExportPrisma)
 }
 
 func (h *handler) handleExportDrizzle(w http.ResponseWriter, r *http.Request) {
-	h.export(w, r, "drizzle", db.Exporter.Drizzle)
+	h.export(w, r, studio.ExportDrizzle)
 }
 
-func (h *handler) export(w http.ResponseWriter, r *http.Request, target string, render func(db.Exporter, *db.Schema) string) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
-	schema, err := conn.Impl.IntrospectSchema(r.Context(), conn.Impl.DefaultSchema())
+func (h *handler) export(w http.ResponseWriter, r *http.Request, target studio.ExportTarget) {
+	out, err := h.studio.Export(r.Context(), target)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	exp, err := db.ExporterFor(conn.Kind)
-	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
 	writeJSON(w, http.StatusOK, exportResponse{
-		Target: target,
-		Schema: render(exp, schema),
+		Target: string(target),
+		Schema: out,
 	})
 }

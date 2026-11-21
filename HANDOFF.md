@@ -40,12 +40,17 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   `/api/health` reports the ldflags `Version` ("dev" locally) instead of "0.1.0".
 - refactor(api): response helpers moved to `api/respond.go`; `h.activeConn(w)` replaces
   7 copies of the session lookup; all bodies decoded via `readJSON`. 401 path verified.
+- refactor(studio): `internal/studio.Service` sits between api and db (ADR 0003). It owns
+  the session and projects, sort-column validation and connect bookkeeping; errors carry
+  a class (`ErrNoConnection/ErrInvalid/ErrNotFound/ErrConflict`) mapped once in
+  `api.writeServiceError`. A 45-request battery matched the previous binary except one
+  intended change: malformed body + no connection now returns 400 (was 401).
 
 ## Next 3 steps
 
-1. refactor(studio): introduce service layer between api and db (pass-through).
-2. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
-3. refactor(web): move canvas into features/canvas.
+1. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
+2. refactor(web): move canvas into features/canvas.
+3. refactor(web): move explorer into features/explorer.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 

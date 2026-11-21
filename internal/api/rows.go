@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 type rowsResponse struct {
@@ -36,11 +37,6 @@ type updateRowRequest struct {
 }
 
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	tableName := chi.URLParam(r, "tableName")
 	if tableName == "" {
 		writeError(w, http.StatusBadRequest, "tableName is required")
@@ -62,73 +58,40 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sortCol := ""
 	sortDir := db.SortAsc
-
-	if sc := r.URL.Query().Get("sort"); sc != "" {
-		schema, schemaErr := conn.Impl.IntrospectSchema(r.Context(), "public")
-		if schemaErr != nil {
-			writeError(w, http.StatusInternalServerError, schemaErr.Error())
-			return
-		}
-
-		var table *db.Table
-		for i := range schema.Tables {
-			if schema.Tables[i].Name == tableName {
-				table = &schema.Tables[i]
-				break
-			}
-		}
-		if table == nil {
-			writeError(w, http.StatusBadRequest, "unknown table")
-			return
-		}
-
-		for _, f := range table.Fields {
-			if f.Name == sc {
-				sortCol = sc
-				break
-			}
-		}
-		if sortCol == "" {
-			writeError(w, http.StatusBadRequest, "invalid sort column")
-			return
-		}
-	}
-
-	if sd := r.URL.Query().Get("dir"); sd == "desc" {
+	if r.URL.Query().Get("dir") == "desc" {
 		sortDir = db.SortDesc
 	}
 
-	search := r.URL.Query().Get("search")
+	q := studio.RowsQuery{
+		Table:   tableName,
+		Limit:   pageSize,
+		Offset:  (page - 1) * pageSize,
+		SortCol: r.URL.Query().Get("sort"),
+		SortDir: sortDir,
+		Search:  r.URL.Query().Get("search"),
+	}
 
-	offset := (page - 1) * pageSize
-
-	columns, rows, total, err := conn.Impl.FetchRows(r.Context(), tableName, pageSize, offset, sortCol, sortDir, search)
+	res, err := h.studio.Rows(r.Context(), q)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
 	writeJSON(w, http.StatusOK, rowsResponse{
 		TableName: tableName,
-		Columns:   columns,
-		Rows:      rows,
-		Total:     total,
+		Columns:   res.Columns,
+		Rows:      res.Rows,
+		Total:     res.Total,
 		Page:      page,
 		PageSize:  pageSize,
-		SortCol:   sortCol,
+		SortCol:   q.SortCol,
 		SortDir:   string(sortDir),
-		Search:    search,
+		Search:    q.Search,
 	})
 }
 
 func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	tableName := chi.URLParam(r, "tableName")
 	if tableName == "" {
 		writeError(w, http.StatusBadRequest, "tableName is required")
@@ -143,9 +106,9 @@ func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	columns, rows, err := conn.Impl.FetchRowWhere(r.Context(), tableName, field, value)
+	columns, rows, err := h.studio.LookupRows(r.Context(), tableName, field, value)
 	if err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+		writeServiceError(w, err)
 		return
 	}
 
@@ -159,11 +122,6 @@ func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
-	conn, ok := h.activeConn(w)
-	if !ok {
-		return
-	}
-
 	tableName := chi.URLParam(r, "tableName")
 	if tableName == "" {
 		writeError(w, http.StatusBadRequest, "tableName is required")
@@ -181,8 +139,15 @@ func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := conn.Impl.UpdateRow(r.Context(), tableName, req.PKField, req.PKValue, req.TargetField, req.NewValue); err != nil {
-		writeError(w, http.StatusBadRequest, err.Error())
+	err := h.studio.UpdateRow(r.Context(), studio.RowUpdate{
+		Table:       tableName,
+		PKField:     req.PKField,
+		PKValue:     req.PKValue,
+		TargetField: req.TargetField,
+		NewValue:    req.NewValue,
+	})
+	if err != nil {
+		writeServiceError(w, err)
 		return
 	}
 

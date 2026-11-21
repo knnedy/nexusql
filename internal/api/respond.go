@@ -5,8 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/session"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -24,16 +23,18 @@ func readJSON(r *http.Request, v any) error {
 	return json.NewDecoder(r.Body).Decode(v)
 }
 
-// activeConn returns the session's connection, or writes the error and reports false.
-func (h *handler) activeConn(w http.ResponseWriter) (*db.Connection, bool) {
-	conn, err := h.session.Get()
-	if errors.Is(err, session.ErrNoActiveConnection) {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return nil, false
+// writeServiceError maps studio error classes to HTTP status codes.
+func writeServiceError(w http.ResponseWriter, err error) {
+	status := http.StatusInternalServerError
+	switch {
+	case errors.Is(err, studio.ErrNoConnection):
+		status = http.StatusUnauthorized
+	case errors.Is(err, studio.ErrInvalid):
+		status = http.StatusBadRequest
+	case errors.Is(err, studio.ErrNotFound):
+		status = http.StatusNotFound
+	case errors.Is(err, studio.ErrConflict):
+		status = http.StatusConflict
 	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return nil, false
-	}
-	return conn, true
+	writeError(w, status, err.Error())
 }
