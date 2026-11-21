@@ -165,14 +165,22 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   key / read-only connection). Boolean picker, tabular numerals, pretty JSON tooltip.
   API client errors show the server's message, not the JSON envelope (connect page too).
   `useReadOnly` moved to `shared/hooks`. Component tests + 4 Playwright explorer flows.
+- fix(web): every query read from the connection is keyed `["connection", projectId, …]`
+  (`shared/api/query-keys.ts`: `queryKeys`, `forgetConnection`). Connect and disconnect
+  drop the whole scope: before, disconnect missed lookups/exports/read-only (prefix
+  `["lookup"]` never matched `[["lookup"], …]`) and connect kept everything, so another
+  project could show the old one's rows and Prisma/Drizzle export. A console write now
+  invalidates the whole scope (DDL left the canvas and exports stale). No `.slice()` key
+  prefixes left; export query moved to `shared/hooks/use-export.ts`; `useReadOnly` no
+  longer needs always-refetch.
 
 ## Next 3 steps
 
-1. fix(web): query keys scoped by project; disconnect clears lookup/export caches
-   (then drop `useReadOnly`'s always-refetch workaround).
-2. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
-3. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
+1. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
+2. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
    constraints, enums per dialect (may split in 2-3 commits).
+3. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
+   (SQLite autoIncrement on non-rowid INT PKs, Postgres formatDefault paren, composite FKs).
 
 ## Half-done files
 
@@ -202,11 +210,7 @@ None.
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
   writes and show a count (ADR 0010).
-- `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys
-  are `[["lookup"], ...]`, so the prefix never matches: lookup/export caches survive
-  disconnect (high confidence).
 - CSV export: header cells not escaped; no formula-injection guard (`=`,`+`,`-`,`@`).
-- React Query keys not scoped by project/connection.
 - MySQL DSN drops URI query params (e.g. `tls=`); passwords are spliced raw into the
   DSN (special characters untested). Revisit with connection options (medium confidence).
 - SQLite Drizzle export emits `primaryKey({ autoIncrement: true })` for any integer PK,

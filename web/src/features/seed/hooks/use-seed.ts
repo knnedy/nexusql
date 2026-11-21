@@ -1,7 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
-import { tableRowsQueryOptions } from "@/shared/hooks/use-table-rows";
-import { rowLookupQueryOptions } from "@/shared/hooks/use-row-lookup";
+import { queryKeys } from "@/shared/api/query-keys";
 import type { SeedRequest } from "@/shared/types/seed";
 
 export function useSeed() {
@@ -10,12 +9,8 @@ export function useSeed() {
   return useMutation({
     mutationFn: (req: SeedRequest) => api.seed(req),
     onSuccess: () => {
-      qc.invalidateQueries({
-        queryKey: tableRowsQueryOptions("", false).queryKey.slice(0, 1),
-      });
-      qc.invalidateQueries({
-        queryKey: rowLookupQueryOptions("", "", "", false).queryKey.slice(0, 1),
-      });
+      qc.invalidateQueries({ queryKey: queryKeys.rows() });
+      qc.invalidateQueries({ queryKey: queryKeys.lookups() });
     },
   });
 }

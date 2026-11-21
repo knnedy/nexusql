@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
-import { QUERY_KEYS } from "@/shared/api/query-keys";
+import { queryKeys } from "@/shared/api/query-keys";
 
 export const DEFAULT_PAGE_SIZE = 50;
 
@@ -15,8 +15,7 @@ export function tableRowsQueryOptions(
 ) {
   return queryOptions({
     queryKey: [
-      QUERY_KEYS.rows,
-      tableName,
+      ...queryKeys.tableRows(tableName),
       page,
       pageSize,
       sortCol,

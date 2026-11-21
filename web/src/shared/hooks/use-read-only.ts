@@ -5,23 +5,21 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
+import { queryKeys } from "@/shared/api/query-keys";
 
-const readOnlyQueryOptions = queryOptions({
-  queryKey: ["read-only"],
-  queryFn: () => api.readOnly.get(),
-});
+export const readOnlyQueryOptions = () =>
+  queryOptions({
+    queryKey: queryKeys.readOnly(),
+    queryFn: () => api.readOnly.get(),
+  });
 
 /** Whether the active connection refuses writes; the server is the source of truth. */
 export function useReadOnly() {
   const qc = useQueryClient();
-  const status = useQuery({
-    ...readOnlyQueryOptions,
-    // Keys are not yet scoped by connection, so never trust a cached value.
-    refetchOnMount: "always",
-  });
+  const status = useQuery(readOnlyQueryOptions());
   const toggle = useMutation({
     mutationFn: (readOnly: boolean) => api.readOnly.set({ readOnly }),
-    onSuccess: (data) => qc.setQueryData(readOnlyQueryOptions.queryKey, data),
+    onSuccess: (data) => qc.setQueryData(readOnlyQueryOptions().queryKey, data),
   });
   return {
     readOnly: status.data?.readOnly ?? false,

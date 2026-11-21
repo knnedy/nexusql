@@ -1,6 +1,6 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
-import { QUERY_KEYS } from "@/shared/api/query-keys";
+import { queryKeys } from "@/shared/api/query-keys";
 
 export function rowLookupQueryOptions(
   tableName: string,
@@ -9,7 +9,7 @@ export function rowLookupQueryOptions(
   enabled: boolean,
 ) {
   return queryOptions({
-    queryKey: [QUERY_KEYS.lookup, tableName, field, value],
+    queryKey: [...queryKeys.tableLookups(tableName), field, value],
     queryFn: () => api.lookup(tableName, field, value),
     enabled: enabled && !!tableName && !!field && !!value,
     staleTime: Infinity,

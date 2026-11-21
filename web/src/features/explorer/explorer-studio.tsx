@@ -21,6 +21,7 @@ import DataGrid, {
 } from "@/features/explorer/_components/data-grid";
 import { editKey } from "@/features/explorer/lib/row-key";
 import { isUnchanged } from "@/features/explorer/lib/cell";
+import { queryKeys } from "@/shared/api/query-keys";
 import { useReadOnly } from "@/shared/hooks/use-read-only";
 import ExplorerToolbar from "@/features/explorer/_components/explorer-toolbar";
 
@@ -306,10 +307,10 @@ function ExplorerInner() {
     // so they never flash back to the old one.
     await Promise.all([
       qc.invalidateQueries({
-        queryKey: tableRowsQueryOptions(selectedTable, false).queryKey.slice(0, 2),
+        queryKey: queryKeys.tableRows(selectedTable),
       }),
       qc.invalidateQueries({
-        queryKey: rowLookupQueryOptions(selectedTable, "", "", false).queryKey.slice(0, 2),
+        queryKey: queryKeys.tableLookups(selectedTable),
       }),
     ]);
 

@@ -5,9 +5,10 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
+import { queryKeys } from "@/shared/api/query-keys";
 
 export const projectsQueryOptions = queryOptions({
-  queryKey: ["projects"],
+  queryKey: queryKeys.projects,
   queryFn: () => api.projects.list(),
 });
 
