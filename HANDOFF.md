@@ -20,12 +20,13 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - chore(build): Makefile split: `go-build` is Go-only; new `test`, `vet`, `web-check`,
   `check`. Goreleaser calls `make web-build`; goreleaser pinned `~> v2`; pnpm pinned
   via `packageManager` (12.18.0).
+- ci: PR/main workflow: gofmt, vet, test, Go-only build; pnpm typecheck, lint, build.
 
 ## Next 3 steps
 
-1. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
-2. chore(deps): update Go modules (minor/patch).
-3. chore(deps): update web minor/patch (next + eslint-config-next together).
+1. chore(deps): update Go modules (minor/patch).
+2. chore(deps): update web minor/patch (next + eslint-config-next together).
+3. chore(deps): elkjs 0.12; @types/node ^22.
 
 ## Half-done files
 
