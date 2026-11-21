@@ -4,14 +4,12 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Clock, Database, Loader2 } from "lucide-react";
 import { formatRelativeTime } from "@/shared/lib/utils";
 import ProviderBadge from "@/components/provider-badge";
-import { useProjects, useTouchProject } from "@/shared/hooks/use-projects";
+import { useProjects } from "@/shared/hooks/use-projects";
 import { useConnect } from "@/features/connect/hooks/use-connect";
-import { DatabaseProvider } from "@/shared/types/provider";
 
 export default function RecentProjects() {
   const router = useRouter();
   const { data, isLoading } = useProjects();
-  const touch = useTouchProject();
   const connect = useConnect();
 
   const projects = data?.projects ?? [];
@@ -22,14 +20,8 @@ export default function RecentProjects() {
     )
     .slice(0, 3);
 
-  function handleRecentProject(
-    id: string,
-    uri: string,
-    provider: DatabaseProvider,
-    name: string,
-  ) {
-    touch.mutate(id);
-    connect.mutate({ uri, provider, name });
+  function handleRecentProject(projectId: string, name: string) {
+    connect.mutate({ projectId, name });
   }
 
   if (isLoading) {
@@ -61,12 +53,7 @@ export default function RecentProjects() {
           <button
             key={project.id}
             onClick={() =>
-              handleRecentProject(
-                project.id,
-                project.uri,
-                project.provider,
-                project.name,
-              )
+              handleRecentProject(project.id, project.name)
             }
             disabled={connect.isPending}
             className={[
@@ -82,7 +69,7 @@ export default function RecentProjects() {
                 {project.name}
               </span>
               <span className="text-[11px] truncate text-text-tertiary font-mono">
-                {project.uri}
+                {project.displayUri}
               </span>
             </div>
 

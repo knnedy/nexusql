@@ -18,9 +18,22 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 	writeJSON(w, status, map[string]string{"error": msg})
 }
 
-func readJSON(r *http.Request, v any) error {
+// maxBody caps JSON request bodies; the largest legitimate one is console SQL.
+const maxBody = 1 << 20
+
+// decodeJSON reads a capped JSON body into v, writing 413 or 400 on failure.
+func decodeJSON(w http.ResponseWriter, r *http.Request, v any) bool {
 	defer r.Body.Close()
-	return json.NewDecoder(r.Body).Decode(v)
+	err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxBody)).Decode(v)
+	if err == nil {
+		return true
+	}
+	if _, tooBig := errors.AsType[*http.MaxBytesError](err); tooBig {
+		writeError(w, http.StatusRequestEntityTooLarge, "request body exceeds 1 MiB")
+	} else {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+	}
+	return false
 }
 
 // writeServiceError maps studio error classes to HTTP status codes.

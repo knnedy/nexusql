@@ -5,11 +5,10 @@ export interface HealthResponse {
   version: string;
 }
 
-export interface ConnectRequest {
-  uri: string;
-  provider: DatabaseProvider;
-  name: string;
-}
+/** Connect to a new URI (saved as a project), or reopen a saved project by id. */
+export type ConnectRequest =
+  | { uri: string; provider: DatabaseProvider; name: string }
+  | { projectId: string; name: string };
 
 export interface ConnectResponse {
   ok: boolean;

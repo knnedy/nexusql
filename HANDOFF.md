@@ -88,13 +88,17 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   exposed mode requires a per-run token (`?token=` → HttpOnly cookie, cookie, or Bearer).
   Host allowlist blocks DNS rebinding; Origin check blocks cross-site writes. ADR 0007.
   README usage block was stale (claimed default 0.0.0.0:8080); now the real `-h` output.
+- fix(projects): API never returns connection URIs; projects carry a server-redacted
+  `displayUri` (`db.RedactURI`). Saved projects reconnect with `{"projectId"}`
+  (`studio.OpenProject`, also touches lastOpenedAt). Connect errors are redacted at the
+  source plus a studio scrub. JSON bodies capped at 1 MiB (413). Credentials remain
+  plaintext at rest in ~/.nexusql/projects.json (0600) until Stage 4.
 
 ## Next 3 steps
 
-1. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors;
-   request body limit.
-2. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
-3. fix(db): composite-key updates, explicit NULL, PK-less tables read-only.
+1. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
+2. fix(db): composite-key updates, explicit NULL, PK-less tables read-only.
+3. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea).
 
 ## Half-done files
 
@@ -124,11 +128,10 @@ None.
 - Postgres `FetchRows` interpolates an unvalidated table name with Go `%q` (SQL injection).
 - `"public"` schema hardcoded in `api/rows.go`, `api/seed.go`, `api/schema.go` default,
   postgres column lookups.
-- `GET /api/projects` returns full URIs including passwords.
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
 - `UpdateRow` cannot set NULL; single-column PKs only.
-- Connect has no timeout; request bodies are unbounded; raw driver errors reach the client.
+- Connect has no timeout (bodies now capped; URIs redacted in errors).
 - SQLite introspection reports `INTEGER PRIMARY KEY` as nullable with default "AUTOINCREMENT".
 - Active DB connection is not closed on server shutdown (pool lifecycle).
 - `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys

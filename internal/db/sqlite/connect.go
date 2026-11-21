@@ -54,7 +54,7 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 func extractPath(uri string) (string, error) {
 	const prefix = "sqlite://"
 	if !strings.HasPrefix(uri, prefix) {
-		return "", fmt.Errorf("invalid sqlite URI: %s", uri)
+		return "", fmt.Errorf("invalid sqlite URI: %s", db.RedactURI(uri))
 	}
 
 	path := strings.TrimPrefix(uri, prefix)
@@ -64,7 +64,7 @@ func extractPath(uri string) (string, error) {
 	}
 
 	if !strings.HasPrefix(path, "/") {
-		return "", fmt.Errorf("sqlite path must be absolute, got: %s", path)
+		return "", fmt.Errorf("sqlite path must be absolute, got: %s", db.RedactURI(uri))
 	}
 
 	return path, nil

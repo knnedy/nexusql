@@ -17,8 +17,7 @@ type seedResponse struct {
 
 func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
 	var req seedRequest
-	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

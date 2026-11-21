@@ -4,13 +4,15 @@ import (
 	"fmt"
 	"net/url"
 	"strings"
+
+	"github.com/knnedy/nexusql/internal/db"
 )
 
 // toDSN converts a "mysql://user:pass@host:port/dbname" URI into the DSN
 // format github.com/go-sql-driver/mysql expects: "user:pass@tcp(host:port)/dbname".
 func toDSN(uri string) (string, error) {
 	if !strings.HasPrefix(uri, "mysql://") {
-		return "", fmt.Errorf("expected mysql:// URI, got: %s", uri)
+		return "", fmt.Errorf("expected mysql:// URI, got: %s", db.RedactURI(uri))
 	}
 
 	parsed, err := url.Parse(uri)

@@ -23,7 +23,7 @@ func DetectProviderKind(uri string) (ProviderKind, error) {
 	case strings.HasPrefix(uri, "sqlite://"):
 		return ProviderKindSQLite, nil
 	default:
-		return "", fmt.Errorf("unsupported or unrecognised URI scheme: %s", uri)
+		return "", fmt.Errorf("unsupported or unrecognised URI scheme: %s", RedactURI(uri))
 	}
 }
 

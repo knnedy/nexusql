@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
@@ -173,4 +174,74 @@ func TestProjects(t *testing.T) {
 			t.Errorf("%s missing project: err = %v, want ErrNotFound", name, err)
 		}
 	}
+}
+
+func TestConnectErrorsNeverContainThePassword(t *testing.T) {
+	s := newService(t)
+	const pw = "s3cret-pw"
+	for _, uri := range []string{
+		"oracle://u:" + pw + "@h/db",                 // unsupported scheme
+		"mysql://u:" + pw + "@/db",                   // missing host
+		"mysql://u:" + pw + "@127.0.0.1:1/db",        // unreachable
+		"postgres://u:" + pw + "@127.0.0.1:1/db",     // unreachable
+		"postgres://u:" + pw + "@h:notaport/db",      // unparseable port
+		"postgres://u:" + pw + "@h/db?sslmode=bogus", // bad option
+		"sqlite://u:" + pw + "@relative.db",          // relative path
+	} {
+		_, err := s.Connect(context.Background(), uri, "x")
+		if err == nil {
+			t.Errorf("%s: expected an error", uri)
+			continue
+		}
+		if strings.Contains(err.Error(), pw) {
+			t.Errorf("error leaks the password: %v", err)
+		}
+	}
+}
+
+func TestProjectsNeverExposeThePassword(t *testing.T) {
+	s := newService(t)
+	created, err := s.CreateProject("shop", "postgres://app:s3cret-pw@db.local/shop")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if created.DisplayURI != "postgres://app:****@db.local/shop" {
+		t.Errorf("created DisplayURI = %q", created.DisplayURI)
+	}
+	for _, p := range s.Projects() {
+		if strings.Contains(p.DisplayURI, "s3cret-pw") {
+			t.Errorf("listed project leaks the password: %q", p.DisplayURI)
+		}
+	}
+}
+
+func TestOpenProject(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("connects to a saved project by id", func(t *testing.T) {
+		s := newService(t)
+		p, err := s.CreateProject("local", sqliteURI(t))
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := s.OpenProject(ctx, p.ID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.ProjectID != p.ID || res.Provider != "sqlite" {
+			t.Fatalf("got %+v, want project %s on sqlite", res, p.ID)
+		}
+		if _, err := s.Query(ctx, "SELECT 1", false); err != nil {
+			t.Fatalf("query after open: %v", err)
+		}
+		if got := s.Projects()[0].LastOpenedAt; got.IsZero() {
+			t.Fatal("LastOpenedAt not set")
+		}
+	})
+
+	t.Run("unknown id is ErrNotFound", func(t *testing.T) {
+		if _, err := newService(t).OpenProject(ctx, "missing"); !errors.Is(err, studio.ErrNotFound) {
+			t.Fatalf("err = %v, want ErrNotFound", err)
+		}
+	})
 }

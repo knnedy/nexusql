@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/knnedy/nexusql/internal/db"
 )
@@ -26,7 +28,7 @@ func (s *Service) Connect(ctx context.Context, uri, name string) (ConnectResult,
 
 	conn, err := db.Connect(context.Background(), uri)
 	if err != nil {
-		return ConnectResult{}, invalid(err)
+		return ConnectResult{}, invalid(scrubPassword(err, uri))
 	}
 
 	if err := s.session.Set(conn); err != nil {
@@ -66,4 +68,17 @@ func (s *Service) Disconnect() error {
 
 func (s *Service) conn() (*db.Connection, error) {
 	return s.session.Get()
+}
+
+// scrubPassword removes the URI's password from err's text, whatever produced it.
+func scrubPassword(err error, uri string) error {
+	u, perr := url.Parse(uri)
+	if perr != nil || u.User == nil {
+		return err
+	}
+	pw, ok := u.User.Password()
+	if !ok || pw == "" || !strings.Contains(err.Error(), pw) {
+		return err
+	}
+	return errors.New(strings.ReplaceAll(err.Error(), pw, "****"))
 }

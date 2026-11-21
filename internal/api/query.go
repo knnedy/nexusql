@@ -19,8 +19,7 @@ type queryResponse struct {
 
 func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	var req queryRequest
-	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

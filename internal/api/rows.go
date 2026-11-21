@@ -129,8 +129,7 @@ func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req updateRowRequest
-	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 

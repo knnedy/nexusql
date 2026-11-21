@@ -13,8 +13,6 @@ import {
   Loader2,
   FolderOpen,
   Search,
-  Eye,
-  EyeOff,
   ServerCrash,
   LayoutGrid,
   Table2,
@@ -38,16 +36,6 @@ const PROVIDER_FILTERS: { label: string; value: DatabaseProvider | "all" }[] = [
   { label: "MySQL", value: "mysql" },
   { label: "SQLite", value: "sqlite" },
 ];
-
-function maskUri(uri: string): string {
-  try {
-    const url = new URL(uri);
-    if (url.password) url.password = "••••••••";
-    return url.toString();
-  } catch {
-    return uri;
-  }
-}
 
 function EmptyState({ hasFilter }: { hasFilter: boolean }) {
   const router = useRouter();
@@ -96,15 +84,10 @@ function ProjectRow({
 
   const [editing, setEditing] = useState(false);
   const [nameInput, setNameInput] = useState(project.name);
-  const [uriVisible, setUriVisible] = useState(false);
 
   function handleOpen(mode: "canvas" | "explorer") {
     connect.mutate(
-      {
-        uri: project.uri,
-        provider: project.provider,
-        name: project.name,
-      },
+      { projectId: project.id, name: project.name },
       {
         onSuccess: () => {
           router.push(
@@ -201,19 +184,10 @@ function ProjectRow({
           </div>
         )}
 
-        {/* URI & Masking */}
-        <div
-          className="flex items-center gap-2 min-w-0"
-          onClick={(e) => e.stopPropagation()}>
-          <span className="text-[12px] text-text-tertiary font-mono truncate max-w-75 sm:max-w-100">
-            {uriVisible ? project.uri : maskUri(project.uri)}
-          </span>
-          <button
-            onClick={() => setUriVisible((v) => !v)}
-            className="shrink-0 text-text-tertiary/60 hover:text-text-secondary hover:bg-surface-3 p-1 rounded-md transition-colors border-none bg-transparent cursor-pointer">
-            {uriVisible ? <EyeOff size={12} /> : <Eye size={12} />}
-          </button>
-        </div>
+        {/* URI, masked by the server */}
+        <span className="text-[12px] text-text-tertiary font-mono truncate max-w-75 sm:max-w-100">
+          {project.displayUri}
+        </span>
       </div>
 
       {/* Metadata & Desktop Actions */}
@@ -316,7 +290,7 @@ export default function ProjectsView() {
       list = list.filter(
         (p) =>
           p.name.toLowerCase().includes(needle) ||
-          p.uri.toLowerCase().includes(needle),
+          p.displayUri.toLowerCase().includes(needle),
       );
     }
 

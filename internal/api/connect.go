@@ -8,9 +8,11 @@ import (
 	"github.com/knnedy/nexusql/internal/studio"
 )
 
+// connectRequest names a saved project, or a new URI to connect to and save.
 type connectRequest struct {
-	URI  string `json:"uri"`
-	Name string `json:"name"`
+	ProjectID string `json:"projectId"`
+	URI       string `json:"uri"`
+	Name      string `json:"name"`
 }
 
 type connectResponse struct {
@@ -21,12 +23,17 @@ type connectResponse struct {
 
 func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 	var req connectRequest
-	if err := readJSON(r, &req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	if !decodeJSON(w, r, &req) {
 		return
 	}
 
-	res, err := h.studio.Connect(r.Context(), req.URI, req.Name)
+	var res studio.ConnectResult
+	var err error
+	if req.ProjectID != "" {
+		res, err = h.studio.OpenProject(r.Context(), req.ProjectID)
+	} else {
+		res, err = h.studio.Connect(r.Context(), req.URI, req.Name)
+	}
 	if err != nil {
 		writeServiceError(w, err)
 		return
