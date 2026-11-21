@@ -62,12 +62,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - refactor(web): `features/canvas` (canvas-studio, components, canvas-utils, types);
   `app/studio/canvas/page.tsx` is a thin wrapper. Every feature has an `index.ts` entry
   point and cross-feature imports go through it (ADR 0006 amended).
+- refactor(web): `features/explorer` (explorer-studio, grid/toolbar/table-list,
+  use-update-row); `exportToCsv` split out of shared utils into `explorer/lib/csv.ts`.
 
 ## Next 3 steps
 
-1. refactor(web): move explorer into features/explorer.
-2. refactor(web): move connect and projects into features; drop src/hooks.
-3. docs: README/CONTRIBUTING project structure; preview images to docs/assets.
+1. refactor(web): move connect and projects into features; drop src/hooks.
+2. docs: README/CONTRIBUTING project structure; preview images to docs/assets.
+3. Stage 1 wrap-up: summary + approval before Stage 2.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
@@ -109,4 +111,5 @@ None.
 - `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys
   are `[["lookup"], ...]`, so the prefix never matches: lookup/export caches survive
   disconnect (high confidence).
+- CSV export: header cells not escaped; no formula-injection guard (`=`,`+`,`-`,`@`).
 - React Query keys not scoped by project/connection.
