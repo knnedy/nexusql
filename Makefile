@@ -1,16 +1,21 @@
-.PHONY: build clean run dev web-build go-build
+.PHONY: build go-build web-build run dev test vet web-check check clean
 
-build: web-build go-build
+UI_DIST := internal/ui/dist
+
+# Full binary with the frontend embedded.
+build: web-build
+	$(MAKE) go-build
+
+# Go-only build; embeds whatever is in $(UI_DIST) (a build hint page if empty).
+go-build:
+	go build -o bin/nexusql ./cmd/nexusql
 
 web-build:
-	cd web && pnpm install && pnpm run build
+	cd web && pnpm install --frozen-lockfile && pnpm run build
 	@test -f web/out/index.html || \
 		(echo "ERROR: web/out/index.html not found. Frontend build failed." && exit 1)
-	find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete
-	cp -r web/out/. internal/ui/dist/
-
-go-build: web-build
-	go build -o bin/nexusql ./cmd/nexusql
+	find $(UI_DIST) -mindepth 1 ! -name .gitkeep -delete
+	cp -r web/out/. $(UI_DIST)/
 
 run: build
 	./bin/nexusql
@@ -23,7 +28,18 @@ dev:
 	cd web && pnpm dev; \
 	wait
 
+test:
+	go test ./...
+
+vet:
+	go vet ./...
+
+web-check:
+	cd web && pnpm typecheck && pnpm lint && pnpm build
+
+# Everything CI runs.
+check: vet test go-build web-check
+
 clean:
 	rm -rf web/out web/.next bin
-	find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete
-	
+	find $(UI_DIST) -mindepth 1 ! -name .gitkeep -delete

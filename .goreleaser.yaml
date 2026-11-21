@@ -2,9 +2,7 @@ version: 2
 project_name: nexusql
 before:
   hooks:
-    - sh -c "cd web && pnpm install && pnpm run build"
-    - sh -c "find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete"
-    - sh -c "cp -r web/out/. internal/ui/dist/"
+    - make web-build
 builds:
   - id: nexusql
     main: ./cmd/nexusql

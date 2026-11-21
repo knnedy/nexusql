@@ -17,16 +17,19 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   "frontend not built" page when no UI is embedded. The goreleaser `dist/` ignore is now
   root-anchored (it was hiding `internal/ui/dist`).
 - chore(web): `pnpm typecheck` script (`tsc --noEmit`).
+- chore(build): Makefile split: `go-build` is Go-only; new `test`, `vet`, `web-check`,
+  `check`. Goreleaser calls `make web-build`; goreleaser pinned `~> v2`; pnpm pinned
+  via `packageManager` (12.18.0).
 
 ## Next 3 steps
 
-1. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
-2. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
-3. chore(deps): update Go modules (minor/patch).
+1. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
+2. chore(deps): update Go modules (minor/patch).
+3. chore(deps): update web minor/patch (next + eslint-config-next together).
 
 ## Half-done files
 
-- Makefile: target split written, uncommitted (lands in step 1 above).
+None.
 
 ## Planned dependency updates (after CI step)
 
