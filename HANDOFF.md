@@ -28,10 +28,11 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - chore(deps): web minor/patch: next + eslint-config-next 16.4.6, react 19.3.1, TanStack
   Query 5.108, tailwind 4.3.5, zustand 5.1, shiki 4.6, lucide 1.77, react-icons 5.7.
   html-to-image kept at exact 1.11.11.
+- chore(deps): elkjs 0.12.1; canvas layout options verified on a sample FK graph.
 
 ## Next 3 steps
 
-1. chore(deps): elkjs 0.12; @types/node ^22.
+1. chore(deps): @types/node ^22 (match CI Node).
 2. refactor(seed): move seeding to internal/seed.
 3. refactor(db): Exporter registry; drop dialect imports from api.
 
