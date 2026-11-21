@@ -8,11 +8,15 @@ import (
 	"github.com/knnedy/nexusql/internal/seed"
 )
 
-// Schema introspects the given schema of the active connection.
+// Schema introspects the active connection. An empty name means the dialect's
+// default schema, which also refreshes the identifier cache.
 func (s *Service) Schema(ctx context.Context, schema string) (*db.Schema, error) {
 	conn, err := s.conn()
 	if err != nil {
 		return nil, err
+	}
+	if schema == "" {
+		return s.schemas.get(ctx, conn, true)
 	}
 	return conn.Impl.IntrospectSchema(ctx, schema)
 }
@@ -22,7 +26,7 @@ type RowsQuery struct {
 	Table   string
 	Limit   int
 	Offset  int
-	SortCol string // validated against the table's columns
+	SortCol string
 	SortDir db.SortDir
 	Search  string
 }
@@ -34,53 +38,47 @@ type RowsPage struct {
 	Total   int64
 }
 
-// Rows fetches a page of rows after validating the sort column.
+// Rows fetches a page of rows; table and sort column must exist in the schema.
 func (s *Service) Rows(ctx context.Context, q RowsQuery) (RowsPage, error) {
 	conn, err := s.conn()
 	if err != nil {
 		return RowsPage{}, err
 	}
-
+	t, err := s.table(ctx, conn, q.Table)
+	if err != nil {
+		return RowsPage{}, err
+	}
+	req := db.RowsRequest{Table: t, Limit: q.Limit, Offset: q.Offset, SortDir: q.SortDir, Search: q.Search}
 	if q.SortCol != "" {
-		if err := validateSortColumn(ctx, conn, q.Table, q.SortCol); err != nil {
+		f, err := field(t, q.SortCol)
+		if err != nil {
 			return RowsPage{}, err
 		}
+		req.Sort = &f
 	}
 
-	cols, rows, total, err := conn.Impl.FetchRows(ctx, q.Table, q.Limit, q.Offset, q.SortCol, q.SortDir, q.Search)
+	cols, rows, total, err := conn.Impl.FetchRows(ctx, req)
 	if err != nil {
 		return RowsPage{}, err
 	}
 	return RowsPage{Columns: cols, Rows: rows, Total: total}, nil
 }
 
-func validateSortColumn(ctx context.Context, conn *db.Connection, table, col string) error {
-	schema, err := conn.Impl.IntrospectSchema(ctx, "public")
-	if err != nil {
-		return err
-	}
-
-	for _, t := range schema.Tables {
-		if t.Name != table {
-			continue
-		}
-		for _, f := range t.Fields {
-			if f.Name == col {
-				return nil
-			}
-		}
-		return invalid(errors.New("invalid sort column"))
-	}
-	return invalid(errors.New("unknown table"))
-}
-
 // LookupRows returns up to 100 rows of table where field equals value.
-func (s *Service) LookupRows(ctx context.Context, table, field, value string) ([]string, []map[string]any, error) {
+func (s *Service) LookupRows(ctx context.Context, table, column, value string) ([]string, []map[string]any, error) {
 	conn, err := s.conn()
 	if err != nil {
 		return nil, nil, err
 	}
-	cols, rows, err := conn.Impl.FetchRowWhere(ctx, table, field, value)
+	t, err := s.table(ctx, conn, table)
+	if err != nil {
+		return nil, nil, err
+	}
+	f, err := field(t, column)
+	if err != nil {
+		return nil, nil, err
+	}
+	cols, rows, err := conn.Impl.FetchRowWhere(ctx, t, f, value)
 	if err != nil {
 		return nil, nil, invalid(err)
 	}
@@ -102,7 +100,19 @@ func (s *Service) UpdateRow(ctx context.Context, u RowUpdate) error {
 	if err != nil {
 		return err
 	}
-	if err := conn.Impl.UpdateRow(ctx, u.Table, u.PKField, u.PKValue, u.TargetField, u.NewValue); err != nil {
+	t, err := s.table(ctx, conn, u.Table)
+	if err != nil {
+		return err
+	}
+	pk, err := field(t, u.PKField)
+	if err != nil {
+		return err
+	}
+	target, err := field(t, u.TargetField)
+	if err != nil {
+		return err
+	}
+	if err := conn.Impl.UpdateRow(ctx, t, pk, u.PKValue, target, u.NewValue); err != nil {
 		return invalid(err)
 	}
 	return nil
@@ -131,6 +141,9 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 	}
 
 	cols, rows, affected, isWrite, err := conn.Impl.ExecuteQuery(ctx, sql)
+	if isWrite || err != nil {
+		s.schemas.invalidate() // may have run DDL, even if a later part failed
+	}
 	if err != nil {
 		return QueryResult{}, invalid(err)
 	}
@@ -143,7 +156,7 @@ func (s *Service) Seed(ctx context.Context, opts seed.Options) (*seed.Result, er
 	if err != nil {
 		return nil, err
 	}
-	schema, err := conn.Impl.IntrospectSchema(ctx, "public")
+	schema, err := s.schemas.get(ctx, conn, true)
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +181,7 @@ func (s *Service) Export(ctx context.Context, target ExportTarget) (string, erro
 	if err != nil {
 		return "", err
 	}
-	schema, err := conn.Impl.IntrospectSchema(ctx, conn.Impl.DefaultSchema())
+	schema, err := s.schemas.get(ctx, conn, true)
 	if err != nil {
 		return "", err
 	}

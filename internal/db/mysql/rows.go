@@ -9,50 +9,42 @@ import (
 	"github.com/knnedy/nexusql/internal/db"
 )
 
-func (p *provider) FetchRows(ctx context.Context, tableName string, limit, offset int, sortCol string, sortDir db.SortDir, search string) ([]string, []map[string]any, int64, error) {
-	searchCols, err := p.getTextColumns(ctx, tableName)
-	if err != nil {
-		return nil, nil, 0, fmt.Errorf("get text columns: %w", err)
-	}
+func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, int64, error) {
+	table := p.QuoteTable(req.Table)
 
 	whereClause := ""
 	var searchArgs []any
-
-	if search != "" && len(searchCols) > 0 {
-		conditions := make([]string, len(searchCols))
-		for i, col := range searchCols {
-			// MySQL's default collation is often case-insensitive, but that
-			// depends on the column's charset/collation and isn't
-			// guaranteed — LOWER()/LOWER() makes the match explicit and
-			// collation-independent, matching the SQLite provider's approach.
-			conditions[i] = fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", quoteIdent(col))
-			searchArgs = append(searchArgs, "%"+search+"%")
+	if req.Search != "" {
+		var conditions []string
+		for _, f := range req.Table.Fields {
+			if searchable(req.Table, f) {
+				// LOWER() on both sides: case-insensitive whatever the column collation.
+				conditions = append(conditions, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", quoteIdent(f.Name)))
+				searchArgs = append(searchArgs, "%"+req.Search+"%")
+			}
 		}
-		whereClause = " WHERE " + strings.Join(conditions, " OR ")
+		if len(conditions) > 0 {
+			whereClause = " WHERE " + strings.Join(conditions, " OR ")
+		}
 	}
 
 	var total int64
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM %s%s", quoteIdent(tableName), whereClause)
-	if err := p.conn.QueryRowContext(ctx, countQuery, searchArgs...).Scan(&total); err != nil {
+	if err := p.conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+table+whereClause, searchArgs...).Scan(&total); err != nil {
 		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
 	}
 
-	query := fmt.Sprintf("SELECT * FROM %s%s", quoteIdent(tableName), whereClause)
-
-	if sortCol != "" {
+	query := "SELECT * FROM " + table + whereClause
+	if req.Sort != nil {
 		dir := "ASC"
-		if sortDir == db.SortDesc {
+		if req.SortDir == db.SortDesc {
 			dir = "DESC"
 		}
-		query += fmt.Sprintf(" ORDER BY %s %s", quoteIdent(sortCol), dir)
+		query += fmt.Sprintf(" ORDER BY %s %s", quoteIdent(req.Sort.Name), dir)
 	}
-
 	query += " LIMIT ? OFFSET ?"
 
-	// Copy searchArgs rather than append directly onto it, so the slice
-	// backing the earlier count query's args is never mutated/aliased.
-	dataArgs := append(append([]any{}, searchArgs...), limit, offset)
-
+	// copy so the count query's args are never aliased
+	dataArgs := append(append([]any{}, searchArgs...), req.Limit, req.Offset)
 	rows, err := p.conn.QueryContext(ctx, query, dataArgs...)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("query rows: %w", err)
@@ -63,146 +55,44 @@ func (p *provider) FetchRows(ctx context.Context, tableName string, limit, offse
 	if err != nil {
 		return nil, nil, 0, err
 	}
-
 	return columns, result, total, nil
 }
 
-// getTableColumns lists a table's column names, scoped to the connection's
-// current database via DATABASE() rather than a stored schema value —
-// mirroring resolveSchema's fallback in schema.go. The table name comes
-// from API input, so it's bound as a parameter, never interpolated into
-// SQL text.
-func (p *provider) getTableColumns(ctx context.Context, tableName string) ([]string, error) {
-	rows, err := p.conn.QueryContext(ctx,
-		`SELECT COLUMN_NAME FROM information_schema.columns
-		 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
-		 ORDER BY ORDINAL_POSITION`, tableName)
-	if err != nil {
-		return nil, fmt.Errorf("get columns: %w", err)
+// searchable reports whether search matches against f: text-like columns and
+// enums, which introspection types as their synthesized per-column name.
+func searchable(t db.Table, f db.Field) bool {
+	switch f.Type {
+	case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeJSON:
+		return true
 	}
-	defer rows.Close()
-
-	var cols []string
-	for rows.Next() {
-		var col string
-		if err := rows.Scan(&col); err != nil {
-			return nil, fmt.Errorf("scan column: %w", err)
-		}
-		cols = append(cols, col)
-	}
-	return cols, rows.Err()
+	return f.Type == db.FieldType(enumTypeName(t.Name, f.Name))
 }
 
-// getTextColumns returns the subset of a table's columns whose canonical
-// FieldType is text-like, for building the search WHERE clause. ENUM
-// columns are included by DATA_TYPE directly, since normalizeType maps
-// them to a synthesized per-column type name (see schema.go) rather than
-// one of the FieldType text constants.
-func (p *provider) getTextColumns(ctx context.Context, tableName string) ([]string, error) {
-	rows, err := p.conn.QueryContext(ctx,
-		`SELECT COLUMN_NAME, DATA_TYPE, COLUMN_TYPE FROM information_schema.columns
-		 WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
-		 ORDER BY ORDINAL_POSITION`, tableName)
-	if err != nil {
-		return nil, fmt.Errorf("get text columns: %w", err)
-	}
-	defer rows.Close()
-
-	var cols []string
-	for rows.Next() {
-		var name, dataType, columnType string
-		if err := rows.Scan(&name, &dataType, &columnType); err != nil {
-			return nil, fmt.Errorf("scan column: %w", err)
-		}
-
-		isEnum := strings.ToLower(dataType) == "enum"
-		switch normalizeType(dataType, columnType) {
-		case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeJSON:
-			cols = append(cols, name)
-		default:
-			if isEnum {
-				cols = append(cols, name)
-			}
-		}
-	}
-	return cols, rows.Err()
-}
-
-func (p *provider) FetchRowWhere(ctx context.Context, tableName, field, value string) ([]string, []map[string]any, error) {
-	validCols, err := p.getTableColumns(ctx, tableName)
-	if err != nil {
-		return nil, nil, fmt.Errorf("validate field: %w", err)
-	}
-
-	fieldValid := false
-	for _, col := range validCols {
-		if col == field {
-			fieldValid = true
-			break
-		}
-	}
-	if !fieldValid {
-		return nil, nil, fmt.Errorf("invalid field: %s", field)
-	}
-
-	query := fmt.Sprintf(
-		"SELECT * FROM %s WHERE %s = ? LIMIT 100",
-		quoteIdent(tableName),
-		quoteIdent(field),
-	)
-
+func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, value string) ([]string, []map[string]any, error) {
+	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = ? LIMIT 100", p.QuoteTable(t), quoteIdent(f.Name))
 	rows, err := p.conn.QueryContext(ctx, query, value)
 	if err != nil {
 		return nil, nil, fmt.Errorf("query rows: %w", err)
 	}
 	defer rows.Close()
-
-	columns, result, err := scanRows(rows)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return columns, result, nil
+	return scanRows(rows)
 }
 
-func (p *provider) UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error {
-	validCols, err := p.getTableColumns(ctx, tableName)
-	if err != nil {
-		return fmt.Errorf("validate columns: %w", err)
-	}
-
-	colSet := make(map[string]bool, len(validCols))
-	for _, col := range validCols {
-		colSet[col] = true
-	}
-
-	if !colSet[pkField] {
-		return fmt.Errorf("invalid pk field: %s", pkField)
-	}
-	if !colSet[targetField] {
-		return fmt.Errorf("invalid target field: %s", targetField)
-	}
-
-	query := fmt.Sprintf(
-		"UPDATE %s SET %s = ? WHERE %s = ?",
-		quoteIdent(tableName),
-		quoteIdent(targetField),
-		quoteIdent(pkField),
-	)
+func (p *provider) UpdateRow(ctx context.Context, t db.Table, pk db.Field, pkValue string, target db.Field, newValue string) error {
+	query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE %s = ?",
+		p.QuoteTable(t), quoteIdent(target.Name), quoteIdent(pk.Name))
 
 	result, err := p.conn.ExecContext(ctx, query, newValue, pkValue)
 	if err != nil {
 		return fmt.Errorf("update row: %w", err)
 	}
-
 	affected, err := result.RowsAffected()
 	if err != nil {
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("no row found with %s = %s", pkField, pkValue)
+		return fmt.Errorf("no row found with %s = %s", pk.Name, pkValue)
 	}
-
 	return nil
 }
 

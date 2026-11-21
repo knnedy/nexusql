@@ -210,7 +210,7 @@ func (p *provider) introspectColumns(ctx context.Context, schema string, fkCols 
 			if perr != nil {
 				return nil, nil, fmt.Errorf("parse enum values for %s.%s: %w", tableName, columnName, perr)
 			}
-			enumName := fmt.Sprintf("%s_%s", tableName, columnName)
+			enumName := enumTypeName(tableName, columnName)
 			enums = append(enums, db.EnumType{Name: enumName, Values: values})
 			fieldType = db.FieldType(enumName)
 		}
@@ -298,4 +298,9 @@ func parseEnumValues(columnType string) ([]string, error) {
 // never match the user's actual database name.
 func (p *provider) DefaultSchema() string {
 	return ""
+}
+
+// enumTypeName names the synthesized type of an inline MySQL ENUM column.
+func enumTypeName(table, column string) string {
+	return table + "_" + column
 }

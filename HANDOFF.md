@@ -96,12 +96,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 - test(db): container setup shared as `dbtest.PostgresDB(t)` / `dbtest.MySQLDB(t)`
   (integration tag; one lazily started container per binary, reaped on exit), so
   studio can run on real Postgres/MySQL too.
+- fix(studio): providers take resolved `db.Table`/`db.Field` (`db.RowsRequest`); studio
+  resolves every client name against a per-connection schema cache (ADR 0008). Fixes the
+  Postgres `%q` table quoting and all hardcoded `"public"`; that hardcode made MySQL
+  sorting, seeding and the schema view see zero tables. Studio scenario now runs on all
+  three dialects (`TestSQLite`, integration `TestPostgres`/`TestMySQL`).
 
 ## Next 3 steps
 
-1. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
-2. fix(db): composite-key updates, explicit NULL, PK-less tables read-only.
-3. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea).
+1. fix(db): composite-key updates, explicit NULL, PK-less tables read-only; MySQL
+   UpdateRow reports "no row found" when the value is unchanged (driver counts changed
+   rows, not matched; high confidence): use clientFoundRows or a match check.
+2. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea).
+3. fix(db): introspection (SQLite INTEGER PK, Postgres composite FKs, relation column pairs).
 
 ## Half-done files
 
@@ -128,9 +135,6 @@ None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
-- Postgres `FetchRows` interpolates an unvalidated table name with Go `%q` (SQL injection).
-- `"public"` schema hardcoded in `api/rows.go`, `api/seed.go`, `api/schema.go` default,
-  postgres column lookups.
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
 - `UpdateRow` cannot set NULL; single-column PKs only.

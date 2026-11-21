@@ -57,7 +57,7 @@ func testSeed(t *testing.T, h Harness) {
 		if res.RowsInserted["users"] != 5 || res.RowsInserted["posts"] != 5 {
 			t.Fatalf("RowsInserted = %v, want 5 each", res.RowsInserted)
 		}
-		_, rows, total, err := p.FetchRows(ctx, "posts", 1, 0, "", db.SortAsc, "")
+		_, rows, total, err := page(t, p, "posts", 1, 0, "", db.SortAsc, "")
 		if err != nil || total != 8 || len(rows) != 1 {
 			t.Fatalf("posts total = %d (err %v), want 3 fixture + 5 seeded", total, err)
 		}

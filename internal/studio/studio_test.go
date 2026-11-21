@@ -245,3 +245,5 @@ func TestOpenProject(t *testing.T) {
 		}
 	})
 }
+
+func TestSQLite(t *testing.T) { testDialect(t, sqliteURI(t)) }

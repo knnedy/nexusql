@@ -66,3 +66,23 @@ type Schema struct {
 	Relations []Relation `json:"relations"`
 	Enums     []EnumType `json:"enums"`
 }
+
+// Table returns the introspected table with this exact name.
+func (s *Schema) Table(name string) (Table, bool) {
+	for _, t := range s.Tables {
+		if t.Name == name {
+			return t, true
+		}
+	}
+	return Table{}, false
+}
+
+// Field returns the column with this exact name.
+func (t Table) Field(name string) (Field, bool) {
+	for _, f := range t.Fields {
+		if f.Name == name {
+			return f, true
+		}
+	}
+	return Field{}, false
+}

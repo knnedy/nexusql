@@ -26,6 +26,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Query", func(t *testing.T) { testQuery(t, h) })
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })
 	t.Run("Export", func(t *testing.T) { testExport(t, h) })
+	t.Run("Quoting", func(t *testing.T) { testQuoting(t, h) })
 }
 
 // setup opens a fresh database with the fixture schema and rows loaded.
@@ -51,4 +52,54 @@ func str(v any) string {
 		return string(b)
 	}
 	return fmt.Sprint(v)
+}
+
+// tableOf introspects p and returns the named table, as studio resolves it.
+func tableOf(t *testing.T, p db.Provider, name string) db.Table {
+	t.Helper()
+	sch, err := p.IntrospectSchema(context.Background(), p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	tbl, ok := sch.Table(name)
+	if !ok {
+		t.Fatalf("table %q not introspected", name)
+	}
+	return tbl
+}
+
+// fieldOf returns the named column of tbl.
+func fieldOf(t *testing.T, tbl db.Table, name string) db.Field {
+	t.Helper()
+	f, ok := tbl.Field(name)
+	if !ok {
+		t.Fatalf("column %q not in %s", name, tbl.Name)
+	}
+	return f
+}
+
+// page fetches rows of a named table, sorted by sortCol when it is non-empty.
+func page(t *testing.T, p db.Provider, table string, limit, offset int, sortCol string, dir db.SortDir, search string) ([]string, []map[string]any, int64, error) {
+	t.Helper()
+	tbl := tableOf(t, p, table)
+	req := db.RowsRequest{Table: tbl, Limit: limit, Offset: offset, SortDir: dir, Search: search}
+	if sortCol != "" {
+		f := fieldOf(t, tbl, sortCol)
+		req.Sort = &f
+	}
+	return p.FetchRows(context.Background(), req)
+}
+
+// lookup runs FetchRowWhere on named identifiers.
+func lookup(t *testing.T, p db.Provider, table, field, value string) ([]string, []map[string]any, error) {
+	t.Helper()
+	tbl := tableOf(t, p, table)
+	return p.FetchRowWhere(context.Background(), tbl, fieldOf(t, tbl, field), value)
+}
+
+// update runs UpdateRow on named identifiers.
+func update(t *testing.T, p db.Provider, table, pk, pkValue, target, value string) error {
+	t.Helper()
+	tbl := tableOf(t, p, table)
+	return p.UpdateRow(context.Background(), tbl, fieldOf(t, tbl, pk), pkValue, fieldOf(t, tbl, target), value)
 }

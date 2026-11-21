@@ -33,6 +33,7 @@ func invalid(err error) error { return classed{ErrInvalid, err} }
 type Service struct {
 	session  *session.Store
 	projects projects.Store
+	schemas  schemaCache
 }
 
 // New returns a Service over the given connection holder and project store.

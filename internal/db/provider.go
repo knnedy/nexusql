@@ -47,14 +47,26 @@ type SeedTx interface {
 // Provider is implemented once per database engine (postgres, mysql, sqlite).
 // Each implementation owns its own driver connection and translates its
 // native SQL dialect and type system into the canonical shapes in types.go.
+// RowsRequest selects one page of an introspected table.
+type RowsRequest struct {
+	Table   Table
+	Limit   int
+	Offset  int
+	Sort    *Field // nil leaves the order to the database
+	SortDir SortDir
+	Search  string // case-insensitive match on the table's text columns
+}
+
 type Provider interface {
 	Kind() ProviderKind
 
 	IntrospectSchema(ctx context.Context, schema string) (*Schema, error)
 
-	FetchRows(ctx context.Context, tableName string, limit, offset int, sortCol string, sortDir SortDir, search string) ([]string, []map[string]any, int64, error)
-	FetchRowWhere(ctx context.Context, tableName, field, value string) ([]string, []map[string]any, error)
-	UpdateRow(ctx context.Context, tableName, pkField, pkValue, targetField, newValue string) error
+	// Row methods take introspected tables and fields only; callers resolve
+	// client input against the schema first, so providers never see raw names.
+	FetchRows(ctx context.Context, req RowsRequest) (columns []string, rows []map[string]any, total int64, err error)
+	FetchRowWhere(ctx context.Context, t Table, f Field, value string) ([]string, []map[string]any, error)
+	UpdateRow(ctx context.Context, t Table, pk Field, pkValue string, target Field, newValue string) error
 
 	ExecuteQuery(ctx context.Context, sql string) (columns []string, rows []map[string]any, rowsAffected int64, isWrite bool, err error)
 
