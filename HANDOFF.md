@@ -4,7 +4,9 @@ Working log for the staged refactor on `refactor/architecture`. Updated with eve
 
 ## Current stage
 
-Stage 1 complete (architecture and file tree). Waiting for approval to start Stage 2.
+Stage 2: reliability, correctness, security (approved). Plan: 17 steps A–F; decisions:
+`-expose` + access token; read-only toggle enforced by the DB. Test seams confirmed:
+db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 ## Done
 
@@ -70,13 +72,18 @@ Stage 1 complete (architecture and file tree). Waiting for approval to start Sta
 - docs: CONTRIBUTING project structure rewritten for the new layout; README lists the
   new make targets; preview images moved to `docs/assets/` (README + goreleaser updated).
 
+### Stage 2
+
+- test(db): `internal/db/dbtest` conformance suite (introspection, rows, lookup, update,
+  query, seed, export) run on SQLite; `studio.Service` tests on real SQLite (no mocks).
+  Mutation check: breaking DESC sort fails the suite.
+
 ## Next 3 steps
 
-1. Stage 2 plan (reliability, correctness, security), for approval before any edits.
-2. Stage 2 first step: Go test harness on SQLite for studio + providers.
-3. Stage 2: schema-validated identifiers in studio (fixes the Postgres `%q` injection).
-
-Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
+1. test(db): run the suite on Postgres + MySQL via testcontainers (`-tags integration`,
+   `make test-integration`, CI job).
+2. test(web): vitest + tests for session-storage, utils, csv.
+3. fix(server): `-expose` + access token; Host allowlist + Origin check.
 
 ## Half-done files
 
