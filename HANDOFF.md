@@ -21,10 +21,12 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   `check`. Goreleaser calls `make web-build`; goreleaser pinned `~> v2`; pnpm pinned
   via `packageManager` (12.18.0).
 - ci: PR/main workflow: gofmt, vet, test, Go-only build; pnpm typecheck, lint, build.
+- chore(deps): Go modules bumped (lipgloss 2.1.1, gofakeit 7.18.10, chi 5.5.0, mysql
+  1.10.2, pgx 5.13.0, modernc sqlite 1.62.0). SQLite API smoke test passed.
 
 ## Next 3 steps
 
-1. chore(deps): update Go modules (minor/patch).
+1. ci: move GitHub Actions to Node 24 majors (fixes deprecation warnings).
 2. chore(deps): update web minor/patch (next + eslint-config-next together).
 3. chore(deps): elkjs 0.12; @types/node ^22.
 
@@ -50,4 +52,5 @@ None.
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
 - `UpdateRow` cannot set NULL; single-column PKs only.
 - Connect has no timeout; request bodies are unbounded; raw driver errors reach the client.
+- SQLite introspection reports `INTEGER PRIMARY KEY` as nullable with default "AUTOINCREMENT".
 - React Query keys not scoped by project/connection.
