@@ -30,6 +30,7 @@ import { useConnect } from "@/hooks/use-connect";
 import { formatRelativeTime } from "@/shared/lib/utils";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { Project } from "@/shared/types/project";
+import { studioSession } from "@/shared/lib/session-storage";
 
 const PROVIDER_FILTERS: { label: string; value: DatabaseProvider | "all" }[] = [
   { label: "All", value: "all" },
@@ -298,10 +299,7 @@ export default function ProjectsPage() {
     DatabaseProvider | "all"
   >("all");
 
-  const connectedProjectId =
-    typeof window !== "undefined"
-      ? sessionStorage.getItem("nexusql_project_id")
-      : null;
+  const connectedProjectId = studioSession.projectId();
 
   const projects = useMemo(() => {
     let list = [...(data?.projects ?? [])].sort(

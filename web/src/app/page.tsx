@@ -17,6 +17,7 @@ import {
   ProviderMeta,
   PROVIDERS,
 } from "@/shared/types/provider";
+import { studioSession } from "@/shared/lib/session-storage";
 
 function ProviderTab({
   provider,
@@ -107,7 +108,7 @@ export default function HomePage() {
 
     if (!isNameValid || !isUriValid) return;
 
-    sessionStorage.setItem("nexusql_project_name", projectName.trim());
+    studioSession.setProjectName(projectName.trim());
 
     connect.mutate({
       uri,

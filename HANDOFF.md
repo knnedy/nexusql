@@ -50,12 +50,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   `app/icon.png` stays in app (Next metadata convention) and is imported as `@/app/icon.png`.
 - refactor(web): component folders renamed to `_components`, except shared UI which moved
   from `shared/components` up to `src/components` (user decision). ADR 0006 updated.
+- refactor(web): sessionStorage keys live only in `shared/lib/session-storage.ts`
+  (`studioSession`); call-site fallbacks unchanged.
 
 ## Next 3 steps
 
-1. refactor(web): centralise sessionStorage keys in shared/lib/session-storage.
-2. refactor(web): move canvas into features/canvas (components into `_components`).
-3. refactor(web): move explorer into features/explorer.
+1. refactor(web): move canvas into features/canvas (components into `_components`).
+2. refactor(web): move explorer into features/explorer.
+3. refactor(web): move console/seed/export into their own features.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 

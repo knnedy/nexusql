@@ -1,10 +1,10 @@
 import { queryOptions, useQuery } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
 import { QUERY_KEYS } from "@/shared/api/query-keys";
+import { studioSession } from "@/shared/lib/session-storage";
 
 function getProjectId(): string {
-  if (typeof window === "undefined") return "";
-  return sessionStorage.getItem("nexusql_project_id") ?? "";
+  return studioSession.projectId() ?? "";
 }
 
 export function schemaQueryOptions() {

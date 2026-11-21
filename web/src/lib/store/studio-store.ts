@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { DatabaseProvider } from "@/shared/types/provider";
+import { studioSession } from "@/shared/lib/session-storage";
 
 interface StudioState {
   provider: DatabaseProvider;
@@ -21,9 +22,9 @@ function readInitialSession(): {
   }
   return {
     provider:
-      (sessionStorage.getItem("nexusql_provider") as DatabaseProvider) ??
+      studioSession.provider() ??
       "postgres",
-    projectName: sessionStorage.getItem("nexusql_project_name") ?? "Untitled",
+    projectName: studioSession.projectName() ?? "Untitled",
   };
 }
 

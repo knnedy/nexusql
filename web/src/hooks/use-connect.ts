@@ -6,6 +6,7 @@ import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
 import { ConnectRequest } from "@/shared/types/health";
 import { DatabaseProvider } from "@/shared/types/provider";
+import { studioSession } from "@/shared/lib/session-storage";
 
 export function useConnect() {
   const router = useRouter();
@@ -16,9 +17,11 @@ export function useConnect() {
     onSuccess: (data, variables) => {
       const projectName = variables.name ?? "";
 
-      sessionStorage.setItem("nexusql_provider", data.provider);
-      sessionStorage.setItem("nexusql_project_id", data.projectId);
-      sessionStorage.setItem("nexusql_project_name", projectName);
+      studioSession.save({
+        provider: data.provider,
+        projectId: data.projectId,
+        projectName,
+      });
 
       useStudioStore
         .getState()

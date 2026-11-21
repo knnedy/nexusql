@@ -6,6 +6,7 @@ import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
 import { useStudioStore } from "@/lib/store/studio-store";
 import { QUERY_KEYS } from "@/shared/api/query-keys";
+import { studioSession } from "@/shared/lib/session-storage";
 
 export function useDisconnect() {
   const router = useRouter();
@@ -14,9 +15,7 @@ export function useDisconnect() {
   return useMutation({
     mutationFn: () => api.disconnect(),
     onSuccess: () => {
-      sessionStorage.removeItem("nexusql_provider");
-      sessionStorage.removeItem("nexusql_project_name");
-      sessionStorage.removeItem("nexusql_project_id");
+      studioSession.clear();
       useStudioStore.getState().reset();
       qc.removeQueries({ queryKey: schemaQueryOptions().queryKey });
       qc.removeQueries({

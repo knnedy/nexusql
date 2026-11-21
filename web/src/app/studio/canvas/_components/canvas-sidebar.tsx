@@ -20,6 +20,7 @@ import { useSchema } from "@/shared/hooks/use-schema";
 import type { Node } from "@xyflow/react";
 import { TableNodeData } from "@/shared/types/canvas";
 import { DatabaseProvider } from "@/shared/types/provider";
+import { studioSession } from "@/shared/lib/session-storage";
 
 interface CanvasSidebarProps {
   open: boolean;
@@ -124,9 +125,8 @@ export default function CanvasSidebar({
   const isDark = resolvedTheme === "dark";
   const { data: schema } = useSchema();
 
-  const provider = (sessionStorage.getItem("nexusql_provider") ??
-    "postgres") as DatabaseProvider;
-  const projectName = sessionStorage.getItem("nexusql_project_name") ?? "";
+  const provider: DatabaseProvider = studioSession.provider() ?? "postgres";
+  const projectName = studioSession.projectName() ?? "";
   const tableCount = schema?.tables.length ?? 0;
   const relationCount = schema?.relations.length ?? 0;
   const enumCount = schema?.enums.length ?? 0;

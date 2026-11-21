@@ -40,6 +40,7 @@ import { RelationEdgeData, TableNodeData } from "@/shared/types/canvas";
 import { Relation, Table } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import SeedDataModal from "@/app/studio/canvas/_components/seed-data-modal";
+import { studioSession } from "@/shared/lib/session-storage";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -92,7 +93,7 @@ function CanvasInner() {
   const provider = useSyncExternalStore<DatabaseProvider>(
     emptySubscribe,
     () =>
-      (sessionStorage.getItem("nexusql_provider") as DatabaseProvider) ??
+      studioSession.provider() ??
       "postgres",
     () => "postgres",
   );
