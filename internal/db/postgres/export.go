@@ -282,3 +282,9 @@ func drizzleImports(t db.FieldType, isPk bool, enumSet map[string]bool) []string
 		return []string{"text"}
 	}
 }
+
+// exporter adapts this dialect's generators to db.Exporter.
+type exporter struct{}
+
+func (exporter) Prisma(s *db.Schema) string  { return GeneratePrisma(s) }
+func (exporter) Drizzle(s *db.Schema) string { return GenerateDrizzle(s) }

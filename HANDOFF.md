@@ -32,14 +32,17 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - chore(deps): @types/node ^22 to match the CI Node version.
 - refactor(seed): seeding moved from `internal/db` to `internal/seed` (`seed.Run`,
   `seed.Options`, `seed.Result`); `db.SeedTx` stays in db. SQLite seed smoke test passed.
+- refactor(db): `db.Exporter` registry (`RegisterExporter`/`ExporterFor`); each dialect
+  registers in init(). `internal/api` imports no dialect package. Export output verified
+  byte-identical to the previous commit on SQLite.
 
 ## Next 3 steps
 
-1. refactor(db): Exporter registry; drop dialect imports from api.
-2. refactor(server): extract HTTP server setup from main.go; health reports real Version.
-3. refactor(api): extract respond helpers and session guard.
+1. refactor(server): extract HTTP server setup from main.go; health reports real Version.
+2. refactor(api): extract respond helpers and session guard.
+3. refactor(studio): introduce service layer between api and db (pass-through).
 
-Remaining Stage 1 after that: studio service layer, web shared/ + features/ moves (one feature per commit), README structure docs.
+Remaining Stage 1 after that: web shared/ + features/ moves (one feature per commit), README structure docs.
 
 ## Half-done files
 

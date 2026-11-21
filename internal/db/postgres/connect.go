@@ -15,6 +15,7 @@ type provider struct {
 
 func init() {
 	db.Register(db.ProviderKindPostgres, Connect)
+	db.RegisterExporter(db.ProviderKindPostgres, exporter{})
 }
 
 // Connect opens a pooled connection to a PostgreSQL database and returns

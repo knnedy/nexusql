@@ -17,6 +17,7 @@ type provider struct {
 
 func init() {
 	db.Register(db.ProviderKindMySQL, Connect)
+	db.RegisterExporter(db.ProviderKindMySQL, exporter{})
 }
 
 // Connect opens a pooled connection to a MySQL database and returns a

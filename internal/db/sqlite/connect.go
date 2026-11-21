@@ -17,6 +17,7 @@ type provider struct {
 
 func init() {
 	db.Register(db.ProviderKindSQLite, Connect)
+	db.RegisterExporter(db.ProviderKindSQLite, exporter{})
 }
 
 // Connect opens a SQLite database file and returns a db.Provider
