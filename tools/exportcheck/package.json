@@ -1,0 +1,13 @@
+{
+  "name": "nexusql-exportcheck",
+  "private": true,
+  "description": "Validates the export golden files with the real Prisma and Drizzle tools.",
+  "type": "module",
+  "packageManager": "pnpm@12.18.0",
+  "scripts": {
+    "check": "node check.mjs"
+  },
+  "devDependencies": {
+    "prisma": "7.10.1"
+  }
+}

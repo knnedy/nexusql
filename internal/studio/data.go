@@ -6,6 +6,7 @@ import (
 	"fmt"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/export"
 	"github.com/knnedy/nexusql/internal/seed"
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
@@ -241,12 +242,12 @@ func (s *Service) Export(ctx context.Context, target ExportTarget) (string, erro
 	if err != nil {
 		return "", err
 	}
-	exp, err := db.ExporterFor(conn.Kind)
+	dialect, err := db.ExporterFor(conn.Kind)
 	if err != nil {
 		return "", invalid(err)
 	}
 	if target == ExportDrizzle {
-		return exp.Drizzle(schema), nil
+		return dialect.Drizzle(schema), nil
 	}
-	return exp.Prisma(schema), nil
+	return export.Prisma(export.Build(schema, dialect)), nil
 }

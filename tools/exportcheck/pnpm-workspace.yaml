@@ -1,0 +1,4 @@
+# prisma validate runs on bundled WebAssembly, so the engine downloads are not needed.
+allowBuilds:
+  prisma: false
+  '@prisma/engines': false

@@ -27,79 +27,6 @@ func formatDefault(d string) string {
 	return trimmed
 }
 
-func GeneratePrisma(schema *db.Schema) string {
-	var sb strings.Builder
-	relLookup := db.BuildRelationLookup(schema.Relations)
-	enumSet := db.BuildEnumSet(schema.Enums)
-
-	sb.WriteString("datasource db {\n  provider = \"mysql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n")
-	sb.WriteString("generator client {\n  provider = \"prisma-client-js\"\n}\n\n")
-
-	// Unlike SQLite, MySQL's Prisma connector has native enum support, so
-	// this mirrors the Postgres path exactly — including reusing the
-	// synthesized table_column enum names from schema.go as-is, since
-	// Prisma enum identifiers accept underscores.
-	for _, e := range schema.Enums {
-		sb.WriteString(fmt.Sprintf("enum %s {\n", db.Capitalize(e.Name)))
-		for _, v := range e.Values {
-			sb.WriteString(fmt.Sprintf("  %s\n", strings.ToUpper(v)))
-		}
-		sb.WriteString("}\n\n")
-	}
-
-	for _, t := range schema.Tables {
-		if !db.IsUserTable(t.Name) {
-			continue
-		}
-
-		sb.WriteString(fmt.Sprintf("model %s {\n", db.Capitalize(t.Name)))
-
-		for _, f := range t.Fields {
-			prismaType := mapPrismaType(f.Type, enumSet)
-			optional := ""
-			if f.Nullable && !f.IsPrimaryKey {
-				optional = "?"
-			}
-
-			line := fmt.Sprintf("  %-20s %s%s", f.Name, prismaType, optional)
-
-			if f.IsPrimaryKey {
-				if f.Type == db.FieldTypeUUID {
-					line += "  @id @default(uuid())"
-				} else {
-					line += "  @id @default(autoincrement())"
-				}
-			}
-
-			sb.WriteString(line)
-			sb.WriteString("\n")
-		}
-
-		addedRelations := map[string]bool{}
-		for _, f := range t.Fields {
-			if !f.IsForeignKey {
-				continue
-			}
-			rel, ok := relLookup[t.Name+"."+f.Name]
-			if !ok || addedRelations[rel.TargetTable] {
-				continue
-			}
-			addedRelations[rel.TargetTable] = true
-			refModel := db.Capitalize(rel.TargetTable)
-			nullable := ""
-			if f.Nullable {
-				nullable = "?"
-			}
-			sb.WriteString(fmt.Sprintf("  %-20s %s%s @relation(fields: [%s], references: [%s])\n",
-				rel.TargetTable, refModel, nullable, f.Name, rel.TargetField))
-		}
-
-		sb.WriteString("}\n\n")
-	}
-
-	return strings.TrimSpace(sb.String())
-}
-
 func GenerateDrizzle(schema *db.Schema) string {
 	var sb strings.Builder
 	relLookup := db.BuildRelationLookup(schema.Relations)
@@ -175,37 +102,6 @@ func GenerateDrizzle(schema *db.Schema) string {
 	}
 
 	return strings.TrimSpace(sb.String())
-}
-
-func mapPrismaType(t db.FieldType, enumSet map[string]bool) string {
-	switch t {
-	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial:
-		return "Int"
-	case db.FieldTypeBigint, db.FieldTypeBigserial:
-		return "BigInt"
-	case db.FieldTypeVarchar, db.FieldTypeText, db.FieldTypeChar:
-		return "String"
-	case db.FieldTypeUUID:
-		// MySQL has no native UUID type; UUID-typed PKs here mean a
-		// char(36)/varchar(36) column, so no @db.Uuid attribute (that's
-		// Postgres-specific) — plain String is correct.
-		return "String"
-	case db.FieldTypeBoolean:
-		return "Boolean"
-	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz, db.FieldTypeDate, db.FieldTypeTime:
-		return "DateTime"
-	case db.FieldTypeJSON:
-		return "Json"
-	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
-		return "Float"
-	case db.FieldTypeBytea:
-		return "Bytes"
-	default:
-		if enumSet[string(t)] {
-			return db.Capitalize(string(t))
-		}
-		return "String // " + string(t)
-	}
 }
 
 func mapDrizzleType(name string, t db.FieldType, isPk bool, enumLookup map[string]db.EnumType) string {
@@ -323,5 +219,97 @@ func drizzleImports(t db.FieldType, isPk bool, enumLookup map[string]db.EnumType
 // exporter adapts this dialect's generators to db.Exporter.
 type exporter struct{}
 
-func (exporter) Prisma(s *db.Schema) string  { return GeneratePrisma(s) }
 func (exporter) Drizzle(s *db.Schema) string { return GenerateDrizzle(s) }
+
+func (exporter) PrismaProvider() string { return "mysql" }
+
+var mysqlInts = map[string]string{
+	"tinyint": "TinyInt", "smallint": "SmallInt", "mediumint": "MediumInt", "int": "", "integer": "",
+}
+
+var mysqlNative = map[string]string{
+	"text": "@db.Text", "tinytext": "@db.TinyText", "mediumtext": "@db.MediumText", "longtext": "@db.LongText",
+	"blob": "@db.Blob", "tinyblob": "@db.TinyBlob", "mediumblob": "@db.MediumBlob", "longblob": "@db.LongBlob",
+	"date": "@db.Date",
+}
+
+func (exporter) PrismaType(f db.Field) (string, string) {
+	name, args := db.TypeArgs(f.NativeType)
+	unsigned := strings.HasSuffix(name, " unsigned")
+	name = strings.TrimSuffix(name, " unsigned")
+	withArgs := func(attr string) string {
+		if len(args) == 0 {
+			return attr
+		}
+		return attr + "(" + strings.Join(args, ", ") + ")"
+	}
+	if f.Type == db.FieldTypeBoolean {
+		return "Boolean", ""
+	}
+	switch name {
+	case "tinyint", "smallint", "mediumint", "int", "integer":
+		attr := mysqlInts[name]
+		if unsigned {
+			attr = "Unsigned" + attr
+			if attr == "Unsigned" {
+				attr = "UnsignedInt"
+			}
+		}
+		if attr == "" {
+			return "Int", ""
+		}
+		return "Int", "@db." + attr
+	case "bigint":
+		if unsigned {
+			return "BigInt", "@db.UnsignedBigInt"
+		}
+		return "BigInt", ""
+	case "decimal", "numeric":
+		return "Decimal", withArgs("@db.Decimal")
+	case "float":
+		return "Float", "@db.Float"
+	case "double", "real":
+		return "Float", ""
+	case "varchar":
+		return "String", withArgs("@db.VarChar")
+	case "char":
+		return "String", withArgs("@db.Char")
+	case "binary":
+		return "Bytes", withArgs("@db.Binary")
+	case "varbinary":
+		return "Bytes", withArgs("@db.VarBinary")
+	case "time":
+		return "DateTime", "@db.Time(" + precision(args) + ")"
+	case "datetime":
+		return "DateTime", "@db.DateTime(" + precision(args) + ")"
+	case "timestamp":
+		return "DateTime", "@db.Timestamp(" + precision(args) + ")"
+	case "json":
+		return "Json", ""
+	}
+	if attr, ok := mysqlNative[name]; ok {
+		if strings.HasSuffix(attr, "Blob") {
+			return "Bytes", attr
+		}
+		if attr == "@db.Date" {
+			return "DateTime", attr
+		}
+		return "String", attr
+	}
+	return "", ""
+}
+
+// precision is the declared fractional-second precision; MySQL's default is 0.
+func precision(args []string) string {
+	if len(args) == 0 {
+		return "0"
+	}
+	return args[0]
+}
+
+func (exporter) Default(f db.Field) db.Default {
+	if f.DefaultValue == nil {
+		return db.Default{}
+	}
+	return db.ParseDefault(*f.DefaultValue)
+}

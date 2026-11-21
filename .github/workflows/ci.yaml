@@ -70,3 +70,17 @@ jobs:
         working-directory: web
       - run: pnpm e2e
         working-directory: web
+
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: tools/exportcheck/package.json
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: tools/exportcheck/pnpm-lock.yaml
+      - run: make export-check

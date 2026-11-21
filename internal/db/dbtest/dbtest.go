@@ -25,6 +25,8 @@ type Harness struct {
 	Seed Seed
 	// Columns pins declared types and default expressions.
 	Columns Columns
+	// Export is the schema whose exports are compared with testdata/.
+	Export Export
 }
 
 // Run executes every conformance test against the harness.

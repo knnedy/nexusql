@@ -202,16 +202,26 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   expression on every dialect: MySQL reported string literals unquoted (`it's`) and
   expressions without their parentheses (`uuid()`), so the canvas DDL preview and the
   Drizzle export printed invalid defaults. Pinned by a `Columns` fixture per dialect.
+- fix(export): `internal/export` builds one model (identifiers, keys, both sides of every
+  relation, relation names, referenced unique sets) and renders Prisma 7 from it (ADR
+  0012; amends 0004). `db.Exporter` now holds dialect facts only: provider, Prisma type +
+  native attribute from `nativeType`, default classification (`db.ParseDefault`). Fixed:
+  several `@id` → `@@id`, autoincrement only on auto ints, `@@map`/`@map` for names that
+  are not identifiers, back-relations and named relations, second key into a table kept,
+  composite FKs, `@unique` on referenced columns, enum values kept with `@map`, defaults
+  (`now()`, literals, `dbgenerated`), `Unsupported(...)`, keyless tables `@@ignore`d,
+  no datasource `url`. SQLite defaults regain the parentheses PRAGMA drops
+  (`(datetime('now'))`). Goldens in `internal/db/<dialect>/testdata/` (`go test -update`);
+  `tools/exportcheck` (pnpm, prisma 7.10.1, install scripts off) validates them:
+  `make export-check`, CI `export` job.
 
 ## Next 3 steps
 
-1. fix(export): one shared model + Prisma renderer (user approved); dialects supply type
-   and default facts only. Golden files per dialect from a real fixture database, and a
-   pinned `tools/exportcheck` (prisma 7.10.1) running `prisma validate` in CI and
-   `make export-check`. Then Drizzle on the same model, checked with tsc (drizzle-orm
-   0.45.4). Real tools rejected today's output: space in a table name, several `@id`,
-   autoincrement on text keys, Prisma 7 rejects datasource `url`, missing back-relations,
-   enums upper-cased without `@map`, `sql` not imported, boolean default `1`.
+1. fix(export): Drizzle on the shared model, golden `export.ts` per dialect, checked by
+   tsc + drizzle-orm 0.45.4 in tools/exportcheck. Known failures today: invalid const
+   names, `sql` imported from the core module, boolean default `1`, self-reference
+   inference error, text keys as autoincrement integers, composite keys, invented
+   varchar(255) lengths.
 2. End of Stage 2: summarize commits, ask before Stage 3.
 3. Stage 3 (after approval).
 

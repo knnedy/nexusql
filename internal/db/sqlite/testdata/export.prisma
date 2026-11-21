@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+/// The table has no primary key or unique column, so Prisma Client cannot use it.
+model audit_log {
+  at  String?
+  msg String?
+
+  @@ignore
+}
+
+model categories {
+  id                Int          @id @default(autoincrement())
+  parent_id         Int?
+  slug              String
+  parent            categories?  @relation("categories_parent", fields: [parent_id], references: [id])
+  categories_parent categories[] @relation("categories_parent")
+}
+
+model invites {
+  id    Int     @id @default(autoincrement())
+  email String?
+  users users?  @relation(fields: [email], references: [email])
+}
+
+model offices {
+  id      Int     @id
+  country String
+  code    String
+  regions regions @relation(fields: [country, code], references: [country, code])
+}
+
+model order_items {
+  id         Int    @id @default(autoincrement())
+  unit_price Float? @map("unit price")
+  qty        Int
+
+  @@map("order items")
+}
+
+model post_tags {
+  post_id  Int
+  tag_code String
+  tags     tags   @relation(fields: [tag_code], references: [code])
+  post     posts  @relation(fields: [post_id], references: [id])
+
+  @@id([post_id, tag_code])
+}
+
+model posts {
+  id        Int         @id @default(autoincrement())
+  author_id Int
+  editor_id Int?
+  title     String      @default("it's \"new\"")
+  status    String      @default("todo")
+  body      Bytes?
+  score     Decimal?    @default(1.50)
+  ratio     Float?
+  stamp     String?     @default(dbgenerated("(datetime('now'))"))
+  editor    users?      @relation("posts_editor", fields: [editor_id], references: [id])
+  author    users       @relation("posts_author", fields: [author_id], references: [id])
+  post_tags post_tags[]
+}
+
+model regions {
+  country String
+  code    String
+  offices offices[]
+
+  @@id([country, code])
+}
+
+model tags {
+  code      String      @id
+  label     String?
+  post_tags post_tags[]
+}
+
+model users {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  name         String?
+  created_at   String    @default(dbgenerated("CURRENT_TIMESTAMP"))
+  joined       DateTime? @default(now())
+  active       Boolean   @default(true)
+  settings     Json?
+  visits       Int       @default(0)
+  invites      invites[]
+  posts_editor posts[]   @relation("posts_editor")
+  posts_author posts[]   @relation("posts_author")
+}

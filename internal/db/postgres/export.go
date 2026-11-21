@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -20,75 +21,6 @@ func formatDefault(d string) string {
 		return fmt.Sprintf("sql`%s`", d)
 	}
 	return d
-}
-
-func GeneratePrisma(schema *db.Schema) string {
-	var sb strings.Builder
-	relLookup := db.BuildRelationLookup(schema.Relations)
-	enumSet := db.BuildEnumSet(schema.Enums)
-
-	sb.WriteString("datasource db {\n  provider = \"postgresql\"\n  url      = env(\"DATABASE_URL\")\n}\n\n")
-	sb.WriteString("generator client {\n  provider = \"prisma-client-js\"\n}\n\n")
-
-	for _, e := range schema.Enums {
-		sb.WriteString(fmt.Sprintf("enum %s {\n", db.Capitalize(e.Name)))
-		for _, v := range e.Values {
-			sb.WriteString(fmt.Sprintf("  %s\n", strings.ToUpper(v)))
-		}
-		sb.WriteString("}\n\n")
-	}
-
-	for _, t := range schema.Tables {
-		if !db.IsUserTable(t.Name) {
-			continue
-		}
-
-		sb.WriteString(fmt.Sprintf("model %s {\n", db.Capitalize(t.Name)))
-
-		for _, f := range t.Fields {
-			prismaType := mapPrismaType(f.Type, enumSet)
-			optional := ""
-			if f.Nullable && !f.IsPrimaryKey {
-				optional = "?"
-			}
-
-			line := fmt.Sprintf("  %-20s %s%s", f.Name, prismaType, optional)
-
-			if f.IsPrimaryKey {
-				if f.Type == db.FieldTypeUUID {
-					line += "  @id @default(uuid())"
-				} else {
-					line += "  @id @default(autoincrement())"
-				}
-			}
-
-			sb.WriteString(line)
-			sb.WriteString("\n")
-		}
-
-		addedRelations := map[string]bool{}
-		for _, f := range t.Fields {
-			if !f.IsForeignKey {
-				continue
-			}
-			rel, ok := relLookup[t.Name+"."+f.Name]
-			if !ok || addedRelations[rel.TargetTable] {
-				continue
-			}
-			addedRelations[rel.TargetTable] = true
-			refModel := db.Capitalize(rel.TargetTable)
-			nullable := ""
-			if f.Nullable {
-				nullable = "?"
-			}
-			sb.WriteString(fmt.Sprintf("  %-20s %s%s @relation(fields: [%s], references: [%s])\n",
-				rel.TargetTable, refModel, nullable, f.Name, rel.TargetField))
-		}
-
-		sb.WriteString("}\n\n")
-	}
-
-	return strings.TrimSpace(sb.String())
 }
 
 func GenerateDrizzle(schema *db.Schema) string {
@@ -169,32 +101,6 @@ func GenerateDrizzle(schema *db.Schema) string {
 	}
 
 	return strings.TrimSpace(sb.String())
-}
-
-func mapPrismaType(t db.FieldType, enumSet map[string]bool) string {
-	switch t {
-	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial:
-		return "Int"
-	case db.FieldTypeBigint, db.FieldTypeBigserial:
-		return "BigInt"
-	case db.FieldTypeVarchar, db.FieldTypeText, db.FieldTypeChar:
-		return "String"
-	case db.FieldTypeUUID:
-		return "String @db.Uuid"
-	case db.FieldTypeBoolean:
-		return "Boolean"
-	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
-		return "DateTime"
-	case db.FieldTypeJSON, db.FieldTypeJSONB:
-		return "Json"
-	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
-		return "Float"
-	default:
-		if enumSet[string(t)] {
-			return db.Capitalize(string(t))
-		}
-		return "String // " + string(t)
-	}
 }
 
 func mapDrizzleType(name string, t db.FieldType, isPk bool, enumSet map[string]bool) string {
@@ -286,5 +192,83 @@ func drizzleImports(t db.FieldType, isPk bool, enumSet map[string]bool) []string
 // exporter adapts this dialect's generators to db.Exporter.
 type exporter struct{}
 
-func (exporter) Prisma(s *db.Schema) string  { return GeneratePrisma(s) }
 func (exporter) Drizzle(s *db.Schema) string { return GenerateDrizzle(s) }
+
+func (exporter) PrismaProvider() string { return "postgresql" }
+
+func (exporter) PrismaType(f db.Field) (string, string) {
+	_, args := db.TypeArgs(f.NativeType)
+	withArgs := func(attr string) string {
+		if len(args) == 0 {
+			return attr
+		}
+		return attr + "(" + strings.Join(args, ", ") + ")"
+	}
+	switch f.Type {
+	case db.FieldTypeSmallint:
+		return "Int", "@db.SmallInt"
+	case db.FieldTypeInteger, db.FieldTypeSerial:
+		return "Int", ""
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
+		return "BigInt", ""
+	case db.FieldTypeNumeric:
+		return "Decimal", withArgs("@db.Decimal")
+	case db.FieldTypeReal:
+		return "Float", "@db.Real"
+	case db.FieldTypeDoublePrecision:
+		return "Float", ""
+	case db.FieldTypeVarchar:
+		return "String", withArgs("@db.VarChar")
+	case db.FieldTypeChar:
+		return "String", withArgs("@db.Char")
+	case db.FieldTypeText:
+		return "String", ""
+	case db.FieldTypeBoolean:
+		return "Boolean", ""
+	case db.FieldTypeUUID:
+		return "String", "@db.Uuid"
+	case db.FieldTypeDate:
+		return "DateTime", "@db.Date"
+	case db.FieldTypeTime:
+		return "DateTime", withPrecision("@db.Time", args)
+	case db.FieldTypeTimestamp:
+		return "DateTime", withPrecision("@db.Timestamp", args)
+	case db.FieldTypeTimestamptz:
+		return "DateTime", withPrecision("@db.Timestamptz", args)
+	case db.FieldTypeJSON:
+		return "Json", "@db.Json"
+	case db.FieldTypeJSONB:
+		return "Json", ""
+	case db.FieldTypeBytea:
+		return "Bytes", ""
+	}
+	return "", ""
+}
+
+// withPrecision states the precision Postgres uses when none is declared (6).
+func withPrecision(attr string, args []string) string {
+	if len(args) == 0 {
+		return attr + "(6)"
+	}
+	return attr + "(" + args[0] + ")"
+}
+
+var trailingCast = regexp.MustCompile(`::[a-zA-Z_][\w ."]*(\(\d+(,\s*\d+)?\))?(\[\])?$`)
+
+func (exporter) Default(f db.Field) db.Default {
+	if f.DefaultValue == nil {
+		return db.Default{}
+	}
+	e := strings.TrimSpace(*f.DefaultValue)
+	for {
+		stripped := strings.TrimSpace(trailingCast.ReplaceAllString(e, ""))
+		if stripped == e {
+			break
+		}
+		e = stripped
+	}
+	if strings.HasPrefix(e, "(") && strings.HasSuffix(e, ")") && db.ParseDefault(e[1:len(e)-1]).Kind == db.DefaultNumber {
+		e = e[1 : len(e)-1] // negative numbers come back as (-1)
+	}
+	return db.ParseDefault(e)
+}

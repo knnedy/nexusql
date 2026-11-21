@@ -11,6 +11,7 @@ tmp/
 
 # Frontend
 web/node_modules
+tools/exportcheck/node_modules
 web/.next
 web/out
 

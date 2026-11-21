@@ -29,70 +29,6 @@ func formatDefault(d string) string {
 	return trimmed
 }
 
-func GeneratePrisma(schema *db.Schema) string {
-	var sb strings.Builder
-
-	sb.WriteString("datasource db {\n  provider = \"sqlite\"\n  url      = env(\"DATABASE_URL\")\n}\n\n")
-	sb.WriteString("generator client {\n  provider = \"prisma-client-js\"\n}\n\n")
-
-	relLookup := db.BuildRelationLookup(schema.Relations)
-
-	// Note: SQLite has no native enum type, so schema.Enums is always empty
-	// for this provider (see IntrospectSchema) — no enum block is emitted.
-
-	for _, t := range schema.Tables {
-		if !db.IsUserTable(t.Name) {
-			continue
-		}
-
-		sb.WriteString(fmt.Sprintf("model %s {\n", db.Capitalize(t.Name)))
-
-		for _, f := range t.Fields {
-			prismaType := mapPrismaType(f.Type)
-			optional := ""
-			if f.Nullable && !f.IsPrimaryKey {
-				optional = "?"
-			}
-
-			line := fmt.Sprintf("  %-20s %s%s", f.Name, prismaType, optional)
-
-			if f.IsPrimaryKey {
-				if f.Type == db.FieldTypeUUID {
-					line += "  @id @default(uuid())"
-				} else {
-					line += "  @id @default(autoincrement())"
-				}
-			}
-
-			sb.WriteString(line)
-			sb.WriteString("\n")
-		}
-
-		addedRelations := map[string]bool{}
-		for _, f := range t.Fields {
-			if !f.IsForeignKey {
-				continue
-			}
-			rel, ok := relLookup[t.Name+"."+f.Name]
-			if !ok || addedRelations[rel.TargetTable] {
-				continue
-			}
-			addedRelations[rel.TargetTable] = true
-			refModel := db.Capitalize(rel.TargetTable)
-			nullable := ""
-			if f.Nullable {
-				nullable = "?"
-			}
-			sb.WriteString(fmt.Sprintf("  %-20s %s%s @relation(fields: [%s], references: [%s])\n",
-				rel.TargetTable, refModel, nullable, f.Name, rel.TargetField))
-		}
-
-		sb.WriteString("}\n\n")
-	}
-
-	return strings.TrimSpace(sb.String())
-}
-
 func GenerateDrizzle(schema *db.Schema) string {
 	var sb strings.Builder
 	relLookup := db.BuildRelationLookup(schema.Relations)
@@ -160,33 +96,6 @@ func GenerateDrizzle(schema *db.Schema) string {
 	return strings.TrimSpace(sb.String())
 }
 
-// mapPrismaType has no enumSet parameter, unlike the Postgres version —
-// SQLite never produces enum-name FieldTypes (see IntrospectSchema), so
-// that branch would be dead code here.
-func mapPrismaType(t db.FieldType) string {
-	switch t {
-	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial:
-		return "Int"
-	case db.FieldTypeBigint, db.FieldTypeBigserial:
-		return "BigInt"
-	case db.FieldTypeVarchar, db.FieldTypeText, db.FieldTypeChar, db.FieldTypeUUID:
-		return "String"
-	case db.FieldTypeBoolean:
-		return "Boolean"
-	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz, db.FieldTypeDate, db.FieldTypeTime:
-		return "DateTime"
-	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
-		// Prisma's Decimal type is unsupported on the sqlite connector.
-		return "Float"
-	case db.FieldTypeBytea:
-		return "Bytes"
-	default:
-		// Covers JSON/JSONB/Interval — also unsupported scalar types on
-		// the sqlite connector — and anything genuinely unrecognized.
-		return "String // " + string(t)
-	}
-}
-
 func mapDrizzleType(name string, t db.FieldType, isPk bool) string {
 	if isPk {
 		if t == db.FieldTypeUUID {
@@ -247,5 +156,38 @@ func drizzleImports(t db.FieldType, isPk bool) []string {
 // exporter adapts this dialect's generators to db.Exporter.
 type exporter struct{}
 
-func (exporter) Prisma(s *db.Schema) string  { return GeneratePrisma(s) }
 func (exporter) Drizzle(s *db.Schema) string { return GenerateDrizzle(s) }
+
+func (exporter) PrismaProvider() string { return "sqlite" }
+
+// PrismaType maps by affinity; the SQLite connector has no native type attributes.
+func (exporter) PrismaType(f db.Field) (string, string) {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial:
+		return "Int", ""
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
+		return "BigInt", ""
+	case db.FieldTypeNumeric:
+		return "Decimal", ""
+	case db.FieldTypeReal, db.FieldTypeDoublePrecision:
+		return "Float", ""
+	case db.FieldTypeVarchar, db.FieldTypeText, db.FieldTypeChar, db.FieldTypeUUID:
+		return "String", ""
+	case db.FieldTypeBoolean:
+		return "Boolean", ""
+	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz, db.FieldTypeDate, db.FieldTypeTime:
+		return "DateTime", ""
+	case db.FieldTypeJSON, db.FieldTypeJSONB:
+		return "Json", ""
+	case db.FieldTypeBytea:
+		return "Bytes", ""
+	}
+	return "", ""
+}
+
+func (exporter) Default(f db.Field) db.Default {
+	if f.DefaultValue == nil {
+		return db.Default{}
+	}
+	return db.ParseDefault(*f.DefaultValue)
+}

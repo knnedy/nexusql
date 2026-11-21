@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -142,7 +143,7 @@ func (p *provider) introspectColumns(ctx context.Context, tableName string, fkRo
 		rowid := c.pk > 0 && pkCount == 1 && strings.EqualFold(strings.TrimSpace(c.declType), "INTEGER")
 		var defaultValue *string
 		if c.dflt.Valid {
-			v := c.dflt.String
+			v := defaultExpr(c.dflt.String)
 			defaultValue = &v
 		}
 		fields = append(fields, db.Field{
@@ -263,4 +264,15 @@ func quoteIdent(name string) string {
 // return here.
 func (p *provider) DefaultSchema() string {
 	return ""
+}
+
+var sqliteLiteral = regexp.MustCompile(`(?i)^([-+]?(\d+\.?\d*|\.\d+)(e[-+]?\d+)?|0x[0-9a-f]+|'(''|[^'])*'|x'[0-9a-f]*'|null|true|false|current_(timestamp|date|time))$`)
+
+// defaultExpr restores the parentheses PRAGMA table_info drops from expression
+// defaults, which CREATE TABLE requires; literals are left as they are.
+func defaultExpr(v string) string {
+	if sqliteLiteral.MatchString(strings.TrimSpace(v)) {
+		return v
+	}
+	return "(" + v + ")"
 }

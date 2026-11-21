@@ -17,7 +17,7 @@ func IsUserTable(name string) bool {
 }
 
 // BuildRelationLookup indexes single-column relations by "sourceTable.sourceField";
-// exporters cannot express composite keys yet, so those are left out.
+// the Drizzle exporters cannot express composite keys yet, so those are left out.
 func BuildRelationLookup(relations []Relation) map[string]Relation {
 	m := make(map[string]Relation, len(relations))
 	for _, r := range relations {
@@ -38,11 +38,17 @@ func BuildEnumSet(enums []EnumType) map[string]bool {
 	return m
 }
 
-// Capitalize upper-cases the first letter of s, used to turn snake_case
-// table/enum names into PascalCase model names for Prisma output.
-func Capitalize(s string) string {
-	if s == "" {
-		return ""
+// TypeArgs splits a declared type such as "numeric(10,2)" or "timestamp(3)
+// with time zone" into its lower-cased name without arguments and the arguments.
+func TypeArgs(native string) (string, []string) {
+	n := strings.ToLower(strings.TrimSpace(native))
+	open, end := strings.IndexByte(n, '('), strings.IndexByte(n, ')')
+	if open < 0 || end < open {
+		return n, nil
 	}
-	return strings.ToUpper(s[:1]) + s[1:]
+	var args []string
+	for _, a := range strings.Split(n[open+1:end], ",") {
+		args = append(args, strings.TrimSpace(a))
+	}
+	return strings.TrimSpace(strings.Join(strings.Fields(n[:open]+" "+n[end+1:]), " ")), args
 }

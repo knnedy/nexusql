@@ -155,22 +155,3 @@ func testQuery(t *testing.T, h Harness) {
 		}
 	})
 }
-
-func testExport(t *testing.T, h Harness) {
-	p := setup(t, h)
-	schema, err := p.IntrospectSchema(context.Background(), p.DefaultSchema())
-	if err != nil {
-		t.Fatal(err)
-	}
-	exp, err := db.ExporterFor(p.Kind())
-	if err != nil {
-		t.Fatalf("no exporter registered: %v", err)
-	}
-
-	for name, out := range map[string]string{"prisma": exp.Prisma(schema), "drizzle": exp.Drizzle(schema)} {
-		lower := strings.ToLower(out)
-		if !strings.Contains(lower, "users") || !strings.Contains(lower, "posts") {
-			t.Errorf("%s output does not mention both fixture tables:\n%s", name, out)
-		}
-	}
-}

@@ -4,7 +4,7 @@ Date: 2026-11-21
 
 ## Status
 
-Accepted
+Accepted. Amended by 0012: the exporter now supplies dialect facts to shared renderers.
 
 ## Context
 

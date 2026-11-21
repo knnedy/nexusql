@@ -1,4 +1,4 @@
-.PHONY: build go-build web-build run dev test test-integration e2e vet web-check check clean
+.PHONY: build go-build web-build run dev test test-integration e2e export-check vet web-check check clean
 
 UI_DIST := internal/ui/dist
 
@@ -38,6 +38,10 @@ test-integration:
 # Browser tests against the built binary (first run: pnpm exec playwright install chromium).
 e2e: build
 	cd web && pnpm e2e
+
+# Validates the export golden files with the real Prisma and Drizzle tools.
+export-check:
+	cd tools/exportcheck && pnpm install --frozen-lockfile && pnpm check
 
 vet:
 	go vet ./...
