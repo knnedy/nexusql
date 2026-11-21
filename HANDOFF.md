@@ -151,6 +151,11 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   message); MySQL session-level `SET SESSION TRANSACTION READ ONLY` (transaction-level
   let DDL through, verified); SQLite `query_only`. Studio refuses statements naming
   READ WRITE/`*_read_only`/`query_only`; edits and seeding return 409. Not persisted.
+- test(web): Testing Library (component seam; `src/test/setup.ts`) and Playwright e2e
+  (`web/e2e`, `make e2e`, CI job) driving the built binary on a temp SQLite file with
+  a throwaway HOME. New dev deps pinned to releases at least two weeks old (jest-dom
+  7.0.1 not 8.0.0, user-event 14.6.8, Playwright 1.65.0). First run locally:
+  `cd web && pnpm exec playwright install chromium`.
 
 ## Next 3 steps
 

@@ -1,4 +1,4 @@
-.PHONY: build go-build web-build run dev test test-integration vet web-check check clean
+.PHONY: build go-build web-build run dev test test-integration e2e vet web-check check clean
 
 UI_DIST := internal/ui/dist
 
@@ -34,6 +34,10 @@ test:
 # Postgres/MySQL conformance tests in Docker containers (testcontainers-go).
 test-integration:
 	go test -tags integration ./...
+
+# Browser tests against the built binary (first run: pnpm exec playwright install chromium).
+e2e: build
+	cd web && pnpm e2e
 
 vet:
 	go vet ./...
