@@ -34,8 +34,8 @@ archives:
       - README.md
       - LICENSE
       - CONTRIBUTING.md
-      - preview-canvas.png
-      - preview-explorer.png
+      - docs/assets/preview-canvas.png
+      - docs/assets/preview-explorer.png
 checksum:
   name_template: "checksums.txt"
 changelog:

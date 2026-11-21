@@ -2,10 +2,10 @@
 
 A local-first SQL data studio with a visual ERD canvas, spreadsheet-style data explorer, SQL console, and fake data seeding — supports Postgres, MySQL, and SQLite. No installation required — just download and run a single binary.
 
-![NexusQL Canvas](https://raw.githubusercontent.com/knnedy/nexusql/main/preview-canvas.png)
+![NexusQL Canvas](https://raw.githubusercontent.com/knnedy/nexusql/main/docs/assets/preview-canvas.png)
 _Canvas — interactive ERD with auto-layout, relation edges, and an inspector panel._
 
-![NexusQL Explorer](https://raw.githubusercontent.com/knnedy/nexusql/main/preview-explorer.png)
+![NexusQL Explorer](https://raw.githubusercontent.com/knnedy/nexusql/main/docs/assets/preview-explorer.png)
 _Explorer — spreadsheet-style data grid with inline editing and foreign-key navigation._
 
 ---
@@ -126,9 +126,14 @@ make dev
 Other targets:
 
 ```bash
-make run    # build then run ./bin/nexusql
-make clean  # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
+make run       # build then run ./bin/nexusql
+make go-build  # Go only; embeds whatever is in internal/ui/dist
+make test      # go test ./...
+make check     # everything CI runs (vet, test, Go build, web typecheck/lint/build)
+make clean     # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
 ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md#project-structure) for the project layout.
 
 ---
 
