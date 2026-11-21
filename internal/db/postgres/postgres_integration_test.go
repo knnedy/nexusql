@@ -4,6 +4,7 @@ package postgres_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -73,14 +74,46 @@ func TestTruncatedQueryStopsReading(t *testing.T) {
 	t.Cleanup(p.Close)
 
 	start := time.Now()
-	res, err := p.ExecuteQuery(context.Background(), "SELECT generate_series(1, 50000000) AS g", 5) // streams; FROM would materialize
+	res, err := dbtest.Script(context.Background(), p, "SELECT generate_series(1, 50000000) AS g", 5) // streams; FROM would materialize
 	if err != nil || len(res.Rows) != 5 || !res.Truncated {
 		t.Fatalf("got %d rows truncated=%v err=%v", len(res.Rows), res.Truncated, err)
 	}
 	if d := time.Since(start); d > 3*time.Second {
 		t.Fatalf("took %s: the remaining rows were read instead of abandoned", d)
 	}
-	if _, err := p.ExecuteQuery(context.Background(), "SELECT 1", 0); err != nil {
+	if _, err := dbtest.Script(context.Background(), p, "SELECT 1", 0); err != nil {
 		t.Fatalf("pool unusable after truncation: %v", err)
+	}
+}
+
+// pgxpool already drops connections released mid-transaction; settings it keeps.
+func TestRunLeavesNoSettingsBehind(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	ctx := context.Background()
+
+	if _, err := dbtest.Script(ctx, p, "SET application_name = 'leaked'", 0); err != nil {
+		t.Fatal(err)
+	}
+	res, err := dbtest.Script(ctx, p,
+		"SELECT count(*) AS n FROM pg_stat_activity WHERE application_name = 'leaked'", 0)
+	if err != nil || fmt.Sprint(res.Rows[0]["n"]) != "0" {
+		t.Fatalf("sessions still carrying the setting: %v (err %v), want 0", res.Rows, err)
+	}
+}
+
+func TestReturningRows(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	res, err := dbtest.Script(context.Background(), p,
+		"CREATE TABLE ret (id serial PRIMARY KEY, v text); INSERT INTO ret (v) VALUES ('a'), ('b') RETURNING id", 0)
+	if err != nil || len(res.Rows) != 2 || !res.IsWrite {
+		t.Fatalf("got %+v err %v, want the 2 returned ids", res, err)
 	}
 }

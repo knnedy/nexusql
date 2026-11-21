@@ -112,3 +112,21 @@ func TestUpdateRowBody(t *testing.T) {
 		t.Fatalf("value after null update: %s", w.Body)
 	}
 }
+
+func TestQueryResultsAlwaysCarryArrays(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "q.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"q"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	for _, sql := range []string{"CREATE TABLE t (x INT)", "SELECT x FROM t", "BEGIN; COMMIT"} {
+		w := call(h, "POST", "/query", `{"sql":"`+sql+`","confirmed":true}`)
+		var res struct {
+			Columns []string         `json:"columns"`
+			Rows    []map[string]any `json:"rows"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil || res.Columns == nil || res.Rows == nil {
+			t.Errorf("%q: %d %s: columns and rows must be arrays, never null", sql, w.Code, w.Body)
+		}
+	}
+}

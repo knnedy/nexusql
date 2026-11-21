@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 // Harness adapts one dialect to the suite.
@@ -47,9 +48,14 @@ func setup(t *testing.T, h Harness) db.Provider {
 
 func mustExec(t *testing.T, p db.Provider, sql string) {
 	t.Helper()
-	if _, err := p.ExecuteQuery(context.Background(), sql, 0); err != nil {
+	if _, err := Script(context.Background(), p, sql, 0); err != nil {
 		t.Fatalf("exec %q: %v", sql, err)
 	}
+}
+
+// Script runs console SQL the way studio does: split with the provider's syntax.
+func Script(ctx context.Context, p db.Provider, sql string, maxRows int) (db.QueryResult, error) {
+	return p.ExecuteScript(ctx, sqlscan.Split(sql, p.Syntax()), maxRows)
 }
 
 // str renders a scanned value dialect-neutrally (int32 vs int64, []byte vs string).

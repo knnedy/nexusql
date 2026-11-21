@@ -12,7 +12,8 @@ import (
 )
 
 type provider struct {
-	conn *sql.DB
+	conn     *sql.DB
+	inMemory bool // its one connection is the database; never close it early
 }
 
 func init() {
@@ -44,7 +45,7 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 		return nil, fmt.Errorf("database unreachable: %w", err)
 	}
 
-	return &provider{conn: conn}, nil
+	return &provider{conn: conn, inMemory: path == ":memory:"}, nil
 }
 
 // extractPath strips the "sqlite://" scheme prefix and validates the

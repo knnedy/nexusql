@@ -2,6 +2,7 @@ package sqlite_test
 
 import (
 	"context"
+	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -62,4 +63,40 @@ func TestConformance(t *testing.T) {
 			},
 		},
 	})
+}
+
+func TestInMemoryDatabaseSurvivesRuns(t *testing.T) {
+	ctx := context.Background()
+	p, err := sqlite.Connect(ctx, "sqlite://:memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+
+	for _, sql := range []string{
+		"CREATE TABLE t (x INT); INSERT INTO t VALUES (1)",
+		"BEGIN; INSERT INTO t VALUES (2)", // never committed
+	} {
+		if _, err := dbtest.Script(ctx, p, sql, 0); err != nil {
+			t.Fatalf("%q: %v", sql, err)
+		}
+	}
+	res, err := dbtest.Script(ctx, p, "SELECT count(*) AS n FROM t", 0)
+	if err != nil || fmt.Sprint(res.Rows[0]["n"]) != "1" {
+		t.Fatalf("rows %v err %v, want the table kept with only the committed row", res.Rows, err)
+	}
+}
+
+func TestReturningRows(t *testing.T) {
+	ctx := context.Background()
+	p, err := sqlite.Connect(ctx, "sqlite://"+filepath.Join(t.TempDir(), "r.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	res, err := dbtest.Script(ctx, p,
+		"CREATE TABLE ret (id INTEGER PRIMARY KEY, v TEXT); INSERT INTO ret (v) VALUES ('a'), ('b') RETURNING id", 0)
+	if err != nil || len(res.Rows) != 2 || !res.IsWrite {
+		t.Fatalf("got %+v err %v, want the 2 returned ids", res, err)
+	}
 }

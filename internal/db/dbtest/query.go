@@ -14,7 +14,7 @@ func testQuery(t *testing.T, h Harness) {
 	p := setup(t, h)
 
 	t.Run("select returns rows", func(t *testing.T) {
-		res, err := p.ExecuteQuery(ctx, "SELECT email FROM users ORDER BY id", 0)
+		res, err := Script(ctx, p, "SELECT email FROM users ORDER BY id", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -35,7 +35,7 @@ func testQuery(t *testing.T, h Harness) {
 			{"SELECT email FROM users WHERE email <> 'limit 1' ORDER BY id", 2, 2, true},
 			{"SELECT email FROM users ORDER BY id\n-- trailing comment", 1, 1, true},
 		} {
-			res, err := p.ExecuteQuery(ctx, c.sql, c.max)
+			res, err := Script(ctx, p, c.sql, c.max)
 			if err != nil {
 				t.Fatalf("%q: %v", c.sql, err)
 			}
@@ -46,7 +46,7 @@ func testQuery(t *testing.T, h Harness) {
 	})
 
 	t.Run("write reports affected rows", func(t *testing.T) {
-		res, err := p.ExecuteQuery(ctx, "UPDATE posts SET title = 'x' WHERE user_id = 1", 0)
+		res, err := Script(ctx, p, "UPDATE posts SET title = 'x' WHERE user_id = 1", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -56,15 +56,73 @@ func testQuery(t *testing.T, h Harness) {
 	})
 
 	t.Run("invalid SQL errors", func(t *testing.T) {
-		if _, err := p.ExecuteQuery(ctx, "SELEC 1", 0); err == nil {
+		if _, err := Script(ctx, p, "SELEC 1", 0); err == nil {
 			t.Fatal("expected syntax error")
+		}
+	})
+
+	count := func(t *testing.T, where string) string {
+		t.Helper()
+		res, err := Script(ctx, p, "SELECT COUNT(*) AS n FROM users WHERE "+where, 0)
+		if err != nil || len(res.Rows) != 1 {
+			t.Fatalf("count: %v %v", res.Rows, err)
+		}
+		return str(res.Rows[0]["n"])
+	}
+
+	t.Run("statements run in order and the last one answers", func(t *testing.T) {
+		res, err := Script(ctx, p, `SELECT email FROM users;
+			INSERT INTO users (id, email) VALUES (100, 'semi;colon@x');
+			SELECT email FROM users WHERE id = 100;`, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !res.IsWrite || len(res.Rows) != 1 || str(res.Rows[0]["email"]) != "semi;colon@x" {
+			t.Fatalf("got %+v, want the inserted row from the last statement", res)
+		}
+	})
+
+	t.Run("a transaction spans the statements of a run", func(t *testing.T) {
+		if _, err := Script(ctx, p, "BEGIN; INSERT INTO users (id, email) VALUES (101, 'tx@x'); ROLLBACK", 0); err != nil {
+			t.Fatal(err)
+		}
+		if n := count(t, "id = 101"); n != "0" {
+			t.Fatalf("%s rows after ROLLBACK, want 0: statements ran on different connections", n)
+		}
+	})
+
+	t.Run("an unfinished transaction is rolled back", func(t *testing.T) {
+		if _, err := Script(ctx, p, "BEGIN; INSERT INTO users (id, email) VALUES (102, 'open@x')", 0); err != nil {
+			t.Fatal(err)
+		}
+		if n := count(t, "id = 102"); n != "0" {
+			t.Fatalf("%s rows from a transaction never committed, want 0", n)
+		}
+		if _, err := Script(ctx, p, "INSERT INTO users (id, email) VALUES (103, 'after@x')", 0); err != nil {
+			t.Fatalf("write after an abandoned transaction: %v", err)
+		}
+	})
+
+	t.Run("session state ends with the run", func(t *testing.T) {
+		if _, err := Script(ctx, p, "CREATE TEMPORARY TABLE scratch (x INT)", 0); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := Script(ctx, p, "SELECT x FROM scratch", 0); err == nil {
+			t.Fatal("a temporary table outlived the run that made it")
+		}
+	})
+
+	t.Run("errors name the failing statement", func(t *testing.T) {
+		_, err := Script(ctx, p, "SELECT 1; SELEC 2", 0)
+		if err == nil || !strings.Contains(err.Error(), "statement 2 of 2") {
+			t.Fatalf("err = %v, want it to name statement 2 of 2", err)
 		}
 	})
 
 	t.Run("cancelled context stops the query", func(t *testing.T) {
 		cctx, cancel := context.WithCancel(ctx)
 		cancel()
-		if _, err := p.ExecuteQuery(cctx, "SELECT email FROM users", 0); err == nil {
+		if _, err := Script(cctx, p, "SELECT email FROM users", 0); err == nil {
 			t.Fatal("expected an error from a cancelled context")
 		}
 	})
@@ -94,7 +152,7 @@ func testSeed(t *testing.T, h Harness) {
 	})
 
 	t.Run("seeded foreign keys reference existing rows", func(t *testing.T) {
-		res, err := p.ExecuteQuery(ctx,
+		res, err := Script(ctx, p,
 			"SELECT COUNT(*) AS orphans FROM posts WHERE user_id NOT IN (SELECT id FROM users)", 0)
 		if err != nil {
 			t.Fatal(err)

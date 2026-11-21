@@ -36,7 +36,7 @@ func invalid(err error) error { return classed{ErrInvalid, err} }
 // Config bounds the work one request can make the database do; zero values
 // take the defaults.
 type Config struct {
-	QueryTimeout   time.Duration // per statement, rows and console alike
+	QueryTimeout   time.Duration // per request: a console run, a page of rows, an edit
 	ConnectTimeout time.Duration
 	MaxRows        int // console rows returned before Truncated is set
 }

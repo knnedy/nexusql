@@ -15,6 +15,7 @@ type queryResponse struct {
 	RowsAffected         int64            `json:"rowsAffected"`
 	IsWrite              bool             `json:"isWrite"`
 	Truncated            bool             `json:"truncated"`
+	Statements           int              `json:"statements"`
 	RequiresConfirmation bool             `json:"requiresConfirmation"`
 }
 
@@ -30,12 +31,20 @@ func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Never null: the console reads columns and rows on every result.
+	if res.Columns == nil {
+		res.Columns = []string{}
+	}
+	if res.Rows == nil {
+		res.Rows = []map[string]any{}
+	}
 	writeJSON(w, http.StatusOK, queryResponse{
 		Columns:              res.Columns,
 		Rows:                 res.Rows,
 		RowsAffected:         res.RowsAffected,
 		IsWrite:              res.IsWrite,
 		Truncated:            res.Truncated,
+		Statements:           res.Statements,
 		RequiresConfirmation: res.RequiresConfirmation,
 	})
 }

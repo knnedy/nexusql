@@ -135,15 +135,23 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   the background), DB pool closed after `Shutdown` drains requests (`server.Server`;
   `RegisterOnShutdown` hooks are async and raced), HTTP write
   timeout = query timeout + 15s. Console shows "first N rows · more not shown".
+- fix(console): `internal/sqlscan` lexes console SQL per dialect (`Provider.Syntax`) and
+  classifies each statement (unknown = write); confirmation if any statement may write
+  (`WITH ... DELETE`, `SELECT 1; DROP`, `PRAGMA x = y` now caught; `SHOW`/`PRAGMA`/`VALUES`
+  return rows). `Provider.ExecuteScript` runs a run's statements on one connection and
+  closes it unless the run was plain reads (ADR 0010): transactions span statements,
+  unfinished ones roll back, settings/temp tables no longer leak into the pool. In-memory
+  SQLite keeps its connection (ROLLBACK only). `db.IsDestructiveQuery`/`IsSelectQuery`
+  removed. Console shows RETURNING rows and "last of N statements"; API query results
+  always carry `columns`/`rows` arrays.
 
 ## Next 3 steps
 
-1. fix(console): `internal/sqlscan` lexer: split statements, classify each (unknown =
-   write), run in order, confirm if any writes; replaces first-keyword regexes
-   (`WITH ... DELETE`, `SHOW`, `PRAGMA`, `VALUES` are misclassified today).
-2. feat(console): read-only toggle enforced by the database.
-3. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
-   type-aware rendering; Playwright setup.
+1. feat(console): read-only toggle enforced by the database (PG `BEGIN READ ONLY`, MySQL
+   `START TRANSACTION READ ONLY`, SQLite `query_only`), inside ExecuteScript's session.
+2. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
+   type-aware rendering; Playwright setup (cover the console run/confirm flow too).
+3. fix(web): query keys scoped by project; disconnect clears lookup/export caches.
 
 ## Half-done files
 
@@ -171,7 +179,8 @@ None.
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
-- Destructive-query detection is first-keyword only (LIMIT appending removed in step 10).
+- Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
+  writes and show a count (ADR 0010).
 - `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys
   are `[["lookup"], ...]`, so the prefix never matches: lookup/export caches survive
   disconnect (high confidence).

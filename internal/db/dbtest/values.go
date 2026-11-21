@@ -49,7 +49,7 @@ func testValues(t *testing.T, h Harness) {
 		check(t, rows[0])
 	})
 	t.Run("console", func(t *testing.T) {
-		res, err := p.ExecuteQuery(context.Background(), "SELECT * FROM vals", 0)
+		res, err := Script(context.Background(), p, "SELECT * FROM vals", 0)
 		if err != nil || len(res.Rows) != 1 {
 			t.Fatalf("rows %v err %v", res.Rows, err)
 		}
@@ -74,7 +74,7 @@ func testValues(t *testing.T, h Harness) {
 		}
 		check(t, rows[0])
 		for expr, want := range h.Values.Stored {
-			res, err := p.ExecuteQuery(context.Background(), "SELECT "+expr+" AS v FROM vals", 0)
+			res, err := Script(context.Background(), p, "SELECT "+expr+" AS v FROM vals", 0)
 			if err != nil || len(res.Rows) != 1 || str(res.Rows[0]["v"]) != want {
 				t.Errorf("%s = %v (err %v), want %s", expr, res.Rows, err, want)
 			}

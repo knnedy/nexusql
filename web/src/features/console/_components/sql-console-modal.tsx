@@ -98,6 +98,12 @@ export default function SqlConsoleModal({
   const result = runQuery.data;
   const showConfirmBanner = result?.requiresConfirmation && pendingConfirm;
   const showResults = result && !result.requiresConfirmation;
+  // Writes with RETURNING have rows too; only column-less results are counts.
+  const hasRows = showResults && result.columns.length > 0;
+  const runNote =
+    result && result.statements > 1
+      ? ` · last of ${result.statements} statements`
+      : "";
 
   const status: "idle" | "running" | "confirm" | "error" | "success" =
     runQuery.isPending
@@ -165,7 +171,7 @@ export default function SqlConsoleModal({
   }
 
   async function handleCopy(format: "json" | "csv") {
-    if (!result || result.isWrite) return;
+    if (!result || result.columns.length === 0) return;
     const text =
       format === "json"
         ? JSON.stringify(result.rows, null, 2)
@@ -323,12 +329,13 @@ export default function SqlConsoleModal({
             <span className="text-[10.5px] font-semibold tracking-wide uppercase text-text-tertiary">
               Results
             </span>
-            {showResults && !result.isWrite && (
+            {hasRows && (
               <div className="flex items-center gap-2.5">
                 <span className="text-[10.5px] font-mono text-text-tertiary">
                   {result.truncated
                     ? `first ${result.rows.length} rows · more not shown`
                     : `${result.rows.length} ${result.rows.length === 1 ? "row" : "rows"}`}
+                  {runNote}
                   {elapsedMs !== null && ` · ${elapsedMs.toFixed(0)}ms`}
                 </span>
                 <div className="flex items-center gap-1.5">
@@ -366,7 +373,7 @@ export default function SqlConsoleModal({
                   aria-hidden
                 />
                 <span className="text-[11.5px] text-coral flex-1">
-                  This will modify data or schema. Run it anyway?
+                  This may change data, schema or settings. Run it anyway?
                 </span>
               </div>
             )}
@@ -394,17 +401,19 @@ export default function SqlConsoleModal({
               </div>
             )}
 
-            {showResults && !result.isWrite && (
+            {hasRows && (
               <QueryResultsTable columns={result.columns} rows={result.rows} />
             )}
 
-            {showResults && result.isWrite && (
+            {showResults && !hasRows && (
               <div className="flex items-center justify-between px-3 py-2.5 rounded-lg bg-teal/10 dark:bg-teal/15 border border-teal/20">
                 <div className="flex items-center gap-2">
                   <CheckCircle2 size={13} className="text-teal" aria-hidden />
                   <span className="text-[11.5px] font-mono text-teal">
-                    {result.rowsAffected}{" "}
-                    {result.rowsAffected === 1 ? "row" : "rows"} affected
+                    {result.isWrite
+                      ? `${result.rowsAffected} ${result.rowsAffected === 1 ? "row" : "rows"} affected`
+                      : "Done"}
+                    {runNote}
                   </span>
                 </div>
                 {elapsedMs !== null && (

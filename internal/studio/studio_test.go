@@ -152,8 +152,47 @@ func TestQuery(t *testing.T) {
 		}
 	})
 
+	t.Run("writes hidden behind a read need confirmation", func(t *testing.T) {
+		for _, q := range []string{
+			"SELECT 1; DELETE FROM users",
+			"WITH doomed AS (SELECT id FROM users) DELETE FROM users WHERE id IN (SELECT id FROM doomed)",
+			"/* SELECT */ DELETE FROM users",
+			"PRAGMA foreign_keys = OFF",
+		} {
+			res, err := s.Query(ctx, q, false)
+			if err != nil || !res.RequiresConfirmation {
+				t.Errorf("Query(%q) = %+v err=%v, want RequiresConfirmation", q, res, err)
+			}
+		}
+		page, _ := s.Rows(ctx, studio.RowsQuery{Table: "users", Limit: 10})
+		if page.Total != 2 {
+			t.Fatalf("rows after unconfirmed DELETEs = %d, want 2", page.Total)
+		}
+	})
+
+	t.Run("reads run without confirmation and return rows", func(t *testing.T) {
+		for q, want := range map[string]int{
+			"PRAGMA table_info(users)":           2,
+			"SELECT 'delete from users' AS s":    1,
+			"VALUES (1), (2), (3)":               3,
+			"SELECT 1; SELECT email FROM users;": 2,
+		} {
+			res, err := s.Query(ctx, q, false)
+			if err != nil || res.RequiresConfirmation || len(res.Rows) != want {
+				t.Errorf("Query(%q) = %+v err=%v, want %d rows", q, res, err, want)
+			}
+		}
+	})
+
+	t.Run("reports how many statements ran", func(t *testing.T) {
+		res, err := s.Query(ctx, "SELECT 1; SELECT 2; SELECT 3", false)
+		if err != nil || res.Statements != 3 {
+			t.Fatalf("Statements = %d err=%v, want 3", res.Statements, err)
+		}
+	})
+
 	t.Run("empty and invalid SQL are ErrInvalid", func(t *testing.T) {
-		for _, q := range []string{"", "SELEC 1"} {
+		for _, q := range []string{"", " ; -- nothing\n;", "SELEC 1"} {
 			if _, err := s.Query(ctx, q, true); !errors.Is(err, studio.ErrInvalid) {
 				t.Errorf("Query(%q): err = %v, want ErrInvalid", q, err)
 			}

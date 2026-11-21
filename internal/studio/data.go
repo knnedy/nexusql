@@ -7,6 +7,7 @@ import (
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/seed"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 // Schema introspects the active connection. An empty name means the dialect's
@@ -158,6 +159,7 @@ type QueryResult struct {
 	RowsAffected         int64
 	IsWrite              bool
 	Truncated            bool // only the first MaxRows rows are included
+	Statements           int  // how many ran; the rows are the last one's
 	RequiresConfirmation bool
 }
 
@@ -167,16 +169,17 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 	if err != nil {
 		return QueryResult{}, err
 	}
-	if sql == "" {
+	stmts := sqlscan.Split(sql, conn.Impl.Syntax())
+	if len(stmts) == 0 {
 		return QueryResult{}, invalid(errors.New("sql is required"))
 	}
-	if db.IsDestructiveQuery(sql) && !confirmed {
-		return QueryResult{RequiresConfirmation: true}, nil
+	if sqlscan.AnyWrite(stmts) && !confirmed {
+		return QueryResult{RequiresConfirmation: true, Statements: len(stmts)}, nil
 	}
 
 	qctx, cancel := s.bounded(ctx)
 	defer cancel()
-	res, err := conn.Impl.ExecuteQuery(qctx, sql, s.cfg.MaxRows)
+	res, err := conn.Impl.ExecuteScript(qctx, stmts, s.cfg.MaxRows)
 	if res.IsWrite || err != nil {
 		s.schemas.invalidate() // may have run DDL, even if a later part failed
 	}
@@ -185,7 +188,7 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 	}
 	return QueryResult{
 		Columns: res.Columns, Rows: res.Rows, RowsAffected: res.RowsAffected,
-		IsWrite: res.IsWrite, Truncated: res.Truncated,
+		IsWrite: res.IsWrite, Truncated: res.Truncated, Statements: len(stmts),
 	}, nil
 }
 

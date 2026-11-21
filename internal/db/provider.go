@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 type ProviderKind string
@@ -89,9 +91,11 @@ type Provider interface {
 	// writes NULL. It returns ErrRowNotFound when no row matches.
 	UpdateRow(ctx context.Context, t Table, key []KeyValue, target Field, value *string) error
 
-	// ExecuteQuery runs console SQL unchanged, returning at most maxRows rows
-	// (0 means no cap) and Truncated when more were available.
-	ExecuteQuery(ctx context.Context, sql string, maxRows int) (QueryResult, error)
+	// Syntax is the dialect's lexical rules, for splitting console SQL.
+	Syntax() sqlscan.Syntax
+	// ExecuteScript runs stmts in order in one session that ends with the call;
+	// rows come from the last statement, at most maxRows of them (0: no cap).
+	ExecuteScript(ctx context.Context, stmts []sqlscan.Statement, maxRows int) (QueryResult, error)
 
 	BeginSeedTx(ctx context.Context) (SeedTx, error)
 

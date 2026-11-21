@@ -10,5 +10,7 @@ export interface QueryResponse {
   isWrite: boolean;
   /** The server stopped at its row cap; more rows matched than are listed. */
   truncated: boolean;
+  /** Statements run; rows and columns come from the last one. */
+  statements: number;
   requiresConfirmation: boolean;
 }

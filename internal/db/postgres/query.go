@@ -2,26 +2,58 @@ package postgres
 
 import (
 	"context"
-	"fmt"
+	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
-func (p *provider) ExecuteQuery(ctx context.Context, sql string, maxRows int) (db.QueryResult, error) {
-	if db.IsSelectQuery(sql) {
-		// Cancel on truncation: pgx would otherwise read every row left after the cap.
-		qctx, cancel := context.WithCancel(ctx)
-		defer cancel()
-		rows, err := p.pool.Query(qctx, sql)
-		if err != nil {
-			return db.QueryResult{}, fmt.Errorf("query failed: %w", err)
-		}
-		return collectCapped(rows, maxRows, cancel)
-	}
+func (p *provider) Syntax() sqlscan.Syntax { return sqlscan.Postgres }
 
-	tag, err := p.pool.Exec(ctx, sql)
+func (p *provider) ExecuteScript(ctx context.Context, stmts []sqlscan.Statement, maxRows int) (res db.QueryResult, err error) {
+	c, err := p.pool.Acquire(ctx)
 	if err != nil {
-		return db.QueryResult{IsWrite: true}, fmt.Errorf("execute failed: %w", err)
+		return db.QueryResult{}, err
 	}
-	return db.QueryResult{RowsAffected: tag.RowsAffected(), IsWrite: true}, nil
+	defer func() {
+		if err == nil && !res.Truncated && sqlscan.OnlyReads(stmts) {
+			c.Release()
+			return
+		}
+		// Closing ends any transaction, setting or temp table the run left.
+		cctx, cancel := context.WithTimeout(context.Background(), time.Second)
+		defer cancel()
+		_ = c.Hijack().Close(cctx)
+	}()
+
+	var affected int64
+	for i, st := range stmts {
+		if i == len(stmts)-1 && st.Rows {
+			res, err = queryCapped(ctx, c, st.Text, maxRows)
+		} else {
+			res, err = db.QueryResult{}, nil
+			tag, execErr := c.Exec(ctx, st.Text)
+			if err = execErr; err == nil && st.Write {
+				res.RowsAffected = tag.RowsAffected()
+			}
+		}
+		if err != nil {
+			return db.QueryResult{IsWrite: sqlscan.AnyWrite(stmts)}, db.InStatement(err, i, len(stmts))
+		}
+		affected += res.RowsAffected
+	}
+	res.RowsAffected, res.IsWrite = affected, sqlscan.AnyWrite(stmts)
+	return res, nil
+}
+
+func queryCapped(ctx context.Context, c *pgxpool.Conn, text string, maxRows int) (db.QueryResult, error) {
+	// Cancel on truncation: pgx would otherwise read every row left after the cap.
+	qctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	rows, err := c.Query(qctx, text)
+	if err != nil {
+		return db.QueryResult{}, err
+	}
+	return collectCapped(rows, maxRows, cancel)
 }
