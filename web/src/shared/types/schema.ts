@@ -80,6 +80,8 @@ export interface Table {
   name: string;
   schema: string;
   fields: Field[];
+  /** Unique constraints and full unique indexes other than the primary key. */
+  unique?: string[][];
 }
 
 export interface Relation {

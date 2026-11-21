@@ -232,11 +232,16 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   `_pragma=foreign_keys(1)`; the kept in-memory session gets `SQLSession.Reset`). Edits,
   console writes and seeding could orphan rows before. Existing violations are not
   re-checked; a console `PRAGMA foreign_keys = OFF` lasts one run (ADR 0010).
+- fix(db): `Table.Unique` lists unique constraints and full unique indexes (not the
+  primary key, partial, expression or INCLUDE parts): Postgres `pg_index`, MySQL
+  `STATISTICS`, SQLite `index_list`/`index_info`. Exports used to mark a column unique
+  only when a foreign key referenced it; `@@unique`/`unique().on` now come from the
+  schema. Seeder left on retries: checking sets up front would insert and skip the same
+  rows (only the message differs), so it was not added.
 
 ## Next 3 steps
 
-1. Close-out: unique constraints introspected (exports @unique/.unique(), seeder dedupes),
-   MySQL DSN built from the parsed URI (decoded passwords, tls= etc. kept), sqlite://
+1. Close-out: MySQL DSN built from the parsed URI (decoded passwords, tls= etc. kept), sqlite://
    refuses missing files and is confined to a directory under -expose.
 2. Merge refactor/architecture into main, push main; new branch for Stage 3.
 3. Stage 3 plan for approval (export formats below; identity ALWAYS, referential actions,

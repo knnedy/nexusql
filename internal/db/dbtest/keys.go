@@ -3,6 +3,7 @@ package dbtest
 import (
 	"context"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
@@ -32,6 +33,29 @@ func testKeys(t *testing.T, h Harness) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Run("unique constraints and unique indexes are listed", func(t *testing.T) {
+		for _, stmt := range []string{
+			`CREATE TABLE uniq (id INTEGER PRIMARY KEY, a INTEGER UNIQUE, b INTEGER, c INTEGER, UNIQUE (b, c))`,
+			`CREATE UNIQUE INDEX uniq_c ON uniq (c)`,
+			`CREATE INDEX uniq_plain ON uniq (b)`,
+		} {
+			mustExec(t, p, stmt)
+		}
+		s, err := p.IntrospectSchema(context.Background(), p.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tbl, _ := s.Table("uniq")
+		var got []string
+		for _, u := range tbl.Unique {
+			got = append(got, strings.Join(u, ","))
+		}
+		slices.Sort(got)
+		if want := []string{"a", "b,c", "c"}; !slices.Equal(got, want) {
+			t.Fatalf("unique sets = %v, want %v (primary key and plain indexes left out)", got, want)
+		}
+	})
 
 	t.Run("composite foreign key is one relation with ordered column pairs", func(t *testing.T) {
 		var found []db.Relation

@@ -53,6 +53,9 @@ type Table struct {
 	Name   string  `json:"name"`
 	Schema string  `json:"schema"`
 	Fields []Field `json:"fields"`
+	// Unique lists each unique constraint or full unique index other than the
+	// primary key, as column names in key order.
+	Unique [][]string `json:"unique,omitempty"`
 }
 
 type Relation struct {

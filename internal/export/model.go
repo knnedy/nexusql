@@ -35,7 +35,7 @@ type Table struct {
 	Fields    []*Field
 	PK        []*Field // in column order
 	Out, In   []*Relation
-	Unique    [][]*Field // referenced column sets other than the primary key
+	Unique    [][]*Field // unique column sets other than the primary key
 	identUsed map[string]bool
 }
 
@@ -92,6 +92,15 @@ func Build(schema *db.Schema, dialect db.Exporter) *Model {
 				tb.PK = append(tb.PK, fd)
 			}
 		}
+		for _, cols := range t.Unique {
+			var set []*Field
+			for _, c := range cols {
+				set = append(set, tb.field(c))
+			}
+			if !slices.Contains(set, nil) && !sameSet(set, tb.PK) && !tb.hasUnique(set) {
+				tb.Unique = append(tb.Unique, set)
+			}
+		}
 		tables[t.Name] = tb
 		m.Tables = append(m.Tables, tb)
 	}
@@ -116,7 +125,7 @@ func Build(schema *db.Schema, dialect db.Exporter) *Model {
 		rel.Optional = slices.ContainsFunc(rel.FromFields, func(f *Field) bool { return f.Nullable })
 		rel.OneToOne = sameSet(rel.FromFields, from.PK)
 		rel.ReferencesPK = sameSet(rel.ToFields, to.PK)
-		if !rel.ReferencesPK && !slices.ContainsFunc(to.Unique, func(u []*Field) bool { return sameSet(u, rel.ToFields) }) {
+		if !rel.ReferencesPK && !to.hasUnique(rel.ToFields) {
 			to.Unique = append(to.Unique, rel.ToFields)
 		}
 		from.Out = append(from.Out, rel)
@@ -164,6 +173,10 @@ func nameRelations(m *Model) {
 			r.ToIdent = unique(base, t.identUsed)
 		}
 	}
+}
+
+func (t *Table) hasUnique(set []*Field) bool {
+	return slices.ContainsFunc(t.Unique, func(u []*Field) bool { return sameSet(u, set) })
 }
 
 func (t *Table) field(name string) *Field {

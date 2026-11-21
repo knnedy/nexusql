@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnySQLiteColumn, blob, foreignKey, integer, numeric, primaryKey, real, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { type AnySQLiteColumn, blob, foreignKey, integer, numeric, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 export const audit_log = sqliteTable('audit_log', {
   at: text('at'),
@@ -10,7 +10,9 @@ export const categories = sqliteTable('categories', {
   id: integer('id').primaryKey(),
   parent_id: integer('parent_id').references((): AnySQLiteColumn => categories.id),
   slug: text('slug').notNull(),
-});
+}, (t) => [
+  unique().on(t.parent_id, t.slug),
+]);
 
 export const invites = sqliteTable('invites', {
   id: integer('id').primaryKey(),

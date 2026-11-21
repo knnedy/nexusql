@@ -53,6 +53,9 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 	if err != nil {
 		return nil, fmt.Errorf("introspect columns: %w", err)
 	}
+	if err := p.introspectUnique(ctx, schema, tables); err != nil {
+		return nil, fmt.Errorf("introspect unique indexes: %w", err)
+	}
 
 	return &db.Schema{
 		Tables:    tables,

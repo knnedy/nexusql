@@ -26,6 +26,8 @@ model categories {
   slug              String       @db.VarChar(40)
   parent            categories?  @relation("categories_parent", fields: [parent_id], references: [id])
   categories_parent categories[] @relation("categories_parent")
+
+  @@unique([parent_id, slug])
 }
 
 model invites {

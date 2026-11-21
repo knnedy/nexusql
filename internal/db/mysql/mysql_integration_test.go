@@ -63,7 +63,7 @@ func TestConformance(t *testing.T) {
 					body BLOB, score DECIMAL(10,2) DEFAULT 1.50, ratio FLOAT, published_on DATE,
 					FOREIGN KEY (author_id) REFERENCES users (id), FOREIGN KEY (editor_id) REFERENCES users (id))`,
 				`CREATE TABLE categories (id INT AUTO_INCREMENT PRIMARY KEY, parent_id INT, slug VARCHAR(40) NOT NULL,
-					FOREIGN KEY (parent_id) REFERENCES categories (id))`,
+					FOREIGN KEY (parent_id) REFERENCES categories (id), UNIQUE (parent_id, slug))`,
 				`CREATE TABLE tags (code VARCHAR(20) PRIMARY KEY, label TEXT)`,
 				`CREATE TABLE post_tags (post_id BIGINT NOT NULL, tag_code VARCHAR(20) NOT NULL, PRIMARY KEY (post_id, tag_code),
 					FOREIGN KEY (post_id) REFERENCES posts (id), FOREIGN KEY (tag_code) REFERENCES tags (code))`,

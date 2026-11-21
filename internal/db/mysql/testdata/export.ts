@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnyMySqlColumn, bigint, boolean, char, customType, date, datetime, decimal, float, foreignKey, int, json, mysqlEnum, mysqlTable, primaryKey, text, timestamp, varchar } from 'drizzle-orm/mysql-core';
+import { type AnyMySqlColumn, bigint, boolean, char, customType, date, datetime, decimal, float, foreignKey, int, json, mysqlEnum, mysqlTable, primaryKey, text, timestamp, unique, varchar } from 'drizzle-orm/mysql-core';
 
 // blob has no drizzle-orm builder.
 const blobType = customType<{ data: string }>({ dataType: () => 'blob' });
@@ -13,7 +13,9 @@ export const categories = mysqlTable('categories', {
   id: int('id').autoincrement().primaryKey(),
   parent_id: int('parent_id').references((): AnyMySqlColumn => categories.id),
   slug: varchar('slug', { length: 40 }).notNull(),
-});
+}, (t) => [
+  unique().on(t.parent_id, t.slug),
+]);
 
 export const invites = mysqlTable('invites', {
   id: int('id').autoincrement().primaryKey(),

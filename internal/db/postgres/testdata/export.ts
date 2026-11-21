@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, bigint, boolean, char, customType, date, foreignKey, integer, interval, jsonb, numeric, pgEnum, pgTable, primaryKey, real, serial, smallint, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, bigint, boolean, char, customType, date, foreignKey, integer, interval, jsonb, numeric, pgEnum, pgTable, primaryKey, real, serial, smallint, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core';
 
 // bytea has no drizzle-orm builder.
 const byteaType = customType<{ data: string }>({ dataType: () => 'bytea' });
@@ -15,7 +15,9 @@ export const categories = pgTable('categories', {
   id: serial('id').primaryKey(),
   parent_id: integer('parent_id').references((): AnyPgColumn => categories.id),
   slug: varchar('slug', { length: 40 }).notNull(),
-});
+}, (t) => [
+  unique().on(t.parent_id, t.slug),
+]);
 
 export const invites = pgTable('invites', {
   id: serial('id').primaryKey(),
