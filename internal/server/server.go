@@ -22,6 +22,7 @@ type Options struct {
 	Addr     string
 	IsDev    bool
 	Version  string
+	Token    string // non-empty when exposed; required on every request
 	Session  *session.Store
 	Projects projects.Store
 }
@@ -29,6 +30,7 @@ type Options struct {
 // New builds the server: the JSON API under /api, the embedded UI everywhere else.
 func New(o Options) *http.Server {
 	r := chi.NewRouter()
+	r.Use(guard(o))
 	r.Mount("/api", api.Router(studio.New(o.Session, o.Projects), api.Config{IsDev: o.IsDev, Version: o.Version}))
 	r.Handle("/*", ui.Handler())
 

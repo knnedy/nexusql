@@ -47,12 +47,14 @@ Open your browser at `http://localhost:8080` (or the port printed in your termin
 
 ```
 Usage of nexusql:
+  -expose
+    	allow a non-loopback -host; requires an access token
   -host string
-        network interface to bind (default "0.0.0.0")
-  -port int
-        TCP port for the web server (default 8080)
+    	network interface to bind (default 127.0.0.1)
+  -port string
+    	TCP port for the web server (default 7080)
   -version
-        print version and exit
+    	print version and exit
 ```
 
 ### Examples
@@ -64,12 +66,14 @@ nexusql
 # run on a custom port
 nexusql -port 9090
 
-# restrict to localhost only
-nexusql -host 127.0.0.1
+# reach it from another machine (prints a URL with an access token, new each run)
+nexusql -host 0.0.0.0 -expose
 
 # check version
 nexusql -version
 ```
+
+NexusQL listens on `127.0.0.1` only. Binding any other interface requires `-expose`, which also turns on an access token: open the printed URL once and the browser keeps it in a cookie. Anyone holding that URL gets full access to the connected database.
 
 On first launch, connect to a database using a connection URI (`postgres://`, `mysql://`, or `sqlite://`) and NexusQL will introspect the schema and open the Canvas view.
 

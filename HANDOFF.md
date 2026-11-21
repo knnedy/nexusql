@@ -84,12 +84,17 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   normalizeFieldType, formatRelativeTime, exportToCsv (27 tests). `pnpm test` runs in
   `make web-check` and CI. Web seams confirmed: pure modules, hooks + query cache,
   components (Testing Library), e2e (Playwright, lands with step 13).
+- fix(server): loopback by default; non-loopback `-host` refused without `-expose`;
+  exposed mode requires a per-run token (`?token=` → HttpOnly cookie, cookie, or Bearer).
+  Host allowlist blocks DNS rebinding; Origin check blocks cross-site writes. ADR 0007.
+  README usage block was stale (claimed default 0.0.0.0:8080); now the real `-h` output.
 
 ## Next 3 steps
 
-1. fix(server): `-expose` + access token; Host allowlist + Origin check.
-2. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors.
-3. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
+1. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors;
+   request body limit.
+2. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
+3. fix(db): composite-key updates, explicit NULL, PK-less tables read-only.
 
 ## Half-done files
 
@@ -120,7 +125,7 @@ None.
 - `"public"` schema hardcoded in `api/rows.go`, `api/seed.go`, `api/schema.go` default,
   postgres column lookups.
 - `GET /api/projects` returns full URIs including passwords.
-- No Origin/Host checks (DNS rebinding); `sqlite://` can open any file path.
+- `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
 - `UpdateRow` cannot set NULL; single-column PKs only.
 - Connect has no timeout; request bodies are unbounded; raw driver errors reach the client.

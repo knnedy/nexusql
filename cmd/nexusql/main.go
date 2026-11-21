@@ -30,7 +30,7 @@ const wordmark = `
 ██║ ╚████║███████╗██╔╝ ██╗╚██████╔╝███████║╚██████╔╝███████╗
 ╚═╝  ╚═══╝╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚══════╝ ╚══▀▀═╝ ╚══════╝`
 
-func printBanner(addr string, isDev bool) {
+func printBanner(cfg config.Config) {
 	teal := lipgloss.Color("#5DCAA5")
 	coral := lipgloss.Color("#D85A30")
 	textPrimary := lipgloss.Color("#F0EFEA")
@@ -44,12 +44,15 @@ func printBanner(addr string, isDev bool) {
 	tagline := lipgloss.NewStyle().Foreground(textSecondary).
 		Render("local-first SQL data studio")
 
-	url := lipgloss.NewStyle().Bold(true).Foreground(textPrimary).
-		Render("http://" + addr)
+	link := "http://" + cfg.Addr() + "/"
+	if cfg.Token != "" {
+		link += "?token=" + cfg.Token
+	}
+	url := lipgloss.NewStyle().Bold(true).Foreground(textPrimary).Render(link)
 
 	mode := "production"
 	modeColor := teal
-	if isDev {
+	if cfg.IsDev {
 		mode = "development"
 		modeColor = coral
 	}
@@ -62,12 +65,18 @@ func printBanner(addr string, isDev bool) {
 	fmt.Printf("  %s   %s\n", version, tagline)
 	fmt.Printf("  %s  %s\n", label.Render("running at"), url)
 	fmt.Printf("  %s        %s\n", label.Render("mode"), modeStyled)
+	if cfg.Expose {
+		warn := lipgloss.NewStyle().Bold(true).Foreground(coral)
+		fmt.Printf("  %s     %s\n", label.Render("exposed"),
+			warn.Render("anyone with this URL has full access to the connected database"))
+	}
 	fmt.Println()
 }
 
 func main() {
 	host := flag.String("host", "", "network interface to bind (default 127.0.0.1)")
 	port := flag.String("port", "", "TCP port for the web server (default 7080)")
+	expose := flag.Bool("expose", false, "allow a non-loopback -host; requires an access token")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -76,7 +85,10 @@ func main() {
 		return
 	}
 
-	cfg := config.Load(*host, *port)
+	cfg, err := config.Load(config.Flags{Host: *host, Port: *port, Expose: *expose})
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	proj, err := projects.NewStore()
 	if err != nil {
@@ -86,6 +98,7 @@ func main() {
 	srv := server.New(server.Options{
 		Addr:     cfg.Addr(),
 		IsDev:    cfg.IsDev,
+		Token:    cfg.Token,
 		Version:  Version,
 		Session:  session.NewStore(),
 		Projects: proj,
@@ -94,7 +107,7 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	printBanner(cfg.Addr(), cfg.IsDev)
+	printBanner(cfg)
 	if err := server.Run(ctx, srv); err != nil {
 		log.Fatalf("server error: %v", err)
 	}
