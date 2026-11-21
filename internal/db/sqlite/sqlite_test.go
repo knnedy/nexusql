@@ -29,5 +29,19 @@ func TestConformance(t *testing.T) {
 				title TEXT NOT NULL
 			)`,
 		},
+		Values: dbtest.Values{
+			Setup: []string{
+				`CREATE TABLE vals (id INTEGER PRIMARY KEY, big INTEGER, small INTEGER, amount NUMERIC,
+					fl REAL, ts DATETIME, d DATE, js JSON, bin BLOB, flag BOOLEAN, blank TEXT)`,
+				`INSERT INTO vals VALUES (1, 9007199254740993, 42, '12345.5', 1.5,
+					'2026-01-02 03:04:05.5', '2026-01-02', '{"a": 1}', X'DEADBEEF', 1, NULL)`,
+			},
+			// NUMERIC affinity stores REAL: SQLite has no exact decimal type.
+			Want: map[string]string{
+				"big": `"9007199254740993"`, "small": `42`, "amount": `12345.5`, "fl": `1.5`,
+				"ts": `"2026-01-02T03:04:05.5"`, "d": `"2026-01-02"`, "js": `{"a":1}`,
+				"bin": `"\\xdeadbeef"`, "flag": `true`, "blank": `null`,
+			},
+		},
 	})
 }

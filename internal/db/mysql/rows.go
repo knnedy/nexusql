@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
 )
@@ -166,21 +167,29 @@ var blobTypeNames = map[string]bool{
 	"VARBINARY":  true,
 }
 
-// normalizeValue converts driver-scanned values for JSON serialization.
-// go-sql-driver/mysql returns []byte for most textual and numeric types
-// (VARCHAR, TEXT, DECIMAL, JSON, ENUM) as well as genuine binary columns.
-// declaredType (the driver's DatabaseTypeName(), not the runtime value)
-// disambiguates: binary-affinity columns stay []byte, everything else is
-// converted to string.
+// normalizeValue makes a scanned value JSON-safe. The driver returns []byte
+// for text, DECIMAL and JSON alike, so declaredType (DatabaseTypeName) decides.
 func normalizeValue(v any, declaredType string) any {
-	b, ok := v.([]byte)
-	if !ok {
-		return v
+	declaredType = strings.ToUpper(declaredType)
+	switch x := v.(type) {
+	case []byte:
+		switch {
+		case blobTypeNames[declaredType]:
+			return db.Hex(x)
+		case declaredType == "JSON":
+			return db.JSONValue(x)
+		}
+		return string(x) // DECIMAL included: exact digits as text
+	case time.Time:
+		switch declaredType {
+		case "DATE":
+			return db.Date(x)
+		case "DATETIME":
+			return db.LocalTime(x)
+		}
+		return db.Instant(x) // TIMESTAMP, read in the UTC session time zone
 	}
-	if blobTypeNames[strings.ToUpper(declaredType)] {
-		return b
-	}
-	return string(b)
+	return db.WireValue(v)
 }
 
 // quoteIdent quotes a MySQL identifier with backticks, doubling any

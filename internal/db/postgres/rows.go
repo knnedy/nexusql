@@ -2,10 +2,13 @@ package postgres
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/knnedy/nexusql/internal/db"
 )
 
@@ -109,7 +112,7 @@ func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
-			row[col] = normalizeValue(values[i])
+			row[col] = normalizeValue(values[i], fields[i].DataTypeOID)
 		}
 		result = append(result, row)
 	}
@@ -119,12 +122,32 @@ func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
 	return columns, result, nil
 }
 
-func normalizeValue(v any) any {
-	switch val := v.(type) {
+func normalizeValue(v any, oid uint32) any {
+	switch x := v.(type) {
 	case [16]byte:
-		return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
-			val[0:4], val[4:6], val[6:8], val[8:10], val[10:16])
-	default:
-		return v
+		return fmt.Sprintf("%08x-%04x-%04x-%04x-%012x", x[0:4], x[4:6], x[6:8], x[8:10], x[10:16])
+	case time.Time:
+		switch oid {
+		case pgtype.DateOID:
+			return db.Date(x)
+		case pgtype.TimestampOID:
+			return db.LocalTime(x)
+		}
+		return db.Instant(x)
+	case pgtype.Numeric:
+		return numericText(x) // exact digits, never a float
+	case driver.Valuer: // other pgtype values (time, interval, ...) in their text form
+		if dv, err := x.Value(); err == nil {
+			return db.WireValue(dv)
+		}
 	}
+	return db.WireValue(v)
+}
+
+func numericText(n pgtype.Numeric) any {
+	v, err := n.Value()
+	if err != nil || v == nil {
+		return nil
+	}
+	return v
 }

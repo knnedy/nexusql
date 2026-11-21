@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
 )
@@ -151,20 +152,36 @@ func scanRows(rows *sql.Rows) ([]string, []map[string]any, error) {
 	return columns, result, nil
 }
 
-// normalizeValue converts driver-scanned values for JSON serialization.
-// database/sql with modernc.org/sqlite returns []byte for any column whose
-// affinity isn't INTEGER/REAL — that includes TEXT, UUID, and JSON columns
-// as well as genuine BLOB columns, with no way to tell them apart from the
-// Go value alone. declaredType (from the column's schema, not the runtime
-// value) disambiguates: BLOB-affinity columns stay []byte, everything else
-// is converted to string.
+// normalizeValue makes a scanned value JSON-safe. SQLite types values, not
+// columns, so the declared type decides how bytes, times and 0/1 read.
 func normalizeValue(v any, declaredType string) any {
-	b, ok := v.([]byte)
-	if !ok {
-		return v
+	typ := normalizeType(declaredType)
+	switch x := v.(type) {
+	case []byte:
+		switch typ {
+		case db.FieldTypeBytea:
+			return db.Hex(x)
+		case db.FieldTypeJSON:
+			return db.JSONValue(x)
+		}
+		return string(x)
+	case string:
+		if typ == db.FieldTypeJSON {
+			return db.JSONValue([]byte(x))
+		}
+	case int64:
+		if typ == db.FieldTypeBoolean && (x == 0 || x == 1) {
+			return x == 1
+		}
+	case time.Time:
+		// The driver parses DATE/DATETIME text; text without an offset comes back as UTC.
+		switch {
+		case typ == db.FieldTypeDate:
+			return db.Date(x)
+		case x.Location() == time.UTC:
+			return db.LocalTime(x)
+		}
+		return db.Instant(x)
 	}
-	if normalizeType(declaredType) == db.FieldTypeBytea {
-		return b
-	}
-	return string(b)
+	return db.WireValue(v)
 }

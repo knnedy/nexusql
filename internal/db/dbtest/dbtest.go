@@ -16,6 +16,8 @@ type Harness struct {
 	Open func(t *testing.T) db.Provider
 	// Schema is the dialect's DDL for the fixture tables described in fixture.go.
 	Schema []string
+	// Values exercises how column values are encoded for the browser.
+	Values Values
 }
 
 // Run executes every conformance test against the harness.
@@ -27,6 +29,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })
 	t.Run("Export", func(t *testing.T) { testExport(t, h) })
 	t.Run("Quoting", func(t *testing.T) { testQuoting(t, h) })
+	t.Run("Values", func(t *testing.T) { testValues(t, h) })
 }
 
 // setup opens a fresh database with the fixture schema and rows loaded.

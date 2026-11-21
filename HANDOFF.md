@@ -108,11 +108,15 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   unchanged-value edits no longer fail and console UPDATE counts matched rows like
   PG/SQLite. Web sends the full key (`features/explorer/lib/row-key.ts`); Set NULL UI and
   read-only PK-less tables in the grid land with step 13.
+- fix(db): cell values use one JSON form on every dialect (ADR 0009, `db/wire.go`):
+  unsafe ints and decimals as strings, NaN/Inf as strings (NaN used to break the whole
+  response), naive timestamps without `Z`, dates as dates, JSON as JSON, binary as `\x`
+  hex. `Values` fixture per harness. MySQL session `time_zone` pinned to UTC.
 
 ## Next 3 steps
 
-1. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea; edits
-   coerced per column type).
+1. fix(db): coerce edits per column type (step 8, second half): bool/JSON/binary/
+   timestamps written from the text the grid shows, on every dialect.
 2. fix(db): introspection (SQLite INTEGER PK, Postgres composite FKs, relation column pairs).
 3. fix(studio): timeouts, row cap + truncated flag, cancellation, close pool on shutdown.
 

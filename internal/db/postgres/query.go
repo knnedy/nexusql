@@ -21,31 +21,10 @@ func (p *provider) ExecuteQuery(ctx context.Context, sql string) ([]string, []ma
 		if err != nil {
 			return nil, nil, 0, false, fmt.Errorf("query failed: %w", err)
 		}
-		defer rows.Close()
-
-		fields := rows.FieldDescriptions()
-		columns := make([]string, len(fields))
-		for i, f := range fields {
-			columns[i] = string(f.Name)
-		}
-
-		result := make([]map[string]any, 0)
-		for rows.Next() {
-			values, err := rows.Values()
-			if err != nil {
-				return nil, nil, 0, false, fmt.Errorf("scan row: %w", err)
-			}
-			row := make(map[string]any, len(columns))
-			for i, col := range columns {
-				row[col] = normalizeValue(values[i])
-			}
-			result = append(result, row)
-		}
-
-		if err := rows.Err(); err != nil {
+		columns, result, err := collect(rows)
+		if err != nil {
 			return nil, nil, 0, false, err
 		}
-
 		return columns, result, 0, false, nil
 	}
 

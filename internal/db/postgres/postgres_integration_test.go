@@ -29,5 +29,21 @@ func TestConformance(t *testing.T) {
 				title TEXT NOT NULL
 			)`,
 		},
+		Values: dbtest.Values{
+			Setup: []string{
+				`CREATE TABLE vals (id INT PRIMARY KEY, big BIGINT, small INT, amount NUMERIC(30,6),
+					fl DOUBLE PRECISION, ts TIMESTAMP, tstz TIMESTAMPTZ, d DATE, js JSONB, bin BYTEA,
+					flag BOOLEAN, u UUID, blank TEXT)`,
+				`INSERT INTO vals VALUES (1, 9007199254740993, 42, 12345678901234567.123456, 'NaN',
+					'2026-01-02 03:04:05.5', '2026-01-02 03:04:05+03', '2026-01-02', '{"a": 1}',
+					'\xdeadbeef', true, 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11', NULL)`,
+			},
+			Want: map[string]string{
+				"big": `"9007199254740993"`, "small": `42`, "amount": `"12345678901234567.123456"`,
+				"fl": `"NaN"`, "ts": `"2026-01-02T03:04:05.5"`, "tstz": `"2026-01-02T00:04:05Z"`,
+				"d": `"2026-01-02"`, "js": `{"a":1}`, "bin": `"\\xdeadbeef"`, "flag": `true`,
+				"u": `"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"`, "blank": `null`,
+			},
+		},
 	})
 }

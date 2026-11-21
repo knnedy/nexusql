@@ -45,5 +45,7 @@ func toDSN(uri string) (string, error) {
 	// done for the SQLite provider.
 	// clientFoundRows=true: affected counts matched rows, like Postgres and
 	// SQLite, so an update that leaves a value unchanged still finds its row.
-	return fmt.Sprintf("%stcp(%s)/%s?parseTime=true&clientFoundRows=true", userInfo, parsed.Host, dbName), nil
+	// time_zone=UTC so TIMESTAMP values arrive as UTC instants (loc defaults to UTC).
+	return fmt.Sprintf("%stcp(%s)/%s?parseTime=true&clientFoundRows=true&time_zone=%%27%%2B00%%3A00%%27",
+		userInfo, parsed.Host, dbName), nil
 }
