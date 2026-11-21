@@ -93,6 +93,9 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   (`studio.OpenProject`, also touches lastOpenedAt). Connect errors are redacted at the
   source plus a studio scrub. JSON bodies capped at 1 MiB (413). Credentials remain
   plaintext at rest in ~/.nexusql/projects.json (0600) until Stage 4.
+- test(db): container setup shared as `dbtest.PostgresDB(t)` / `dbtest.MySQLDB(t)`
+  (integration tag; one lazily started container per binary, reaped on exit), so
+  studio can run on real Postgres/MySQL too.
 
 ## Next 3 steps
 
