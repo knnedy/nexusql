@@ -77,13 +77,15 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 - test(db): `internal/db/dbtest` conformance suite (introspection, rows, lookup, update,
   query, seed, export) run on SQLite; `studio.Service` tests on real SQLite (no mocks).
   Mutation check: breaking DESC sort fails the suite.
+- test(db): same suite on Postgres 17 and MySQL 8.4 via testcontainers-go
+  (`//go:build integration`, `make test-integration`, CI `integration` job). All pass;
+  warm run ~20s. One container per package, fresh database per test.
 
 ## Next 3 steps
 
-1. test(db): run the suite on Postgres + MySQL via testcontainers (`-tags integration`,
-   `make test-integration`, CI job).
-2. test(web): vitest + tests for session-storage, utils, csv.
-3. fix(server): `-expose` + access token; Host allowlist + Origin check.
+1. test(web): vitest + tests for session-storage, utils, csv.
+2. fix(server): `-expose` + access token; Host allowlist + Origin check.
+3. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors.
 
 ## Half-done files
 

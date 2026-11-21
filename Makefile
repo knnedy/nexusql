@@ -1,4 +1,4 @@
-.PHONY: build go-build web-build run dev test vet web-check check clean
+.PHONY: build go-build web-build run dev test test-integration vet web-check check clean
 
 UI_DIST := internal/ui/dist
 
@@ -30,6 +30,10 @@ dev:
 
 test:
 	go test ./...
+
+# Postgres/MySQL conformance tests in Docker containers (testcontainers-go).
+test-integration:
+	go test -tags integration ./...
 
 vet:
 	go vet ./...

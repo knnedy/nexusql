@@ -11,7 +11,7 @@ Thanks for your interest in contributing! This project is early (pre-1.0) and mo
 - Go 1.26+
 - Node.js 20.9+
 - pnpm
-- A local Postgres, MySQL, or SQLite instance to test against
+- Docker (optional), for the Postgres/MySQL integration tests
 
 ```bash
 git clone https://github.com/knnedy/nexusql.git
@@ -40,7 +40,8 @@ Runs the Go backend via `air` on `:7080` and the Next.js dev server on `:3000` t
 ```bash
 make run       # build then run ./bin/nexusql
 make go-build  # Go only, no Node needed (serves a "frontend not built" page)
-make test      # go test ./...
+make test      # go test ./... (SQLite, no Docker needed)
+make test-integration  # same provider suite on Postgres + MySQL containers (needs Docker)
 make check     # everything CI runs
 make clean     # remove build artifacts
 ```

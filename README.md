@@ -129,6 +129,7 @@ Other targets:
 make run       # build then run ./bin/nexusql
 make go-build  # Go only; embeds whatever is in internal/ui/dist
 make test      # go test ./...
+make test-integration  # Postgres/MySQL tests in Docker
 make check     # everything CI runs (vet, test, Go build, web typecheck/lint/build)
 make clean     # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
 ```
