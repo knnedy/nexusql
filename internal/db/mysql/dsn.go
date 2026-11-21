@@ -3,49 +3,54 @@ package mysql
 import (
 	"fmt"
 	"net/url"
+	"slices"
 	"strings"
 
+	"github.com/go-sql-driver/mysql"
 	"github.com/knnedy/nexusql/internal/db"
 )
 
-// toDSN converts a "mysql://user:pass@host:port/dbname" URI into the DSN
-// format github.com/go-sql-driver/mysql expects: "user:pass@tcp(host:port)/dbname".
-func toDSN(uri string) (string, error) {
-	if !strings.HasPrefix(uri, "mysql://") {
-		return "", fmt.Errorf("expected mysql:// URI, got: %s", db.RedactURI(uri))
-	}
+// options are the URI query options passed to the driver. Others are refused:
+// unknown ones become session variables, and some (allowAllFiles) let a
+// server read local files.
+var options = []string{"tls", "charset", "collation", "timeout", "readTimeout", "writeTimeout"}
 
+// config turns a "mysql://user:pass@host:port/dbname?tls=true" URI into a
+// driver config. Credentials are set on it directly, never formatted into a DSN.
+func config(uri string) (*mysql.Config, error) {
+	if !strings.HasPrefix(uri, "mysql://") {
+		return nil, fmt.Errorf("expected mysql:// URI, got: %s", db.RedactURI(uri))
+	}
 	parsed, err := url.Parse(uri)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse URI: %w", err)
+		return nil, fmt.Errorf("failed to parse URI: %s", db.RedactURI(uri))
 	}
-
 	if parsed.Host == "" {
-		return "", fmt.Errorf("mysql URI missing host")
+		return nil, fmt.Errorf("mysql URI missing host")
 	}
-
 	dbName := strings.TrimPrefix(parsed.Path, "/")
 	if dbName == "" {
-		return "", fmt.Errorf("mysql URI missing database name")
+		return nil, fmt.Errorf("mysql URI missing database name")
 	}
 
-	var userInfo string
-	if parsed.User != nil {
-		user := parsed.User.Username()
-		if pass, ok := parsed.User.Password(); ok {
-			userInfo = fmt.Sprintf("%s:%s@", user, pass)
-		} else {
-			userInfo = fmt.Sprintf("%s@", user)
+	query := parsed.Query()
+	for name := range query {
+		if !slices.Contains(options, name) {
+			return nil, fmt.Errorf("mysql URI option %q is not supported (supported: %s)", name, strings.Join(options, ", "))
 		}
 	}
-
-	// parseTime=true so DATE/DATETIME/TIMESTAMP columns scan into
-	// time.Time rather than []byte — matters for rows.go/schema.go
-	// value normalization, same reasoning as the type-affinity work
-	// done for the SQLite provider.
-	// clientFoundRows=true: affected counts matched rows, like Postgres and
-	// SQLite, so an update that leaves a value unchanged still finds its row.
-	// time_zone=UTC so TIMESTAMP values arrive as UTC instants (loc defaults to UTC).
-	return fmt.Sprintf("%stcp(%s)/%s?parseTime=true&clientFoundRows=true&time_zone=%%27%%2B00%%3A00%%27",
-		userInfo, parsed.Host, dbName), nil
+	cfg, err := mysql.ParseDSN("/?" + query.Encode()) // the driver validates the option values
+	if err != nil {
+		return nil, fmt.Errorf("mysql URI options: %w", err)
+	}
+	cfg.Net, cfg.Addr, cfg.DBName = "tcp", parsed.Host, dbName
+	if parsed.User != nil {
+		cfg.User = parsed.User.Username()
+		cfg.Passwd, _ = parsed.User.Password()
+	}
+	// parseTime: dates scan as time.Time. clientFoundRows: affected counts match
+	// Postgres and SQLite. time_zone UTC: TIMESTAMP values arrive as UTC instants.
+	cfg.ParseTime, cfg.ClientFoundRows = true, true
+	cfg.Params = map[string]string{"time_zone": "'+00:00'"}
+	return cfg, nil
 }

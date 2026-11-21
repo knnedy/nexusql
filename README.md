@@ -79,6 +79,8 @@ NexusQL listens on `127.0.0.1` only. Binding any other interface requires `-expo
 
 On first launch, connect to a database using a connection URI (`postgres://`, `mysql://`, or `sqlite://`) and NexusQL will introspect the schema and open the Canvas view.
 
+MySQL URIs accept the options `tls` (`true`, `skip-verify`, `preferred`), `charset`, `collation`, `timeout`, `readTimeout` and `writeTimeout`, e.g. `mysql://user:pass@host:3306/app?tls=true`. Other options are refused. Percent-encode special characters in the password.
+
 ---
 
 ## Studio
