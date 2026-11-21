@@ -1,8 +1,13 @@
 # HANDOFF
 
-Working log for the staged refactor on `refactor/architecture`. Updated with every commit.
+Working log for the staged refactor. Stages 1–2 were on `refactor/architecture`, merged
+(fast-forward) into main at `5a18329` and pushed 2026-11-21. Stage 3 is on `feat/stage-3`
+(local, not pushed). Updated with every commit.
 
 ## Current stage
+
+Stage 2 complete (incl. close-out), merged to main. Stage 3 not started: its plan must be
+drafted and approved first. Stage 2 record follows.
 
 Stage 2: reliability, correctness, security (approved). Plan: 17 steps A–F; decisions:
 `-expose` + access token; read-only toggle enforced by the DB. Test seams confirmed:
@@ -255,11 +260,12 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 ## Next 3 steps
 
-1. Merge refactor/architecture into main, push main; new branch for Stage 3.
-2. Stage 3 plan for approval (export formats below; identity ALWAYS, referential actions,
-   SQLite AUTOINCREMENT land with the SQL DDL export; connect form gets an explicit
-   "create new SQLite database" choice).
-3. Then Stage 3 work on the new branch.
+1. Draft the Stage 3 plan for approval: export formats below (identity ALWAYS, referential
+   actions, SQLite AUTOINCREMENT land with the SQL DDL export); filters, keyset paging,
+   canvas performance; deferred majors (react-table 9, xyflow 13, smart-edge 5, eslint 10;
+   not TypeScript 7); connect form gets an explicit "create new SQLite database" choice.
+2. Confirm test seams for the new work, then step 1 on `feat/stage-3`.
+3. Same process: one step per commit, full gate, HANDOFF updated in each commit.
 
 ## Stage 3 export formats (user decision 2026-11-21)
 
