@@ -2,11 +2,12 @@ outline.md
 
 # Go
 bin/
-cmd/nexusql/out/
+internal/ui/dist/*
+!internal/ui/dist/.gitkeep
 tmp/
 
 # GoReleaser output
-dist/
+/dist/
 
 # Frontend
 web/node_modules

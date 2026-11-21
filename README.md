@@ -115,7 +115,7 @@ make build
 ./bin/nexusql
 ```
 
-`make build` builds the frontend as a static export, embeds it into `cmd/nexusql/out`, then compiles the Go binary to `bin/nexusql`.
+`make build` builds the frontend as a static export, embeds it into `internal/ui/dist`, then compiles the Go binary to `bin/nexusql`.
 
 For development with hot reload (Go backend via `air` on `:7080`, Next.js dev server on `:3000`):
 
@@ -127,7 +127,7 @@ Other targets:
 
 ```bash
 make run    # build then run ./bin/nexusql
-make clean  # remove build artifacts (web/out, web/.next, bin, cmd/nexusql/out)
+make clean  # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
 ```
 
 ---

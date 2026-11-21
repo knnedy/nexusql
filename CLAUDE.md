@@ -2,7 +2,7 @@
 
 Local-first SQL data studio. Go backend (chi, pgx, Postgres/MySQL/SQLite behind a
 common provider interface) + Next.js static export (React Flow, TanStack Query/Table,
-Zustand) embedded via go:embed (cmd/nexusql/out). Ships as one binary.
+Zustand) embedded via go:embed (internal/ui/dist). Ships as one binary.
 
 ## Commands
 

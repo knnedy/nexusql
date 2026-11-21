@@ -4,7 +4,6 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -21,6 +20,7 @@ import (
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
+	"github.com/knnedy/nexusql/internal/ui"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=..."
@@ -93,11 +93,7 @@ func main() {
 	r := chi.NewRouter()
 	r.Mount("/api", api.Router(sess, proj, cfg.IsDev))
 
-	sub, err := fs.Sub(staticFiles, "out")
-	if err != nil {
-		log.Fatalf("failed to sub static files: %v", err)
-	}
-	r.Handle("/*", http.FileServer(http.FS(sub)))
+	r.Handle("/*", ui.Handler())
 
 	srv := &http.Server{
 		Addr:         cfg.Addr(),

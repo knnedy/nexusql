@@ -12,12 +12,24 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   registry, embedded UI package and web feature split. HANDOFF.md created.
 - chore(build): go.mod tidied (direct deps no longer `// indirect`); docs say
   Go 1.26+ and Node 20.9+.
+- refactor(ui): frontend embed moved to `internal/ui` (`ui.Handler()`), with a committed
+  `dist/.gitkeep`, so `go build ./...` works on a fresh clone; it serves a 503
+  "frontend not built" page when no UI is embedded. The goreleaser `dist/` ignore is now
+  root-anchored (it was hiding `internal/ui/dist`).
 
 ## Next 3 steps
 
-1. refactor(ui): move the embed to `internal/ui` with a committed `dist/.gitkeep` (ADR 0005).
-2. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
-3. chore(web): add `typecheck` script; align eslint-config-next with next.
+1. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
+2. chore(web): add `typecheck` script (eslint-config-next aligns with next in the deps step).
+3. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
+
+## Planned dependency updates (after CI step)
+
+- Go: minor/patch only (lipgloss, gofakeit, chi, mysql, pgx, modernc sqlite).
+- Web: minor/patch incl. next + eslint-config-next 16.4.6 together; elkjs 0.12 alone;
+  @types/node pinned to ^22 (CI Node), not 26.
+- html-to-image stays exact 1.11.11: 1.11.12+ regressed image export with React Flow.
+- Deferred to Stage 3 (with tests): @tanstack/react-table 9, react-flow-smart-edge 5.
 
 ## Half-done files
 

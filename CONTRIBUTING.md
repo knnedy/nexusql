@@ -25,7 +25,7 @@ make build
 ./bin/nexusql
 ```
 
-This builds the frontend as a static export, embeds it into `cmd/nexusql/out`, then compiles the Go binary.
+This builds the frontend as a static export, embeds it into `internal/ui/dist`, then compiles the Go binary.
 
 ### Development (hot reload)
 

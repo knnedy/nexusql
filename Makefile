@@ -6,8 +6,8 @@ web-build:
 	cd web && pnpm install && pnpm run build
 	@test -f web/out/index.html || \
 		(echo "ERROR: web/out/index.html not found. Frontend build failed." && exit 1)
-	rm -rf cmd/nexusql/out
-	cp -r web/out cmd/nexusql/out
+	find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete
+	cp -r web/out/. internal/ui/dist/
 
 go-build: web-build
 	go build -o bin/nexusql ./cmd/nexusql
@@ -24,5 +24,6 @@ dev:
 	wait
 
 clean:
-	rm -rf web/out web/.next bin cmd/nexusql/out
+	rm -rf web/out web/.next bin
+	find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete
 	

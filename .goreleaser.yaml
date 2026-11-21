@@ -3,8 +3,8 @@ project_name: nexusql
 before:
   hooks:
     - sh -c "cd web && pnpm install && pnpm run build"
-    - rm -rf cmd/nexusql/out
-    - cp -r web/out cmd/nexusql/out
+    - sh -c "find internal/ui/dist -mindepth 1 ! -name .gitkeep -delete"
+    - sh -c "cp -r web/out/. internal/ui/dist/"
 builds:
   - id: nexusql
     main: ./cmd/nexusql
