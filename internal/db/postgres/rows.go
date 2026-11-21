@@ -72,16 +72,22 @@ func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, va
 	return collect(rows)
 }
 
-func (p *provider) UpdateRow(ctx context.Context, t db.Table, pk db.Field, pkValue string, target db.Field, newValue string) error {
-	query := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE %s = $2",
-		p.QuoteTable(t), p.QuoteIdentifier(target.Name), p.QuoteIdentifier(pk.Name))
+func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue, target db.Field, value *string) error {
+	where := make([]string, len(key))
+	args := []any{value} // pgx sends a nil *string as NULL
+	for i, k := range key {
+		args = append(args, k.Value)
+		where[i] = fmt.Sprintf("%s = $%d", p.QuoteIdentifier(k.Field.Name), len(args))
+	}
+	query := fmt.Sprintf("UPDATE %s SET %s = $1 WHERE %s",
+		p.QuoteTable(t), p.QuoteIdentifier(target.Name), strings.Join(where, " AND "))
 
-	tag, err := p.pool.Exec(ctx, query, newValue, pkValue)
+	tag, err := p.pool.Exec(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update row: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("no row found with %s = %s", pk.Name, pkValue)
+		return db.ErrRowNotFound
 	}
 	return nil
 }

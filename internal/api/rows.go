@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strconv"
 
@@ -29,11 +30,11 @@ type lookupResponse struct {
 	Rows      []map[string]any `json:"rows"`
 }
 
+// updateRowRequest edits one cell; value is required and null writes NULL.
 type updateRowRequest struct {
-	PKField     string `json:"pkField"`
-	PKValue     string `json:"pkValue"`
-	TargetField string `json:"targetField"`
-	NewValue    string `json:"newValue"`
+	Key    map[string]string `json:"key"`
+	Column string            `json:"column"`
+	Value  json.RawMessage   `json:"value"`
 }
 
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
@@ -133,17 +134,21 @@ func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.PKField == "" || req.PKValue == "" || req.TargetField == "" {
-		writeError(w, http.StatusBadRequest, "pkField, pkValue and targetField are required")
+	if req.Column == "" || len(req.Value) == 0 {
+		writeError(w, http.StatusBadRequest, "column and value are required (value may be null)")
+		return
+	}
+	var value *string
+	if err := json.Unmarshal(req.Value, &value); err != nil {
+		writeError(w, http.StatusBadRequest, "value must be a string or null")
 		return
 	}
 
 	err := h.studio.UpdateRow(r.Context(), studio.RowUpdate{
-		Table:       tableName,
-		PKField:     req.PKField,
-		PKValue:     req.PKValue,
-		TargetField: req.TargetField,
-		NewValue:    req.NewValue,
+		Table:  tableName,
+		Key:    req.Key,
+		Column: req.Column,
+		Value:  value,
 	})
 	if err != nil {
 		writeServiceError(w, err)

@@ -16,10 +16,10 @@ import { useQueryClient } from "@tanstack/react-query";
 import { exportToCsv } from "@/features/explorer/lib/csv";
 import TableList from "@/features/explorer/_components/table-list";
 import DataGrid, {
-  buildEditKey,
   type PendingEdit,
   type CellEditPayload,
 } from "@/features/explorer/_components/data-grid";
+import { editKey } from "@/features/explorer/lib/row-key";
 import ExplorerToolbar from "@/features/explorer/_components/explorer-toolbar";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
@@ -266,7 +266,7 @@ function ExplorerInner() {
   }
 
   function handleCellEdit(edit: CellEditPayload) {
-    const key = buildEditKey(edit.pkValue, edit.targetField);
+    const key = editKey(edit.key, edit.column);
 
     setPendingEdits((prev) => {
       const next = new Map(prev);
@@ -276,13 +276,7 @@ function ExplorerInner() {
         return next;
       }
 
-      next.set(key, {
-        pkField: edit.pkField,
-        pkValue: edit.pkValue,
-        targetField: edit.targetField,
-        newValue: edit.newValue,
-        originalValue: edit.originalValue,
-      });
+      next.set(key, edit);
       return next;
     });
   }
@@ -296,10 +290,9 @@ function ExplorerInner() {
     for (const [key, edit] of pendingEdits) {
       try {
         await updateRow.mutateAsync({
-          pkField: edit.pkField,
-          pkValue: edit.pkValue,
-          targetField: edit.targetField,
-          newValue: edit.newValue,
+          key: edit.key,
+          column: edit.column,
+          value: edit.newValue,
         });
       } catch {
         failedKeys.push(key);

@@ -76,3 +76,35 @@ func TestOversizedBodyIsRejected(t *testing.T) {
 		t.Fatalf("status %d, want 413", w.Code)
 	}
 }
+
+func TestUpdateRowBody(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	for _, q := range []string{
+		`{"sql":"CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT)","confirmed":true}`,
+		`{"sql":"INSERT INTO t VALUES (1, 'a')","confirmed":true}`,
+	} {
+		if w := call(h, "POST", "/query", q); w.Code != http.StatusOK {
+			t.Fatalf("query: %d %s", w.Code, w.Body)
+		}
+	}
+
+	for body, want := range map[string]int{
+		`{"key":{"id":"1"},"column":"v","value":"b"}`:  http.StatusOK,
+		`{"key":{"id":"1"},"column":"v","value":null}`: http.StatusOK,
+		`{"key":{"id":"1"},"column":"v"}`:              http.StatusBadRequest, // value omitted
+		`{"key":{"id":"1"},"column":"v","value":5}`:    http.StatusBadRequest,
+		`{"key":{"id":"9"},"column":"v","value":"b"}`:  http.StatusNotFound,
+	} {
+		if w := call(h, "PATCH", "/rows/t", body); w.Code != want {
+			t.Errorf("%s: %d %s, want %d", body, w.Code, w.Body, want)
+		}
+	}
+	w := call(h, "GET", "/rows/t/lookup?field=id&value=1", "")
+	if !strings.Contains(w.Body.String(), `"v":null`) {
+		t.Fatalf("value after null update: %s", w.Body)
+	}
+}

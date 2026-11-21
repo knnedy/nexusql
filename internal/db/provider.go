@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -47,6 +48,15 @@ type SeedTx interface {
 // Provider is implemented once per database engine (postgres, mysql, sqlite).
 // Each implementation owns its own driver connection and translates its
 // native SQL dialect and type system into the canonical shapes in types.go.
+// KeyValue pins one primary-key column of a row.
+type KeyValue struct {
+	Field Field
+	Value string
+}
+
+// ErrRowNotFound means no row matched the key of an update.
+var ErrRowNotFound = errors.New("no row matches the key")
+
 // RowsRequest selects one page of an introspected table.
 type RowsRequest struct {
 	Table   Table
@@ -66,7 +76,9 @@ type Provider interface {
 	// client input against the schema first, so providers never see raw names.
 	FetchRows(ctx context.Context, req RowsRequest) (columns []string, rows []map[string]any, total int64, err error)
 	FetchRowWhere(ctx context.Context, t Table, f Field, value string) ([]string, []map[string]any, error)
-	UpdateRow(ctx context.Context, t Table, pk Field, pkValue string, target Field, newValue string) error
+	// UpdateRow sets target on the row matching every key column; a nil value
+	// writes NULL. It returns ErrRowNotFound when no row matches.
+	UpdateRow(ctx context.Context, t Table, key []KeyValue, target Field, value *string) error
 
 	ExecuteQuery(ctx context.Context, sql string) (columns []string, rows []map[string]any, rowsAffected int64, isWrite bool, err error)
 

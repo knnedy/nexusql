@@ -78,11 +78,17 @@ func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, va
 	return scanRows(rows)
 }
 
-func (p *provider) UpdateRow(ctx context.Context, t db.Table, pk db.Field, pkValue string, target db.Field, newValue string) error {
-	query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE %s = ?",
-		p.QuoteTable(t), quoteIdent(target.Name), quoteIdent(pk.Name))
+func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue, target db.Field, value *string) error {
+	where := make([]string, len(key))
+	args := []any{nullable(value)}
+	for i, k := range key {
+		where[i] = quoteIdent(k.Field.Name) + " = ?"
+		args = append(args, k.Value)
+	}
+	query := fmt.Sprintf("UPDATE %s SET %s = ? WHERE %s",
+		p.QuoteTable(t), quoteIdent(target.Name), strings.Join(where, " AND "))
 
-	result, err := p.conn.ExecContext(ctx, query, newValue, pkValue)
+	result, err := p.conn.ExecContext(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("update row: %w", err)
 	}
@@ -91,9 +97,17 @@ func (p *provider) UpdateRow(ctx context.Context, t db.Table, pk db.Field, pkVal
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if affected == 0 {
-		return fmt.Errorf("no row found with %s = %s", pk.Name, pkValue)
+		return db.ErrRowNotFound
 	}
 	return nil
+}
+
+// nullable maps a nil value to SQL NULL.
+func nullable(v *string) any {
+	if v == nil {
+		return nil
+	}
+	return *v
 }
 
 // scanRows reads all rows from a *sql.Rows into a column list and a slice

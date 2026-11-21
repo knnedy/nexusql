@@ -43,5 +43,7 @@ func toDSN(uri string) (string, error) {
 	// time.Time rather than []byte — matters for rows.go/schema.go
 	// value normalization, same reasoning as the type-affinity work
 	// done for the SQLite provider.
-	return fmt.Sprintf("%stcp(%s)/%s?parseTime=true", userInfo, parsed.Host, dbName), nil
+	// clientFoundRows=true: affected counts matched rows, like Postgres and
+	// SQLite, so an update that leaves a value unchanged still finds its row.
+	return fmt.Sprintf("%stcp(%s)/%s?parseTime=true&clientFoundRows=true", userInfo, parsed.Host, dbName), nil
 }

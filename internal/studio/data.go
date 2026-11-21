@@ -3,6 +3,7 @@ package studio
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/seed"
@@ -85,16 +86,15 @@ func (s *Service) LookupRows(ctx context.Context, table, column, value string) (
 	return cols, rows, nil
 }
 
-// RowUpdate sets one column of the row identified by a single-column key.
+// RowUpdate sets one column of the row identified by its full primary key.
 type RowUpdate struct {
-	Table       string
-	PKField     string
-	PKValue     string
-	TargetField string
-	NewValue    string
+	Table  string
+	Key    map[string]string // every primary-key column, and nothing else
+	Column string
+	Value  *string // nil writes NULL
 }
 
-// UpdateRow applies a single-cell edit.
+// UpdateRow applies a single-cell edit to exactly one row.
 func (s *Service) UpdateRow(ctx context.Context, u RowUpdate) error {
 	conn, err := s.conn()
 	if err != nil {
@@ -104,18 +104,45 @@ func (s *Service) UpdateRow(ctx context.Context, u RowUpdate) error {
 	if err != nil {
 		return err
 	}
-	pk, err := field(t, u.PKField)
+	target, err := field(t, u.Column)
 	if err != nil {
 		return err
 	}
-	target, err := field(t, u.TargetField)
+	key, err := rowKey(t, u.Key)
 	if err != nil {
 		return err
 	}
-	if err := conn.Impl.UpdateRow(ctx, t, pk, u.PKValue, target, u.NewValue); err != nil {
+	err = conn.Impl.UpdateRow(ctx, t, key, target, u.Value)
+	switch {
+	case errors.Is(err, db.ErrRowNotFound):
+		return classed{ErrNotFound, err}
+	case err != nil:
 		return invalid(err)
 	}
 	return nil
+}
+
+// rowKey checks that key names exactly t's primary-key columns, so an edit
+// can never match more than one row.
+func rowKey(t db.Table, key map[string]string) ([]db.KeyValue, error) {
+	var out []db.KeyValue
+	for _, f := range t.Fields {
+		if !f.IsPrimaryKey {
+			continue
+		}
+		v, ok := key[f.Name]
+		if !ok {
+			return nil, invalid(fmt.Errorf("key is missing primary-key column %q", f.Name))
+		}
+		out = append(out, db.KeyValue{Field: f, Value: v})
+	}
+	if len(out) == 0 {
+		return nil, invalid(fmt.Errorf("table %s has no primary key, so its rows cannot be edited", t.Name))
+	}
+	if len(key) != len(out) {
+		return nil, invalid(errors.New("key may only contain primary-key columns"))
+	}
+	return out, nil
 }
 
 // QueryResult is the outcome of a console query.

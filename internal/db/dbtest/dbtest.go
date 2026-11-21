@@ -101,5 +101,6 @@ func lookup(t *testing.T, p db.Provider, table, field, value string) ([]string, 
 func update(t *testing.T, p db.Provider, table, pk, pkValue, target, value string) error {
 	t.Helper()
 	tbl := tableOf(t, p, table)
-	return p.UpdateRow(context.Background(), tbl, fieldOf(t, tbl, pk), pkValue, fieldOf(t, tbl, target), value)
+	key := []db.KeyValue{{Field: fieldOf(t, tbl, pk), Value: pkValue}}
+	return p.UpdateRow(context.Background(), tbl, key, fieldOf(t, tbl, target), &value)
 }

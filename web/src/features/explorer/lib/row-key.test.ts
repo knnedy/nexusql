@@ -1,0 +1,39 @@
+import { describe, expect, it } from "vitest";
+import type { Field } from "@/shared/types/schema";
+import { editKey, rowKey } from "./row-key";
+
+const field = (name: string, isPrimaryKey: boolean): Field => ({
+  name,
+  type: "integer",
+  nullable: false,
+  isPrimaryKey,
+  isForeignKey: false,
+  defaultValue: null,
+});
+
+describe("rowKey", () => {
+  it("uses every primary-key column, as strings", () => {
+    const fields = [field("org_id", true), field("user_id", true), field("role", false)];
+
+    expect(rowKey(fields, { org_id: 1, user_id: 2, role: "a" })).toEqual({
+      org_id: "1",
+      user_id: "2",
+    });
+  });
+
+  it("is null for a table without a primary key", () => {
+    expect(rowKey([field("label", false)], { label: "x" })).toBeNull();
+  });
+});
+
+describe("editKey", () => {
+  it("tells apart cells of rows that share part of a composite key", () => {
+    expect(editKey({ org_id: "1", user_id: "2" }, "role")).not.toBe(
+      editKey({ org_id: "1", user_id: "3" }, "role"),
+    );
+  });
+
+  it("cannot be confused by separators inside values", () => {
+    expect(editKey({ a: "1::b" }, "c")).not.toBe(editKey({ a: "1" }, "b::c"));
+  });
+});

@@ -26,26 +26,16 @@ import {
 } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { normalizeFieldType } from "@/shared/lib/utils";
+import { editKey as cellKey, rowKey, type RowKey } from "../lib/row-key";
 
 export interface PendingEdit {
-  pkField: string;
-  pkValue: string;
-  targetField: string;
+  key: RowKey;
+  column: string;
   newValue: string;
   originalValue: unknown;
 }
 
-export interface CellEditPayload {
-  pkField: string;
-  pkValue: string;
-  targetField: string;
-  newValue: string;
-  originalValue: unknown;
-}
-
-export function buildEditKey(pkValue: string, targetField: string): string {
-  return `${pkValue}::${targetField}`;
-}
+export type CellEditPayload = PendingEdit;
 
 interface DataGridProps {
   tableName: string;
@@ -362,7 +352,7 @@ export default function DataGrid({
     [relations, tableName],
   );
 
-  const pkField = useMemo(() => fields.find((f) => f.isPrimaryKey), [fields]);
+  const hasPrimaryKey = useMemo(() => fields.some((f) => f.isPrimaryKey), [fields]);
 
   const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
     () => [
@@ -370,7 +360,7 @@ export default function DataGrid({
       ...columns.map((col): ColumnDef<Record<string, unknown>> => {
         const field = fieldMap.get(col);
         const enumType = field ? enumMap.get(field.type) : undefined;
-        const canEdit = !!field && !!pkField && !field.isPrimaryKey;
+        const canEdit = !!field && hasPrimaryKey && !field.isPrimaryKey;
         const relation = relationMap.get(col);
 
         return {
@@ -399,11 +389,8 @@ export default function DataGrid({
             const isEditing =
               editingCell?.rowId === row.id && editingCell?.columnId === col;
 
-            const pkValue = pkField
-              ? String(row.original[pkField.name] ?? "")
-              : "";
-            const editKey = pkValue ? buildEditKey(pkValue, col) : "";
-            const pending = editKey ? pendingEdits.get(editKey) : undefined;
+            const key = rowKey(fields, row.original);
+            const pending = key ? pendingEdits.get(cellKey(key, col)) : undefined;
             const cellValue = info.getValue();
 
             return (
@@ -421,14 +408,12 @@ export default function DataGrid({
                 }
                 onCancel={() => setEditingCell(null)}
                 onCommit={(newValue) => {
-                  if (!pkField) return;
-                  const originalValue = row.original[col];
+                  if (!key) return;
                   onCellEdit({
-                    pkField: pkField.name,
-                    pkValue,
-                    targetField: col,
+                    key,
+                    column: col,
                     newValue,
-                    originalValue,
+                    originalValue: row.original[col],
                   });
                   setEditingCell(null);
                 }}
@@ -454,7 +439,8 @@ export default function DataGrid({
       fieldMap,
       enumMap,
       relationMap,
-      pkField,
+      fields,
+      hasPrimaryKey,
       sortCol,
       sortDir,
       onSort,

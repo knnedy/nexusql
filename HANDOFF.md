@@ -101,14 +101,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Postgres `%q` table quoting and all hardcoded `"public"`; that hardcode made MySQL
   sorting, seeding and the schema view see zero tables. Studio scenario now runs on all
   three dialects (`TestSQLite`, integration `TestPostgres`/`TestMySQL`).
+- fix(db): row edits name the full primary key (`PATCH /rows/{t}` body
+  `{key:{col:val}, column, value: string|null}`); partial/extra keys and PK-less tables
+  are 400, no matching row is 404, `null` writes NULL. Fixes composite-PK edits that
+  updated every row sharing a key prefix. MySQL DSN adds `clientFoundRows=true`, so
+  unchanged-value edits no longer fail and console UPDATE counts matched rows like
+  PG/SQLite. Web sends the full key (`features/explorer/lib/row-key.ts`); Set NULL UI and
+  read-only PK-less tables in the grid land with step 13.
 
 ## Next 3 steps
 
-1. fix(db): composite-key updates, explicit NULL, PK-less tables read-only; MySQL
-   UpdateRow reports "no row found" when the value is unchanged (driver counts changed
-   rows, not matched; high confidence): use clientFoundRows or a match check.
-2. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea).
-3. fix(db): introspection (SQLite INTEGER PK, Postgres composite FKs, relation column pairs).
+1. fix(db): value fidelity (bigint/numeric as strings, JSON, timestamps, bytea; edits
+   coerced per column type).
+2. fix(db): introspection (SQLite INTEGER PK, Postgres composite FKs, relation column pairs).
+3. fix(studio): timeouts, row cap + truncated flag, cancellation, close pool on shutdown.
 
 ## Half-done files
 
@@ -137,7 +143,6 @@ None.
 
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
-- `UpdateRow` cannot set NULL; single-column PKs only.
 - Connect has no timeout (bodies now capped; URIs redacted in errors).
 - SQLite introspection reports `INTEGER PRIMARY KEY` as nullable with default "AUTOINCREMENT".
 - Active DB connection is not closed on server shutdown (pool lifecycle).
@@ -146,3 +151,5 @@ None.
   disconnect (high confidence).
 - CSV export: header cells not escaped; no formula-injection guard (`=`,`+`,`-`,`@`).
 - React Query keys not scoped by project/connection.
+- MySQL DSN drops URI query params (e.g. `tls=`); passwords are spliced raw into the
+  DSN (special characters untested). Revisit with connection options (medium confidence).
