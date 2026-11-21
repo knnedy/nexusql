@@ -17,29 +17,10 @@ type Options struct {
 }
 
 type Result struct {
-	RowsInserted map[string]int // tableName -> rows inserted
+	RowsInserted map[string]int    // table -> rows inserted
+	Skipped      map[string]int    // table -> rows the database rejected on every try
+	Problems     map[string]string // table -> why its last row was rejected
 }
-
-// pkInsertMode describes how a generated INSERT statement's primary key
-// value needs to be recovered after execution, since the three providers
-// differ in what they can hand back:
-//   - pkNone: table has no PK field (or this row omits it), plain Exec.
-//   - pkNeedsReturning: PK has a DB-side default (serial, AUTO_INCREMENT,
-//     gen_random_uuid()) — the value only exists after the DB assigns it,
-//     so it must be read back via InsertReturningPK.
-//   - pkSelfGenerated: PK was generated client-side and is already
-//     embedded in the INSERT's VALUES clause — the value is already known,
-//     so a round-trip through InsertReturningPK would be redundant (and,
-//     for MySQL, impossible for non-integer PKs, since MySQL has no
-//     RETURNING clause and LAST_INSERT_ID() only reports AUTO_INCREMENT
-//     values).
-type pkInsertMode int
-
-const (
-	pkNone pkInsertMode = iota
-	pkNeedsReturning
-	pkSelfGenerated
-)
 
 // TopoSortTables orders tables so every table appears after all tables it
 // has a (non-self-referential) foreign key into.
@@ -117,12 +98,12 @@ func sortStrings(s []string) {
 	}
 }
 
-// Run generates and inserts fake rows for every table in schema, in FK
-// dependency order, inside a single transaction. PK values that the DB
-// assigns (serial/AUTO_INCREMENT/etc.) are captured via InsertReturningPK
-// as each row is inserted; PK values generated client-side are already
-// known and reused directly, without a redundant round-trip. Either way,
-// child tables always reference real parent PKs.
+// maxAttempts bounds how often a row the database rejects (unique or check
+// constraint) is regenerated before it is skipped and reported.
+const maxAttempts = 5
+
+// Run inserts fake rows into every table in foreign-key order, in one
+// transaction, with values sent as parameters and converted like cell edits.
 func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Options) (*Result, error) {
 	if opts.RowsPerTable <= 0 {
 		return nil, fmt.Errorf("rowsPerTable must be positive")
@@ -159,45 +140,33 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 		}
 	}()
 
-	generatedPKs := map[string][]string{}
-	result := &Result{RowsInserted: map[string]int{}}
+	g := generator{fks: fkByField, enums: enumsByName, nullChance: opts.NullChance, pks: map[string][]string{}}
+	result := &Result{RowsInserted: map[string]int{}, Skipped: map[string]int{}, Problems: map[string]string{}}
 
 	for _, tableName := range order {
 		table := tablesByName[tableName]
-
-		var insertedThisTable []string
+		pk := findPKField(table)
 		for i := 0; i < opts.RowsPerTable; i++ {
-			sqlStmt, pkMode, selfPK := buildInsertSQL(provider, table, fkByField, generatedPKs, enumsByName, opts.NullChance)
-
-			switch pkMode {
-			case pkNeedsReturning:
-				pkField := findPKField(table)
-				pkVal, err := tx.InsertReturningPK(ctx, sqlStmt, pkField.Name)
-				if err != nil {
-					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
-				}
-				insertedThisTable = append(insertedThisTable, pkVal)
-			case pkSelfGenerated:
-				if err := tx.Exec(ctx, sqlStmt); err != nil {
-					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
-				}
-				insertedThisTable = append(insertedThisTable, selfPK)
-			default:
-				if err := tx.Exec(ctx, sqlStmt); err != nil {
-					return nil, fmt.Errorf("table %s row %d: %w", tableName, i, err)
-				}
+			pkValue, err := g.insertRow(ctx, tx, table, pk)
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
+			}
+			if err != nil {
+				result.Skipped[tableName]++
+				result.Problems[tableName] = err.Error()
+				continue
 			}
 			result.RowsInserted[tableName]++
+			if pk != nil {
+				g.pks[tableName] = append(g.pks[tableName], pkValue)
+			}
 		}
-
-		generatedPKs[tableName] = insertedThisTable
 	}
 
 	if err := tx.Commit(ctx); err != nil {
 		return nil, fmt.Errorf("failed to commit seed transaction: %w", err)
 	}
 	committed = true
-
 	return result, nil
 }
 
@@ -210,101 +179,87 @@ func findPKField(table db.Table) *db.Field {
 	return nil
 }
 
-// buildInsertSQL builds an INSERT statement for one row of table, using
-// provider for all dialect-specific quoting. The PK column is either
-// omitted (DB assigns it — pkNeedsReturning) or included with a
-// client-generated value (pkSelfGenerated); pkNone means the table has no
-// PK field at all. selfGeneratedPK is only meaningful when pkMode is
-// pkSelfGenerated, and is the raw (unquoted) value already embedded in the
-// statement — the same shape InsertReturningPK's implementations return,
-// so callers can treat both sources identically afterward.
-func buildInsertSQL(provider db.Provider, table db.Table, fkByField map[string]db.Relation, generatedPKs map[string][]string, enums map[string]db.EnumType, nullChance float64) (sql string, pkMode pkInsertMode, selfGeneratedPK string) {
-	var cols, vals []string
-
-	for _, f := range table.Fields {
-		if f.IsPrimaryKey {
-			if f.AutoGenerated || f.DefaultValue != nil {
-				// DB has a default (serial sequence, gen_random_uuid(),
-				// AUTO_INCREMENT, etc.) — omit the column and let the DB
-				// assign it; read it back via InsertReturningPK.
-				pkMode = pkNeedsReturning
-				continue
-			}
-			// No DB-level default — generate a value ourselves. It's
-			// already known at this point, so there's nothing to read
-			// back afterward.
-			pkMode = pkSelfGenerated
-			raw := generatePKValue(f)
-			selfGeneratedPK = raw
-
-			cols = append(cols, provider.QuoteIdentifier(f.Name))
-			if needsQuoting(f.Type) {
-				vals = append(vals, quoteLiteral(raw))
-			} else {
-				vals = append(vals, raw)
-			}
-			continue
-		}
-
-		var v string
-		if f.IsForeignKey {
-			rel, ok := fkByField[table.Name+"."+f.Name]
-			switch {
-			case !ok:
-				v = valueOrNull(f, enums, nullChance)
-			case rel.TargetTable == table.Name:
-				// Self-referential FK — no earlier row in *this* insert to
-				// reference, so leave NULL if allowed, otherwise skip fake data
-				// and let it default.
-				if f.Nullable {
-					v = "NULL"
-				} else {
-					continue // omit column, let DB default apply if any
-				}
-			default:
-				parentVals := generatedPKs[rel.TargetTable]
-				if len(parentVals) == 0 {
-					if f.Nullable {
-						v = "NULL"
-					} else {
-						continue // no valid parent to reference; omit and hope for a default
-					}
-				} else {
-					v = parentVals[mrand.Intn(len(parentVals))]
-					if needsQuoting(f.Type) {
-						v = quoteLiteral(strings.Trim(v, "'"))
-					}
-				}
-			}
-		} else {
-			v = valueOrNull(f, enums, nullChance)
-		}
-
-		cols = append(cols, provider.QuoteIdentifier(f.Name))
-		vals = append(vals, v)
-	}
-
-	if len(cols) == 0 {
-		return provider.EmptyInsertSQL(table), pkMode, selfGeneratedPK
-	}
-
-	return fmt.Sprintf(
-		"INSERT INTO %s (%s) VALUES (%s)",
-		provider.QuoteTable(table),
-		strings.Join(cols, ", "),
-		strings.Join(vals, ", "),
-	), pkMode, selfGeneratedPK
+type generator struct {
+	fks        map[string]db.Relation
+	enums      map[string]db.EnumType
+	nullChance float64
+	pks        map[string][]string // table -> primary key of every row inserted so far
 }
 
-// generatePKValue returns a raw (unquoted) client-generated primary key
-// value. Callers quote it themselves via needsQuoting/quoteLiteral when
-// embedding it in SQL — kept raw here so the same value can also be stored
-// directly in generatedPKs without stripping quotes back off.
+// insertRow inserts one row, regenerating it when the database rejects it,
+// and returns its primary key value ("" when it has none).
+func (g *generator) insertRow(ctx context.Context, tx db.SeedTx, table db.Table, pk *db.Field) (string, error) {
+	var lastErr error
+	for range maxAttempts {
+		fields, values, err := g.row(table)
+		if err != nil {
+			return "", err // retrying cannot help
+		}
+		var auto []db.Field
+		if pk != nil && pk.AutoGenerated {
+			auto = []db.Field{*pk}
+		}
+		got, err := tx.Insert(ctx, table, fields, values, auto)
+		if err == nil {
+			if len(got) == 1 {
+				return got[0], nil
+			}
+			for i, f := range fields {
+				if pk != nil && f.Name == pk.Name && values[i] != nil {
+					return *values[i], nil
+				}
+			}
+			return "", nil
+		}
+		lastErr = err
+		if ctx.Err() != nil {
+			break
+		}
+	}
+	return "", lastErr
+}
+
+// row generates one row's fields and text values; auto-generated columns are
+// left to the database.
+func (g *generator) row(table db.Table) ([]db.Field, []*string, error) {
+	var fields []db.Field
+	var values []*string
+	for _, f := range table.Fields {
+		if f.AutoGenerated {
+			continue
+		}
+		var v *string
+		switch rel, isFK := g.fks[table.Name+"."+f.Name]; {
+		case f.IsPrimaryKey:
+			s := generatePKValue(f)
+			v = &s
+		case isFK && rel.TargetTable == table.Name:
+			if !f.Nullable {
+				continue // no earlier row to point at; leave it to a default
+			}
+		case isFK:
+			parents := g.pks[rel.TargetTable]
+			switch {
+			case len(parents) > 0:
+				v = &parents[mrand.Intn(len(parents))]
+			case !f.Nullable:
+				return nil, nil, fmt.Errorf("no rows in %s for %s.%s to reference", rel.TargetTable, table.Name, f.Name)
+			}
+		case f.Nullable && mrand.Float64() < g.nullChance:
+		default:
+			s := GenerateFakeValue(f, g.enums)
+			v = &s
+		}
+		fields = append(fields, f)
+		values = append(values, v)
+	}
+	return fields, values, nil
+}
+
+// generatePKValue returns a client-generated primary key value as text.
 func generatePKValue(f db.Field) string {
 	switch f.Type {
-	case db.FieldTypeUUID:
-		return gofakeit.UUID()
-	case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar:
+	case db.FieldTypeUUID, db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar:
 		return gofakeit.UUID()
 	default:
 		// integer-ish PK with no sequence/default behind it
@@ -312,31 +267,11 @@ func generatePKValue(f db.Field) string {
 	}
 }
 
-func needsQuoting(t db.FieldType) bool {
-	switch t {
-	case db.FieldTypeUUID, db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar:
-		return true
-	default:
-		return false
-	}
-}
-
-func valueOrNull(f db.Field, enums map[string]db.EnumType, nullChance float64) string {
-	if f.Nullable && mrand.Float64() < nullChance {
-		return "NULL"
-	}
-	return GenerateFakeValue(f, enums)
-}
-
-func quoteLiteral(s string) string {
-	return "'" + strings.ReplaceAll(s, "'", "''") + "'"
-}
-
-// GenerateFakeValue is unchanged from the GoFakeIt version — enum match,
-// then column-name sniffing, then type-based fallback.
+// GenerateFakeValue returns a fake value for f as text: an enum member, then a
+// value fitting the column name, then one fitting the type.
 func GenerateFakeValue(f db.Field, enums map[string]db.EnumType) string {
 	if enum, ok := enums[string(f.Type)]; ok && len(enum.Values) > 0 {
-		return quoteLiteral(gofakeit.RandomString(enum.Values))
+		return gofakeit.RandomString(enum.Values)
 	}
 	if v, ok := generateByColumnName(f); ok {
 		return v
@@ -345,31 +280,31 @@ func GenerateFakeValue(f db.Field, enums map[string]db.EnumType) string {
 	case db.FieldTypeSerial, db.FieldTypeBigserial, db.FieldTypeInteger, db.FieldTypeBigint, db.FieldTypeSmallint:
 		return fmt.Sprintf("%d", gofakeit.Number(1, 10000))
 	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
-		return fmt.Sprintf("%.2f", gofakeit.Float64Range(0, 10000))
+		return fmt.Sprintf("%.2f", gofakeit.Float64Range(0, 999)) // fits NUMERIC(5,2)
 	case db.FieldTypeBoolean:
 		return fmt.Sprintf("%v", gofakeit.Bool())
 	case db.FieldTypeUUID:
-		return quoteLiteral(gofakeit.UUID())
+		return gofakeit.UUID()
 	case db.FieldTypeDate:
-		return quoteLiteral(gofakeit.Date().Format("2006-01-02"))
+		return gofakeit.Date().Format("2006-01-02")
 	case db.FieldTypeTime:
-		return quoteLiteral(gofakeit.Date().Format("15:04:05"))
+		return gofakeit.Date().Format("15:04:05")
 	case db.FieldTypeTimestamp:
-		return quoteLiteral(gofakeit.Date().Format("2006-01-02 15:04:05"))
+		return gofakeit.Date().Format("2006-01-02 15:04:05")
 	case db.FieldTypeTimestamptz:
-		return quoteLiteral(gofakeit.Date().Format("2006-01-02 15:04:05-07"))
+		return gofakeit.Date().Format("2006-01-02 15:04:05-07")
 	case db.FieldTypeInterval:
-		return quoteLiteral(fmt.Sprintf("%d days", gofakeit.Number(1, 30)))
+		return fmt.Sprintf("%d days", gofakeit.Number(1, 30))
 	case db.FieldTypeJSON, db.FieldTypeJSONB:
-		return quoteLiteral(fmt.Sprintf(`{"seed": %d}`, gofakeit.Number(1, 1000)))
+		return fmt.Sprintf(`{"seed": %d}`, gofakeit.Number(1, 1000))
 	case db.FieldTypeBytea:
-		return quoteLiteral(fmt.Sprintf(`\x%x`, gofakeit.LetterN(16)))
+		return fmt.Sprintf(`\x%x`, gofakeit.LetterN(16))
 	case db.FieldTypeChar:
-		return quoteLiteral(gofakeit.Letter())
+		return gofakeit.Letter()
 	case db.FieldTypeText:
-		return quoteLiteral(gofakeit.Sentence(8))
+		return gofakeit.Sentence(8)
 	default: // varchar and anything else string-shaped
-		return quoteLiteral(gofakeit.Word())
+		return gofakeit.Word()
 	}
 }
 
@@ -381,43 +316,43 @@ func generateByColumnName(f db.Field) (string, bool) {
 
 	switch {
 	case strings.Contains(name, "email"):
-		return quoteLiteral(gofakeit.Email()), true
+		return gofakeit.Email(), true
 	case strings.Contains(name, "first_name") || name == "firstname":
-		return quoteLiteral(gofakeit.FirstName()), true
+		return gofakeit.FirstName(), true
 	case strings.Contains(name, "last_name") || name == "lastname":
-		return quoteLiteral(gofakeit.LastName()), true
+		return gofakeit.LastName(), true
 	case name == "name" || strings.HasSuffix(name, "_name"):
-		return quoteLiteral(gofakeit.Name()), true
+		return gofakeit.Name(), true
 	case strings.Contains(name, "username"):
-		return quoteLiteral(gofakeit.Username()), true
+		return gofakeit.Username(), true
 	case strings.Contains(name, "phone"):
-		return quoteLiteral(gofakeit.Phone()), true
+		return gofakeit.Phone(), true
 	case strings.Contains(name, "company"):
-		return quoteLiteral(gofakeit.Company()), true
+		return gofakeit.Company(), true
 	case strings.Contains(name, "address") && !strings.Contains(name, "email"):
-		return quoteLiteral(gofakeit.Street()), true
+		return gofakeit.Street(), true
 	case strings.Contains(name, "city"):
-		return quoteLiteral(gofakeit.City()), true
+		return gofakeit.City(), true
 	case strings.Contains(name, "state"):
-		return quoteLiteral(gofakeit.State()), true
+		return gofakeit.State(), true
 	case strings.Contains(name, "country"):
-		return quoteLiteral(gofakeit.Country()), true
+		return gofakeit.Country(), true
 	case strings.Contains(name, "zip") || strings.Contains(name, "postal"):
-		return quoteLiteral(gofakeit.Zip()), true
+		return gofakeit.Zip(), true
 	case strings.Contains(name, "url") || strings.Contains(name, "website"):
-		return quoteLiteral(gofakeit.URL()), true
+		return gofakeit.URL(), true
 	case strings.Contains(name, "title"):
-		return quoteLiteral(gofakeit.JobTitle()), true
+		return gofakeit.JobTitle(), true
 	case strings.Contains(name, "description") || strings.Contains(name, "bio"):
-		return quoteLiteral(gofakeit.Sentence(12)), true
+		return gofakeit.Sentence(12), true
 	case strings.Contains(name, "slug"):
-		return quoteLiteral(strings.ToLower(gofakeit.Word() + "-" + gofakeit.Word())), true
+		return strings.ToLower(gofakeit.Word() + "-" + gofakeit.Word()), true
 	case strings.Contains(name, "color"):
-		return quoteLiteral(gofakeit.Color()), true
+		return gofakeit.Color(), true
 	case strings.Contains(name, "currency"):
-		return quoteLiteral(gofakeit.CurrencyShort()), true
+		return gofakeit.CurrencyShort(), true
 	case strings.Contains(name, "avatar") || strings.Contains(name, "image") || strings.Contains(name, "photo"):
-		return quoteLiteral(gofakeit.URL()), true
+		return gofakeit.URL(), true
 	}
 	return "", false
 }

@@ -178,11 +178,18 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   and cells quoted on comma/quote/CR/LF; text starting `= + - @ TAB CR` gets a `'` prefix
   (OWASP), except plain numbers so `-5` and bigint strings survive. Download has a UTF-8
   BOM for Excel.
+- fix(seed): inserts are parameterized and converted like cell edits (`db.SeedTx.Insert`;
+  `db.SQLSeedTx` serves SQLite/MySQL, pgx for Postgres): binary was stored as `\x` text
+  and SQLite booleans as text. Each row runs in a savepoint; a row the database rejects
+  (unique/check) is regenerated up to 5 times, then skipped and reported (`skipped`,
+  `problems` in the API and seed modal) instead of aborting the whole seed.
+  `Provider.EmptyInsertSQL` removed. Decimal fallback fits NUMERIC(5,2).
 
 ## Next 3 steps
 
-1. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
-   constraints, enums per dialect (may split in 2-3 commits).
+1. fix(seed): self-referential/cyclic FKs (NULL then backfill UPDATE), composite FKs
+   (whole parent tuple), enums per dialect (SQLite CHECK IN), unique values generated
+   distinct up front. Then step 17.
 2. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
    (SQLite autoIncrement on non-rowid INT PKs, Postgres formatDefault paren, composite FKs).
 3. End of Stage 2: summarize commits, ask before Stage 3.

@@ -49,6 +49,17 @@ func TestConformance(t *testing.T) {
 				"typeof(flag)": "integer", "typeof(js)": "text", "typeof(blank)": "null",
 			},
 		},
+		Seed: dbtest.Seed{
+			Setup: []string{
+				`CREATE TABLE files (id INTEGER PRIMARY KEY, data BLOB NOT NULL)`,
+				`CREATE TABLE flags (id INTEGER PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
+				`CREATE TABLE scores (id INTEGER PRIMARY KEY, n INTEGER NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+			},
+			Stored: map[string]string{
+				"SELECT COUNT(*) FROM files WHERE typeof(data) <> 'blob'":      "0",
+				"SELECT COUNT(*) FROM flags WHERE typeof(on_off) <> 'integer'": "0",
+			},
+		},
 		Keys: dbtest.Keys{
 			Setup: []string{
 				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,

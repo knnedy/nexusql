@@ -39,10 +39,12 @@ func (k ProviderKind) Validate() error {
 	}
 }
 
-// SeedTx represents an open transaction used for seeding.
+// SeedTx is an open seeding transaction. Each Insert runs in its own
+// savepoint, so a row the database rejects leaves the transaction usable.
 type SeedTx interface {
-	InsertReturningPK(ctx context.Context, sql string, pkColumn string) (string, error)
-	Exec(ctx context.Context, sql string) error
+	// Insert adds a row of t, converting values like cell edits (nil: NULL),
+	// and returns the database-assigned values of the auto fields, in order.
+	Insert(ctx context.Context, t Table, fields []Field, values []*string, auto []Field) ([]string, error)
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
@@ -114,12 +116,6 @@ type Provider interface {
 	// the provider uses one (Postgres). Providers with no schema concept
 	// (MySQL, SQLite) ignore Table.Schema and behave like QuoteIdentifier.
 	QuoteTable(t Table) string
-
-	// EmptyInsertSQL returns the dialect-correct statement for inserting a
-	// single all-default row (no explicit columns). Postgres and SQLite
-	// both use "INSERT INTO t DEFAULT VALUES"; MySQL has no DEFAULT VALUES
-	// syntax and requires "INSERT INTO t () VALUES ()" instead.
-	EmptyInsertSQL(t Table) string
 
 	// DefaultSchema returns the schema name to introspect when the caller
 	// doesn't specify one. Postgres returns "public"; MySQL and SQLite have

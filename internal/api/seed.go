@@ -12,7 +12,9 @@ type seedRequest struct {
 }
 
 type seedResponse struct {
-	RowsInserted map[string]int `json:"rowsInserted"`
+	RowsInserted map[string]int    `json:"rowsInserted"`
+	Skipped      map[string]int    `json:"skipped"`  // rows the database rejected on every try
+	Problems     map[string]string `json:"problems"` // why a table's last row was rejected
 }
 
 func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
@@ -37,5 +39,7 @@ func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, seedResponse{RowsInserted: result.RowsInserted})
+	writeJSON(w, http.StatusOK, seedResponse{
+		RowsInserted: result.RowsInserted, Skipped: result.Skipped, Problems: result.Problems,
+	})
 }

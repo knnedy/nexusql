@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/seed"
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
@@ -153,41 +152,6 @@ func testQuery(t *testing.T, h Harness) {
 		cancel()
 		if _, err := Script(cctx, p, "SELECT email FROM users", 0); err == nil {
 			t.Fatal("expected an error from a cancelled context")
-		}
-	})
-}
-
-func testSeed(t *testing.T, h Harness) {
-	ctx := context.Background()
-	p := setup(t, h)
-	schema, err := p.IntrospectSchema(ctx, p.DefaultSchema())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	res, err := seed.Run(ctx, p, schema, seed.Options{RowsPerTable: 5, NullChance: 0.5})
-	if err != nil {
-		t.Fatalf("seed: %v", err)
-	}
-
-	t.Run("inserts rows per table", func(t *testing.T) {
-		if res.RowsInserted["users"] != 5 || res.RowsInserted["posts"] != 5 {
-			t.Fatalf("RowsInserted = %v, want 5 each", res.RowsInserted)
-		}
-		_, rows, total, err := page(t, p, "posts", 1, 0, "", db.SortAsc, "")
-		if err != nil || total != 8 || len(rows) != 1 {
-			t.Fatalf("posts total = %d (err %v), want 3 fixture + 5 seeded", total, err)
-		}
-	})
-
-	t.Run("seeded foreign keys reference existing rows", func(t *testing.T) {
-		res, err := Script(ctx, p,
-			"SELECT COUNT(*) AS orphans FROM posts WHERE user_id NOT IN (SELECT id FROM users)", 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got := str(res.Rows[0]["orphans"]); got != "0" {
-			t.Fatalf("orphaned posts = %s, want 0", got)
 		}
 	})
 }

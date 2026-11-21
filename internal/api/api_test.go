@@ -159,3 +159,25 @@ func TestReadOnlySwitch(t *testing.T) {
 		t.Errorf("edit while read-only: %d %s, want 409", w.Code, w.Body)
 	}
 }
+
+func TestSeedReportsSkippedRows(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "seed.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"seed"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	call(h, "POST", "/query", `{"sql":"CREATE TABLE flags (id INTEGER PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)","confirmed":true}`)
+
+	w := call(h, "POST", "/seed", `{"rowsPerTable":4}`)
+	var res struct {
+		RowsInserted map[string]int    `json:"rowsInserted"`
+		Skipped      map[string]int    `json:"skipped"`
+		Problems     map[string]string `json:"problems"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("seed: %d %s", w.Code, w.Body)
+	}
+	if res.RowsInserted["flags"] != 2 || res.Skipped["flags"] != 2 || !strings.Contains(res.Problems["flags"], "UNIQUE") {
+		t.Fatalf("seed = %s, want 2 inserted, 2 skipped and the reason", w.Body)
+	}
+}

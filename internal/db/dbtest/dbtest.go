@@ -21,6 +21,8 @@ type Harness struct {
 	Values Values
 	// Keys exercises composite and auto-generated key introspection.
 	Keys Keys
+	// Seed exercises the seeder on constrained tables.
+	Seed Seed
 }
 
 // Run executes every conformance test against the harness.
@@ -30,6 +32,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Update", func(t *testing.T) { testUpdate(t, h) })
 	t.Run("Query", func(t *testing.T) { testQuery(t, h) })
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })
+	t.Run("SeedConstraints", func(t *testing.T) { testSeedConstraints(t, h) })
 	t.Run("Export", func(t *testing.T) { testExport(t, h) })
 	t.Run("Quoting", func(t *testing.T) { testQuoting(t, h) })
 	t.Run("Values", func(t *testing.T) { testValues(t, h) })

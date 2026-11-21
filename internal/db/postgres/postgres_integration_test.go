@@ -48,6 +48,13 @@ func TestConformance(t *testing.T) {
 				"u": `"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"`, "blank": `null`,
 			},
 		},
+		Seed: dbtest.Seed{
+			Setup: []string{
+				`CREATE TABLE files (id SERIAL PRIMARY KEY, data BYTEA NOT NULL)`,
+				`CREATE TABLE flags (id SERIAL PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
+				`CREATE TABLE scores (id SERIAL PRIMARY KEY, n INTEGER NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+			},
+		},
 		Keys: dbtest.Keys{
 			Setup: []string{
 				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,

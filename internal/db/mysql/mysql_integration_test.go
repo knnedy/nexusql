@@ -51,6 +51,13 @@ func TestConformance(t *testing.T) {
 				"blank": `null`,
 			},
 		},
+		Seed: dbtest.Seed{
+			Setup: []string{
+				`CREATE TABLE files (id INT AUTO_INCREMENT PRIMARY KEY, data VARBINARY(64) NOT NULL)`,
+				`CREATE TABLE flags (id INT AUTO_INCREMENT PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
+				`CREATE TABLE scores (id INT AUTO_INCREMENT PRIMARY KEY, n INT NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+			},
+		},
 		Keys: dbtest.Keys{
 			Setup: []string{
 				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,

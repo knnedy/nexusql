@@ -136,6 +136,19 @@ export default function SeedDataModal({ open, onClose }: SeedDataModalProps) {
                   <span>{count} rows</span>
                 </div>
               ))}
+              {Object.entries(result.skipped ?? {}).map(([table, count]) => (
+                <div
+                  key={table}
+                  className="flex flex-col gap-0.5 text-[10.5px] font-mono text-coral pl-5">
+                  <div className="flex items-center justify-between">
+                    <span>{table}</span>
+                    <span>{count} skipped</span>
+                  </div>
+                  <span className="text-coral/80 break-words">
+                    {result.problems?.[table]}
+                  </span>
+                </div>
+              ))}
             </div>
           )}
         </div>

@@ -3,13 +3,15 @@ package postgres
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/knnedy/nexusql/internal/db"
 )
 
 type seedTx struct {
-	tx pgx.Tx
+	tx         pgx.Tx
+	quoteTable func(db.Table) string
 }
 
 func (p *provider) BeginSeedTx(ctx context.Context) (db.SeedTx, error) {
@@ -17,38 +19,55 @@ func (p *provider) BeginSeedTx(ctx context.Context) (db.SeedTx, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to begin seed transaction: %w", err)
 	}
-	return &seedTx{tx: tx}, nil
+	return &seedTx{tx: tx, quoteTable: p.QuoteTable}, nil
 }
 
-func (s *seedTx) Exec(ctx context.Context, sqlStmt string) error {
-	if _, err := s.tx.Exec(ctx, sqlStmt); err != nil {
-		return fmt.Errorf("exec failed: %w", err)
+func (s *seedTx) Insert(ctx context.Context, t db.Table, fields []db.Field, values []*string, auto []db.Field) (out []string, err error) {
+	sp, err := s.tx.Begin(ctx) // a savepoint: a rejected row leaves the seed usable
+	if err != nil {
+		return nil, err
 	}
-	return nil
-}
+	defer func() {
+		if err != nil {
+			_ = sp.Rollback(ctx)
+		} else {
+			err = sp.Commit(ctx)
+		}
+	}()
 
-func (s *seedTx) InsertReturningPK(ctx context.Context, sqlStmt string, pkColumn string) (string, error) {
-	full := fmt.Sprintf("%s RETURNING %s", sqlStmt, pgx.Identifier{pkColumn}.Sanitize())
-
-	var pk any
-	if err := s.tx.QueryRow(ctx, full).Scan(&pk); err != nil {
-		return "", fmt.Errorf("insert failed: %w", err)
+	cols := make([]string, len(fields))
+	marks := make([]string, len(fields))
+	args := make([]any, len(fields))
+	for i, f := range fields {
+		// pgx sends text for any column type; a nil *string is NULL
+		cols[i], marks[i], args[i] = pgx.Identifier{f.Name}.Sanitize(), fmt.Sprintf("$%d", i+1), values[i]
 	}
-	return formatPKValue(pk), nil
+	query := db.InsertSQL(s.quoteTable(t), cols, marks, "DEFAULT VALUES")
+	if len(auto) == 0 {
+		_, err = sp.Exec(ctx, query, args...)
+		return nil, err
+	}
+	names := make([]string, len(auto))
+	for i, f := range auto {
+		names[i] = pgx.Identifier{f.Name}.Sanitize()
+	}
+	got := make([]any, len(auto))
+	ptrs := make([]any, len(auto))
+	for i := range got {
+		ptrs[i] = &got[i]
+	}
+	if err = sp.QueryRow(ctx, query+" RETURNING "+strings.Join(names, ", "), args...).Scan(ptrs...); err != nil {
+		return nil, err
+	}
+	out = make([]string, len(got))
+	for i, v := range got {
+		out[i] = formatPKValue(v)
+	}
+	return out, nil
 }
 
-func (s *seedTx) Commit(ctx context.Context) error {
-	return s.tx.Commit(ctx)
-}
-
-func (s *seedTx) Rollback(ctx context.Context) error {
-	return s.tx.Rollback(ctx)
-}
-
-// QuoteIdentifier, QuoteTable, and EmptyInsertSQL were previously
-// free-standing functions in seed/seed.go (quoteIdent, quoteTable, and an
-// inline "INSERT INTO t DEFAULT VALUES" literal). Moved onto the provider
-// per the shared Provider interface, unchanged in behavior for Postgres.
+func (s *seedTx) Commit(ctx context.Context) error   { return s.tx.Commit(ctx) }
+func (s *seedTx) Rollback(ctx context.Context) error { return s.tx.Rollback(ctx) }
 
 func (p *provider) QuoteIdentifier(name string) string {
 	return pgx.Identifier{name}.Sanitize()
@@ -59,10 +78,6 @@ func (p *provider) QuoteTable(t db.Table) string {
 		return p.QuoteIdentifier(t.Name)
 	}
 	return pgx.Identifier{t.Schema, t.Name}.Sanitize()
-}
-
-func (p *provider) EmptyInsertSQL(t db.Table) string {
-	return fmt.Sprintf("INSERT INTO %s DEFAULT VALUES", p.QuoteTable(t))
 }
 
 // formatPKValue converts a scanned primary key into the string form needed
