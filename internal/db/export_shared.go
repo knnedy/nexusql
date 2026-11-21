@@ -16,12 +16,14 @@ func IsUserTable(name string) bool {
 	return !migrationTables[name]
 }
 
-// BuildRelationLookup indexes relations by "sourceTable.sourceField" for
-// O(1) lookup when walking a table's fields during export.
+// BuildRelationLookup indexes single-column relations by "sourceTable.sourceField";
+// exporters cannot express composite keys yet, so those are left out.
 func BuildRelationLookup(relations []Relation) map[string]Relation {
 	m := make(map[string]Relation, len(relations))
 	for _, r := range relations {
-		m[r.SourceTable+"."+r.SourceField] = r
+		if !r.IsComposite() {
+			m[r.SourceTable+"."+r.SourceField] = r
+		}
 	}
 	return m
 }

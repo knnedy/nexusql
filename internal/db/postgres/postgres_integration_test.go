@@ -45,5 +45,21 @@ func TestConformance(t *testing.T) {
 				"u": `"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"`, "blank": `null`,
 			},
 		},
+		Keys: dbtest.Keys{
+			Setup: []string{
+				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,
+				`CREATE TABLE child (id INTEGER PRIMARY KEY, pa INTEGER, pb INTEGER,
+					FOREIGN KEY (pa, pb) REFERENCES parent (a, b))`,
+				`CREATE TABLE identity_key (id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY, v TEXT)`,
+				`CREATE TABLE serial_key (id SERIAL PRIMARY KEY, v TEXT)`,
+				// Same constraint name on two tables must not cross-flag columns.
+				`CREATE TABLE twin_a (x INT, y INT, CONSTRAINT twin PRIMARY KEY (x))`,
+				`CREATE TABLE twin_b (x INT, y INT, CONSTRAINT twin FOREIGN KEY (x) REFERENCES twin_a (x))`,
+			},
+			Auto: map[string]bool{
+				"identity_key.id": true, "serial_key.id": true, "child.id": false, "parent.a": false,
+			},
+			PK: map[string]bool{"twin_a.x": true, "twin_b.x": false},
+		},
 	})
 }

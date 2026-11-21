@@ -47,5 +47,19 @@ func TestConformance(t *testing.T) {
 				"typeof(flag)": "integer", "typeof(js)": "text", "typeof(blank)": "null",
 			},
 		},
+		Keys: dbtest.Keys{
+			Setup: []string{
+				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,
+				`CREATE TABLE child (id INTEGER PRIMARY KEY, pa INTEGER, pb INTEGER,
+					FOREIGN KEY (pa, pb) REFERENCES parent (a, b))`,
+				`CREATE TABLE rowid_alias (id INTEGER PRIMARY KEY, v TEXT)`,
+				`CREATE TABLE int_key (id INT PRIMARY KEY, v TEXT)`,
+			},
+			// Only a column declared exactly INTEGER PRIMARY KEY aliases the rowid.
+			Auto: map[string]bool{
+				"rowid_alias.id": true, "int_key.id": false, "child.id": true,
+				"parent.a": false, "parent.b": false,
+			},
+		},
 	})
 }

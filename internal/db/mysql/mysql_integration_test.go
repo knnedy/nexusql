@@ -51,5 +51,14 @@ func TestConformance(t *testing.T) {
 				"blank": `null`,
 			},
 		},
+		Keys: dbtest.Keys{
+			Setup: []string{
+				`CREATE TABLE parent (a INTEGER, b INTEGER, PRIMARY KEY (a, b))`,
+				`CREATE TABLE child (id INTEGER PRIMARY KEY, pa INTEGER, pb INTEGER,
+					FOREIGN KEY (pa, pb) REFERENCES parent (a, b))`,
+				`CREATE TABLE auto_key (id INT AUTO_INCREMENT PRIMARY KEY, v TEXT)`,
+			},
+			Auto: map[string]bool{"auto_key.id": true, "child.id": false, "parent.a": false},
+		},
 	})
 }

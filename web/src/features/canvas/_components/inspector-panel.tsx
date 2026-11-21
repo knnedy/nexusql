@@ -18,6 +18,7 @@ import { codeToHtml } from "shiki";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
 import { normalizeFieldType } from "@/shared/lib/utils";
+import { buildDdl } from "@/features/canvas/lib/ddl";
 import {
   Field,
   FIELD_TYPE_BADGE_MAP,
@@ -160,40 +161,6 @@ function IndexRow({ entry }: { entry: IndexEntry }) {
       </div>
     </div>
   );
-}
-
-function buildDdl(
-  table: Table,
-  provider: DatabaseProvider | null,
-  relations: Relation[],
-): string {
-  const q = provider === "mysql" ? "`" : '"';
-  const schemaPrefix =
-    table.schema && table.schema !== "public" ? `${q}${table.schema}${q}.` : "";
-
-  const relLookup = new Map(
-    relations.map((r) => [`${r.sourceTable}.${r.sourceField}`, r]),
-  );
-
-  const lines = table.fields.map((f) => {
-    const parts: string[] = [`  ${q}${f.name}${q}`, f.type.toUpperCase()];
-    if (f.isPrimaryKey) parts.push("PRIMARY KEY");
-    if (!f.nullable && !f.isPrimaryKey) parts.push("NOT NULL");
-    if (f.defaultValue) parts.push(`DEFAULT ${f.defaultValue}`);
-    return parts.join(" ");
-  });
-
-  const fkLines = table.fields
-    .filter((f) => f.isForeignKey)
-    .map((f) => {
-      const rel = relLookup.get(`${table.name}.${f.name}`);
-      if (rel) {
-        return `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES ${q}${rel.targetTable}${q} (${q}${rel.targetField}${q})`;
-      }
-      return `  FOREIGN KEY (${q}${f.name}${q}) REFERENCES -- unknown`;
-    });
-
-  return `CREATE TABLE ${schemaPrefix}${q}${table.name}${q} (\n${[...lines, ...fkLines].join(",\n")}\n);`;
 }
 
 function DdlBlock({ code }: { code: string }) {

@@ -346,7 +346,8 @@ export default function DataGrid({
     () =>
       new Map(
         relations
-          .filter((r) => r.sourceTable === tableName)
+          // composite keys cannot be followed from one cell
+          .filter((r) => r.sourceTable === tableName && r.sourceFields.length === 1)
           .map((r) => [r.sourceField, r]),
       ),
     [relations, tableName],
