@@ -3,6 +3,7 @@ package sqlite_test
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -238,5 +239,70 @@ func TestForeignKeysStayEnforcedAfterAConsoleRun(t *testing.T) {
 				t.Fatal("orphan row inserted: foreign keys are off after the earlier run")
 			}
 		})
+	}
+}
+
+func TestFilesConfinedToTheRoot(t *testing.T) {
+	ctx := context.Background()
+	root, outside := t.TempDir(), t.TempDir()
+	if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
+		t.Fatal(err)
+	}
+	opts := db.Options{FileRoot: root}
+	for _, c := range []struct {
+		path string
+		ok   bool
+	}{
+		{filepath.Join(root, "in.db"), true},
+		{filepath.Join(root, "new", "..", "in.db"), true},
+		{filepath.Join(outside, "out.db"), false},
+		{filepath.Join(root, "..", filepath.Base(outside), "out.db"), false},
+		{filepath.Join(root, "escape", "out.db"), false},
+	} {
+		p, err := sqlite.ConnectWith(ctx, "sqlite://"+c.path, opts)
+		if (err == nil) != c.ok {
+			t.Errorf("%s: err = %v, want allowed = %v", c.path, err, c.ok)
+		}
+		if p != nil {
+			p.Close()
+		}
+	}
+}
+
+func TestNoFilesLeavesOnlyMemory(t *testing.T) {
+	ctx := context.Background()
+	opts := db.Options{NoFiles: true}
+	if _, err := sqlite.ConnectWith(ctx, "sqlite://"+filepath.Join(t.TempDir(), "x.db"), opts); err == nil {
+		t.Fatal("opened a file while files are disabled")
+	}
+	p, err := sqlite.ConnectWith(ctx, "sqlite://:memory:", opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	target := filepath.Join(t.TempDir(), "other.db")
+	for _, sql := range []string{
+		"ATTACH DATABASE '" + target + "' AS other",
+		"/* x */ attach '" + target + "' AS other",
+		"VACUUM INTO '" + target + "'",
+	} {
+		if _, err := dbtest.Script(ctx, p, sql, 0); err == nil {
+			t.Errorf("%q ran while files are confined", sql)
+		}
+	}
+	if _, err := os.Stat(target); err == nil {
+		t.Error("a file was written outside the root")
+	}
+}
+
+func TestUnconfinedConsoleMayAttach(t *testing.T) {
+	ctx := context.Background()
+	p, err := sqlite.Connect(ctx, "sqlite://:memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	if _, err := dbtest.Script(ctx, p, "ATTACH DATABASE ':memory:' AS other", 0); err != nil {
+		t.Fatalf("local use lost ATTACH: %v", err)
 	}
 }

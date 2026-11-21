@@ -19,7 +19,7 @@ func TestShutdownClosesTheDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn, err := db.Connect(context.Background(), "sqlite://"+filepath.Join(t.TempDir(), "a.db"))
+	conn, err := db.Connect(context.Background(), "sqlite://"+filepath.Join(t.TempDir(), "a.db"), db.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

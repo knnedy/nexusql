@@ -49,6 +49,12 @@ func (s Statement) LeavesReadOnly() bool {
 	return false
 }
 
+// Starts reports whether the statement's first word is word (upper case).
+func (s Statement) Starts(word string) bool { return len(s.words) > 0 && s.words[0] == word }
+
+// Has reports whether word (upper case) appears outside strings and comments.
+func (s Statement) Has(word string) bool { return slices.Contains(s.words, word) }
+
 // AnyWrite reports whether any statement may write.
 func AnyWrite(stmts []Statement) bool {
 	for _, s := range stmts {

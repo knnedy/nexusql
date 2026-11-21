@@ -136,7 +136,18 @@ type Connection struct {
 	URI  string
 }
 
-type providerConstructor func(ctx context.Context, uri string) (Provider, error)
+// Options limit what a connection may open.
+type Options struct {
+	// FileRoot confines file-backed databases to this directory ("" leaves them anywhere).
+	FileRoot string
+	// NoFiles refuses file-backed databases; in-memory ones stay available.
+	NoFiles bool
+}
+
+// Confined reports whether file access is restricted.
+func (o Options) Confined() bool { return o.NoFiles || o.FileRoot != "" }
+
+type providerConstructor func(ctx context.Context, uri string, opts Options) (Provider, error)
 
 var registry = map[ProviderKind]providerConstructor{}
 
@@ -147,7 +158,7 @@ func Register(kind ProviderKind, constructor providerConstructor) {
 	registry[kind] = constructor
 }
 
-func Connect(ctx context.Context, uri string) (*Connection, error) {
+func Connect(ctx context.Context, uri string, opts Options) (*Connection, error) {
 	kind, err := DetectProviderKind(uri)
 	if err != nil {
 		return nil, err
@@ -158,7 +169,7 @@ func Connect(ctx context.Context, uri string) (*Connection, error) {
 		return nil, fmt.Errorf("provider not yet supported: %s", kind)
 	}
 
-	impl, err := constructor(ctx, uri)
+	impl, err := constructor(ctx, uri, opts)
 	if err != nil {
 		return nil, err
 	}

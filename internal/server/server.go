@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/api"
+	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
 	"github.com/knnedy/nexusql/internal/studio"
@@ -27,6 +28,7 @@ type Options struct {
 	Projects projects.Store
 	// QueryTimeout bounds each database statement; 0 uses studio's default.
 	QueryTimeout time.Duration
+	Files        db.Options // which database files connections may open
 }
 
 // Server is the HTTP server plus the database session it closes on exit.
@@ -39,7 +41,7 @@ type Server struct {
 func New(o Options) *Server {
 	r := chi.NewRouter()
 	r.Use(guard(o))
-	r.Mount("/api", api.Router(studio.New(o.Session, o.Projects, studio.Config{QueryTimeout: o.QueryTimeout}), api.Config{IsDev: o.IsDev, Version: o.Version}))
+	r.Mount("/api", api.Router(studio.New(o.Session, o.Projects, studio.Config{QueryTimeout: o.QueryTimeout, Files: o.Files}), api.Config{IsDev: o.IsDev, Version: o.Version}))
 	r.Handle("/*", ui.Handler())
 
 	queryTimeout := o.QueryTimeout

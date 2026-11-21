@@ -28,7 +28,7 @@ func (s *Service) Connect(ctx context.Context, uri, name string) (ConnectResult,
 
 	cctx, cancel := context.WithTimeout(ctx, s.cfg.ConnectTimeout)
 	defer cancel()
-	conn, err := db.Connect(cctx, uri)
+	conn, err := db.Connect(cctx, uri, s.cfg.Files)
 	if err != nil {
 		if errors.Is(cctx.Err(), context.DeadlineExceeded) {
 			err = fmt.Errorf("no answer within %s: %w", s.cfg.ConnectTimeout, err)

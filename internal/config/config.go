@@ -7,6 +7,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
+
+	"github.com/knnedy/nexusql/internal/db"
 )
 
 // Flags are the raw command-line values.
@@ -14,6 +17,8 @@ type Flags struct {
 	Host   string
 	Port   string
 	Expose bool // explicit opt-in to bind a non-loopback interface
+	// SQLiteDir confines SQLite files to one directory; required to use them when exposed.
+	SQLiteDir string
 }
 
 // Config is the validated runtime configuration.
@@ -23,6 +28,7 @@ type Config struct {
 	IsDev  bool
 	Expose bool
 	Token  string // required on every request when Expose is set
+	Files  db.Options
 }
 
 // Load validates flags; binding beyond loopback requires Expose and yields a token.
@@ -44,6 +50,20 @@ func Load(f Flags) (Config, error) {
 		return Config{}, fmt.Errorf(
 			"refusing to bind %s: it is reachable from other machines and NexusQL has full database access; pass -expose to allow it (an access token will be required)",
 			cfg.Host)
+	}
+
+	switch {
+	case f.SQLiteDir != "":
+		dir, err := filepath.Abs(f.SQLiteDir)
+		if err != nil {
+			return Config{}, fmt.Errorf("-sqlite-dir: %w", err)
+		}
+		if info, err := os.Stat(dir); err != nil || !info.IsDir() {
+			return Config{}, fmt.Errorf("-sqlite-dir %s is not an existing directory", f.SQLiteDir)
+		}
+		cfg.Files.FileRoot = dir
+	case f.Expose: // anyone with the token could otherwise open any file
+		cfg.Files.NoFiles = true
 	}
 
 	if f.Expose {

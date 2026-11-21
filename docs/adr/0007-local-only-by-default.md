@@ -31,3 +31,6 @@ rebinding (attacker hostname resolving to 127.0.0.1) or by sending cross-site PO
 - Exposed use needs the printed URL once per browser; the token rotates on restart.
 - No TLS: on untrusted networks, exposed mode should sit behind an SSH tunnel or a
   TLS proxy. The token travels in clear text over plain HTTP.
+- Exposed mode opens no SQLite files unless `-sqlite-dir` names a directory, and then only
+  files inside it (symlinks resolved); a confined console refuses `ATTACH` and
+  `VACUUM INTO`. Otherwise a token holder could read or write any file the process can.

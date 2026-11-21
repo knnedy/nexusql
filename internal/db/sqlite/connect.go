@@ -3,8 +3,10 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"net/url"
+	"path/filepath"
 	"strings"
 
 	_ "modernc.org/sqlite"
@@ -15,10 +17,11 @@ import (
 type provider struct {
 	conn     *sql.DB
 	inMemory bool // its one connection is the database; never close it early
+	confined bool // the console may not reach other files (ATTACH, VACUUM INTO)
 }
 
 func init() {
-	db.Register(db.ProviderKindSQLite, Connect)
+	db.Register(db.ProviderKindSQLite, ConnectWith)
 	db.RegisterExporter(db.ProviderKindSQLite, exporter{})
 }
 
@@ -27,9 +30,20 @@ func init() {
 // "sqlite:///absolute/path/to/file.db", or "sqlite://:memory:" for an
 // ephemeral in-memory database.
 func Connect(ctx context.Context, uri string) (db.Provider, error) {
+	return ConnectWith(ctx, uri, db.Options{})
+}
+
+// ConnectWith is Connect with file access limited by opts. A file that does
+// not exist yet is created, as long as it would sit inside the root.
+func ConnectWith(ctx context.Context, uri string, opts db.Options) (db.Provider, error) {
 	path, err := extractPath(uri)
 	if err != nil {
 		return nil, err
+	}
+	if path != ":memory:" {
+		if err := allowed(path, opts); err != nil {
+			return nil, err
+		}
 	}
 
 	conn, err := sql.Open("sqlite", dsn(path))
@@ -46,7 +60,35 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 		return nil, fmt.Errorf("database unreachable: %w", err)
 	}
 
-	return &provider{conn: conn, inMemory: path == ":memory:"}, nil
+	return &provider{conn: conn, inMemory: path == ":memory:", confined: opts.Confined()}, nil
+}
+
+// allowed checks path against opts, resolving symlinks so a link inside the
+// root cannot point outside it.
+func allowed(path string, opts db.Options) error {
+	if opts.NoFiles {
+		return errors.New("SQLite files are disabled while NexusQL is exposed; start it with -sqlite-dir to allow a directory")
+	}
+	if opts.FileRoot == "" {
+		return nil
+	}
+	root, err := filepath.EvalSymlinks(opts.FileRoot)
+	if err != nil {
+		return fmt.Errorf("sqlite directory: %w", err)
+	}
+	dir, err := filepath.EvalSymlinks(filepath.Dir(filepath.Clean(path)))
+	if err != nil {
+		return fmt.Errorf("sqlite path: %w", err)
+	}
+	real := filepath.Join(dir, filepath.Base(path))
+	if resolved, err := filepath.EvalSymlinks(real); err == nil {
+		real = resolved // an existing file may itself be a link
+	}
+	rel, err := filepath.Rel(root, real)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return fmt.Errorf("sqlite path %s is outside the allowed directory %s", path, opts.FileRoot)
+	}
+	return nil
 }
 
 // foreignKeys is set on every new connection: SQLite leaves foreign keys

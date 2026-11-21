@@ -55,6 +55,8 @@ Usage of nexusql:
     	TCP port for the web server (default 7080)
   -query-timeout duration
     	longest a single database statement may run (default 30s)
+  -sqlite-dir string
+    	only open SQLite files in this directory (needed for SQLite when exposed)
   -version
     	print version and exit
 ```

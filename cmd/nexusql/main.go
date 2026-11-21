@@ -78,6 +78,7 @@ func main() {
 	host := flag.String("host", "", "network interface to bind (default 127.0.0.1)")
 	port := flag.String("port", "", "TCP port for the web server (default 7080)")
 	expose := flag.Bool("expose", false, "allow a non-loopback -host; requires an access token")
+	sqliteDir := flag.String("sqlite-dir", "", "only open SQLite files in this directory (needed for SQLite when exposed)")
 	queryTimeout := flag.Duration("query-timeout", studio.DefaultQueryTimeout, "longest a single database statement may run")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
@@ -87,7 +88,7 @@ func main() {
 		return
 	}
 
-	cfg, err := config.Load(config.Flags{Host: *host, Port: *port, Expose: *expose})
+	cfg, err := config.Load(config.Flags{Host: *host, Port: *port, Expose: *expose, SQLiteDir: *sqliteDir})
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -102,6 +103,7 @@ func main() {
 		IsDev:        cfg.IsDev,
 		Token:        cfg.Token,
 		QueryTimeout: *queryTimeout,
+		Files:        cfg.Files,
 		Version:      Version,
 		Session:      session.NewStore(),
 		Projects:     proj,

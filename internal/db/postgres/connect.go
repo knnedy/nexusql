@@ -14,7 +14,9 @@ type provider struct {
 }
 
 func init() {
-	db.Register(db.ProviderKindPostgres, Connect)
+	db.Register(db.ProviderKindPostgres, func(ctx context.Context, uri string, _ db.Options) (db.Provider, error) {
+		return Connect(ctx, uri) // no local files to confine
+	})
 	db.RegisterExporter(db.ProviderKindPostgres, exporter{})
 }
 
