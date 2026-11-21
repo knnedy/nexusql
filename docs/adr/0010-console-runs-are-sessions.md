@@ -40,6 +40,8 @@ console `PRAGMA foreign_keys = OFF` changed it for the whole app.
 - Session state does not carry over between runs: `SET search_path` or a temp table lasts
   for one run. Put the statements that need it in the same run.
 - An unfinished `BEGIN` is rolled back when the run ends, never committed.
+- SQLite connections enforce foreign keys (`_pragma=foreign_keys(1)` on every connection;
+  the kept in-memory session is reset to it), so `PRAGMA foreign_keys = OFF` lasts one run.
 - Statements that return rows but are not recognised (`CALL` with results, `FETCH`) run as
   writes and show a count, not rows.
 - Side effects hidden in functions (`SELECT nextval(...)`, `set_config`) are not seen by

@@ -80,6 +80,12 @@ func testRows(t *testing.T, h Harness) {
 func testUpdate(t *testing.T, h Harness) {
 	p := setup(t, h)
 
+	t.Run("cannot point a foreign key at no row", func(t *testing.T) {
+		if err := update(t, p, "posts", "id", "3", "user_id", "999"); err == nil {
+			t.Fatal("posts.user_id = 999 saved, but no user 999 exists")
+		}
+	})
+
 	t.Run("changes one cell", func(t *testing.T) {
 		if err := update(t, p, "posts", "id", "2", "title", "Edited"); err != nil {
 			t.Fatal(err)

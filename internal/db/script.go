@@ -23,6 +23,7 @@ type SQLSession struct {
 	Scan        func(*sql.Rows, int) (QueryResult, error) // one result set, capped
 	ReadOnlyOn  string                                    // makes the session refuse writes
 	ReadOnlyOff string                                    // undoes ReadOnlyOn on a kept session
+	Reset       string                                    // restores a kept session's settings after any run
 	Keep        bool                                      // the connection is the database (in-memory)
 }
 
@@ -40,6 +41,9 @@ func RunScript(ctx context.Context, s SQLSession, stmts []sqlscan.Statement, opt
 			_, _ = c.ExecContext(bg, "ROLLBACK")
 			if opts.ReadOnly {
 				_, _ = c.ExecContext(bg, s.ReadOnlyOff)
+			}
+			if s.Reset != "" {
+				_, _ = c.ExecContext(bg, s.Reset)
 			}
 		default: // closing ends any transaction, setting or temp table the run left
 			_ = c.Raw(func(any) error { return driver.ErrBadConn })

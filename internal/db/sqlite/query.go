@@ -15,6 +15,7 @@ func (p *provider) ExecuteScript(ctx context.Context, stmts []sqlscan.Statement,
 		Scan:        scanRowsCapped,
 		ReadOnlyOn:  "PRAGMA query_only = ON",
 		ReadOnlyOff: "PRAGMA query_only = OFF",
+		Reset:       foreignKeys,
 		Keep:        p.inMemory,
 	}, stmts, opts)
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"net/url"
 	"strings"
 
 	_ "modernc.org/sqlite"
@@ -31,7 +32,7 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 		return nil, err
 	}
 
-	conn, err := sql.Open("sqlite", path)
+	conn, err := sql.Open("sqlite", dsn(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -46,6 +47,16 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 	}
 
 	return &provider{conn: conn, inMemory: path == ":memory:"}, nil
+}
+
+// foreignKeys is set on every new connection: SQLite leaves foreign keys
+// unenforced unless each connection turns them on.
+const foreignKeys = "PRAGMA foreign_keys = ON"
+
+// dsn opens path as a file: URI (so ? and # in names stay part of the path)
+// with foreign keys enforced on every connection the pool opens.
+func dsn(path string) string {
+	return "file:" + (&url.URL{Path: path}).EscapedPath() + "?_pragma=foreign_keys(1)"
 }
 
 // extractPath strips the "sqlite://" scheme prefix and validates the

@@ -215,3 +215,27 @@ func TestOnlyPlainInListsBecomeAllowedValues(t *testing.T) {
 		}
 	}
 }
+
+func TestForeignKeysStayEnforcedAfterAConsoleRun(t *testing.T) {
+	for _, uri := range []string{"sqlite://" + filepath.Join(t.TempDir(), "fk.db"), "sqlite://:memory:"} {
+		t.Run(uri, func(t *testing.T) {
+			ctx := context.Background()
+			p, err := sqlite.Connect(ctx, uri)
+			if err != nil {
+				t.Fatal(err)
+			}
+			t.Cleanup(p.Close)
+			for _, sql := range []string{
+				"CREATE TABLE a (id INTEGER PRIMARY KEY); CREATE TABLE b (a_id INTEGER REFERENCES a (id))",
+				"PRAGMA foreign_keys = OFF",
+			} {
+				if _, err := dbtest.Script(ctx, p, sql, 0); err != nil {
+					t.Fatalf("%q: %v", sql, err)
+				}
+			}
+			if _, err := dbtest.Script(ctx, p, "INSERT INTO b VALUES (7)", 0); err == nil {
+				t.Fatal("orphan row inserted: foreign keys are off after the earlier run")
+			}
+		})
+	}
+}
