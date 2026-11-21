@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { api } from "@/shared/api/client";
 import { projectsQueryOptions } from "@/hooks/use-projects";
 import { schemaQueryOptions } from "@/shared/hooks/use-schema";
-import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
+import { tableRowsQueryOptions } from "@/shared/hooks/use-table-rows";
 import { useStudioStore } from "@/lib/store/studio-store";
 import { QUERY_KEYS } from "@/shared/api/query-keys";
 import { studioSession } from "@/shared/lib/session-storage";

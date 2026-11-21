@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/shared/api/client";
-import { tableRowsQueryOptions } from "@/hooks/use-table-rows";
+import { tableRowsQueryOptions } from "@/shared/hooks/use-table-rows";
 import { UpdateRowRequest } from "@/shared/types/rows";
 
 export function useUpdateRow(tableName: string) {

@@ -8,8 +8,8 @@ import {
   useTableRows,
   tableRowsQueryOptions,
   DEFAULT_PAGE_SIZE,
-} from "@/hooks/use-table-rows";
-import { useRowLookup, rowLookupQueryOptions } from "@/hooks/use-row-lookup";
+} from "@/shared/hooks/use-table-rows";
+import { useRowLookup, rowLookupQueryOptions } from "@/shared/hooks/use-row-lookup";
 import { useUpdateRow } from "@/hooks/use-update-row";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";

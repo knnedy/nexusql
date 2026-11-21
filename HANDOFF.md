@@ -52,12 +52,16 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   from `shared/components` up to `src/components` (user decision). ADR 0006 updated.
 - refactor(web): sessionStorage keys live only in `shared/lib/session-storage.ts`
   (`studioSession`); call-site fallbacks unchanged.
+- refactor(web): `use-table-rows`/`use-row-lookup` moved to `shared/hooks`: console, seed
+  and disconnect invalidate their caches, so they are shared data access, not Explorer
+  internals (lint rule `prefer-query-options` requires keys from the factories).
 
 ## Next 3 steps
 
-1. refactor(web): move canvas into features/canvas (components into `_components`).
-2. refactor(web): move explorer into features/explorer.
-3. refactor(web): move console/seed/export into their own features.
+1. refactor(web): move console/seed/export into their own features (before canvas, so
+   canvas never imports app/).
+2. refactor(web): move canvas into features/canvas.
+3. refactor(web): move explorer into features/explorer.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
@@ -96,4 +100,7 @@ None.
 - Connect has no timeout; request bodies are unbounded; raw driver errors reach the client.
 - SQLite introspection reports `INTEGER PRIMARY KEY` as nullable with default "AUTOINCREMENT".
 - Active DB connection is not closed on server shutdown (pool lifecycle).
+- `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys
+  are `[["lookup"], ...]`, so the prefix never matches: lookup/export caches survive
+  disconnect (high confidence).
 - React Query keys not scoped by project/connection.
