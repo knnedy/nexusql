@@ -3,8 +3,7 @@
 import Image from "next/image";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
-import ModeSwitcher from "@/features/studio/_components/mode-switcher";
-import DisconnectButton from "@/features/studio/_components/disconnect-button";
+import { DisconnectButton, ModeSwitcher } from "@/features/studio";
 import icon from "@/app/icon.png";
 
 export default function CanvasToolbar() {

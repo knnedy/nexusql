@@ -15,10 +15,10 @@ import {
   Link2,
 } from "lucide-react";
 import { SiPrisma, SiDrizzle } from "react-icons/si";
-import { reapplyLayout } from "@/lib/canvas-utils";
+import { reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { useSchema } from "@/shared/hooks/use-schema";
 import type { Node } from "@xyflow/react";
-import { TableNodeData } from "@/shared/types/canvas";
+import { TableNodeData } from "@/features/canvas/types";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { studioSession } from "@/shared/lib/session-storage";
 

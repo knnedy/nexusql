@@ -30,8 +30,10 @@ web/src/
 
 Import rules:
 - `app` may import `features`, `components`, `shared` and `providers`.
-- A feature may import `shared` and `components`, never another feature's internals. If two features
-  need something, it moves to `shared`.
+- Each feature exposes a public entry point, `features/<name>/index.ts`. Other features
+  and `app` import only `@/features/<name>`; deep paths are private to the feature.
+  Composition (Canvas hosting the console, seed and export UIs) goes through these.
+- If two features need the same data access or state, it moves to `shared`.
 - `shared` and `components` never import `features` or `app`. Exception: static
   assets that Next.js file conventions pin to `app/` (e.g. `app/icon.png`).
 - Component folders are named `_components` everywhere except `src/components`.

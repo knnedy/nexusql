@@ -13,8 +13,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { useStudioStore } from "@/shared/store/studio-store";
-import ModeSwitcher from "@/features/studio/_components/mode-switcher";
-import DisconnectButton from "@/features/studio/_components/disconnect-button";
+import { DisconnectButton, ModeSwitcher } from "@/features/studio";
 import ThemeToggle from "@/components/theme-toggle";
 import icon from "@/app/icon.png";
 

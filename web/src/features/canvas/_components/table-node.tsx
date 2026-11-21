@@ -2,10 +2,10 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { NODE_WIDTH } from "@/lib/canvas-utils";
+import { NODE_WIDTH } from "@/features/canvas/lib/canvas-utils";
 import { Field, FIELD_TYPE_BADGE_MAP } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
-import { TableNodeData } from "@/shared/types/canvas";
+import { TableNodeData } from "@/features/canvas/types";
 
 // Field type badge
 function TypeBadge({ type }: { type: string }) {

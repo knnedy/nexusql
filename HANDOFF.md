@@ -59,12 +59,15 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   (seed modal + use-seed), `features/export` (export preview drawer).
 - refactor(web): `features/studio` (mode switcher, disconnect button, use-disconnect);
   studio store to `shared/store`, `use-projects` to `shared/hooks` (cross-feature).
+- refactor(web): `features/canvas` (canvas-studio, components, canvas-utils, types);
+  `app/studio/canvas/page.tsx` is a thin wrapper. Every feature has an `index.ts` entry
+  point and cross-feature imports go through it (ADR 0006 amended).
 
 ## Next 3 steps
 
-1. refactor(web): move canvas into features/canvas (route page becomes a thin wrapper).
-2. refactor(web): move explorer into features/explorer.
-3. refactor(web): move connect/projects/studio into features; drop src/hooks and src/lib.
+1. refactor(web): move explorer into features/explorer.
+2. refactor(web): move connect and projects into features; drop src/hooks.
+3. docs: README/CONTRIBUTING project structure; preview images to docs/assets.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
