@@ -43,6 +43,7 @@ make go-build  # Go only, no Node needed (serves a "frontend not built" page)
 make test      # go test ./... (SQLite, no Docker needed)
 make test-integration  # same provider suite on Postgres + MySQL containers (needs Docker)
 make check     # everything CI runs
+cd web && pnpm test  # vitest (jsdom); tests sit next to the code as *.test.ts(x)
 make clean     # remove build artifacts
 ```
 

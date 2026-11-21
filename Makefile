@@ -39,7 +39,7 @@ vet:
 	go vet ./...
 
 web-check:
-	cd web && pnpm typecheck && pnpm lint && pnpm build
+	cd web && pnpm typecheck && pnpm lint && pnpm test && pnpm build
 
 # Everything CI runs.
 check: vet test go-build web-check

@@ -80,12 +80,16 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 - test(db): same suite on Postgres 17 and MySQL 8.4 via testcontainers-go
   (`//go:build integration`, `make test-integration`, CI `integration` job). All pass;
   warm run ~20s. One container per package, fresh database per test.
+- test(web): vitest 5 + jsdom; tests colocated as `*.test.ts`. Covers studioSession,
+  normalizeFieldType, formatRelativeTime, exportToCsv (27 tests). `pnpm test` runs in
+  `make web-check` and CI. Web seams confirmed: pure modules, hooks + query cache,
+  components (Testing Library), e2e (Playwright, lands with step 13).
 
 ## Next 3 steps
 
-1. test(web): vitest + tests for session-storage, utils, csv.
-2. fix(server): `-expose` + access token; Host allowlist + Origin check.
-3. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors.
+1. fix(server): `-expose` + access token; Host allowlist + Origin check.
+2. fix(projects): never send URIs to the browser; reconnect by projectId; redact URIs in errors.
+3. fix(studio): schema cache + validate every identifier; providers take resolved table/field.
 
 ## Half-done files
 
