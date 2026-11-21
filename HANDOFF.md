@@ -118,6 +118,7 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   dialect's boolean, MySQL TIMESTAMP from RFC 3339 (it rejects `Z`). Conformance test:
   saving every cell with its shown text round-trips to the same JSON; SQLite also
   asserts storage classes (`Values.Stored`), which exposed hex saved as text.
+- chore(web): `vitest.config.mts` (Vite warned that ESM in a .ts config will break).
 
 ## Next 3 steps
 
