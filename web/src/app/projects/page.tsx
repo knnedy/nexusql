@@ -19,8 +19,8 @@ import {
   LayoutGrid,
   Table2,
 } from "lucide-react";
-import TopNav from "@/shared/components/top-nav";
-import ProviderBadge from "@/shared/components/provider-badge";
+import TopNav from "@/components/top-nav";
+import ProviderBadge from "@/components/provider-badge";
 import {
   useProjects,
   useDeleteProject,

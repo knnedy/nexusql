@@ -9,8 +9,8 @@ import {
   Link as LinkIcon,
   FolderDot,
 } from "lucide-react";
-import TopNav from "@/shared/components/top-nav";
-import RecentProjects from "./components/recent-projects";
+import TopNav from "@/components/top-nav";
+import RecentProjects from "@/app/_components/recent-projects";
 import { useConnect } from "@/hooks/use-connect";
 import {
   DatabaseProvider,

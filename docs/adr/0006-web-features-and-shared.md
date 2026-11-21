@@ -18,18 +18,22 @@ files.
 ```
 web/src/
   app/         routes, layouts, global CSS only; pages compose features
+               route-local UI goes in _components/ (Next private folders)
+  components/  shared, feature-agnostic UI (the only plain "components" folder)
   features/    connect, projects, studio, canvas, explorer, console, seed, export
-               each with components/, hooks/, lib/ as needed
+               each with _components/, hooks/, lib/ as needed
   shared/      api/ (client, endpoints, query keys), types/, hooks/,
-               components/, lib/ (utils, session-storage)
+               lib/ (utils, session-storage)
   providers/   app-wide React providers
 ```
 
 Import rules:
-- `app` may import `features`, `shared` and `providers`.
-- A feature may import `shared`, never another feature's internals. If two features
+- `app` may import `features`, `components`, `shared` and `providers`.
+- A feature may import `shared` and `components`, never another feature's internals. If two features
   need something, it moves to `shared`.
-- `shared` never imports `features` or `app`.
+- `shared` and `components` never import `features` or `app`. Exception: static
+  assets that Next.js file conventions pin to `app/` (e.g. `app/icon.png`).
+- Component folders are named `_components` everywhere except `src/components`.
 - Use the `@/` alias for cross-folder imports; relative imports only within a folder.
 
 ## Consequences

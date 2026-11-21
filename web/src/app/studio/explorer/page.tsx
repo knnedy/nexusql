@@ -14,13 +14,13 @@ import { useUpdateRow } from "@/hooks/use-update-row";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
 import { exportToCsv } from "@/shared/lib/utils";
-import TableList from "./components/table-list";
+import TableList from "@/app/studio/explorer/_components/table-list";
 import DataGrid, {
   buildEditKey,
   type PendingEdit,
   type CellEditPayload,
-} from "./components/data-grid";
-import ExplorerToolbar from "./components/explorer-toolbar";
+} from "@/app/studio/explorer/_components/data-grid";
+import ExplorerToolbar from "@/app/studio/explorer/_components/explorer-toolbar";
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 

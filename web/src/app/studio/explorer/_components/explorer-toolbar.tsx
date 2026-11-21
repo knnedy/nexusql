@@ -13,10 +13,10 @@ import {
   Loader2,
 } from "lucide-react";
 import { useStudioStore } from "@/lib/store/studio-store";
-import ModeSwitcher from "../../components/mode-switcher";
-import DisconnectButton from "../../components/disconnect-button";
-import ThemeToggle from "@/shared/components/theme-toggle";
-import icon from "../../../icon.png";
+import ModeSwitcher from "@/app/studio/_components/mode-switcher";
+import DisconnectButton from "@/app/studio/_components/disconnect-button";
+import ThemeToggle from "@/components/theme-toggle";
+import icon from "@/app/icon.png";
 
 interface ExplorerToolbarProps {
   tableSelected: boolean;

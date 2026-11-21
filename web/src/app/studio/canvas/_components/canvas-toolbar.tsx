@@ -3,9 +3,9 @@
 import Image from "next/image";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/lib/store/studio-store";
-import ModeSwitcher from "../../components/mode-switcher";
-import DisconnectButton from "../../components/disconnect-button";
-import icon from "../../../icon.png";
+import ModeSwitcher from "@/app/studio/_components/mode-switcher";
+import DisconnectButton from "@/app/studio/_components/disconnect-button";
+import icon from "@/app/icon.png";
 
 export default function CanvasToolbar() {
   const { data: schema } = useSchema();
