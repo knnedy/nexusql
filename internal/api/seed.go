@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/seed"
 	"github.com/knnedy/nexusql/internal/session"
 )
 
@@ -46,7 +46,7 @@ func (h *handler) handleSeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := db.RunSeed(r.Context(), conn.Impl, schema, db.SeedOptions{
+	result, err := seed.Run(r.Context(), conn.Impl, schema, seed.Options{
 		RowsPerTable: req.RowsPerTable,
 		NullChance:   req.NullChance,
 	})

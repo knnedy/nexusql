@@ -27,7 +27,7 @@ func (s *seedTx) Exec(ctx context.Context, sqlStmt string) error {
 	return nil
 }
 
-// InsertReturningPK is only ever called (per db/seed.go's pkNeedsReturning
+// InsertReturningPK is only ever called (per seed/seed.go's pkNeedsReturning
 // path) when the PK column has a DB-side default — i.e. AUTO_INCREMENT,
 // the only such default MySQL's schema introspection reports (see
 // schema.go's DefaultValue handling). Client-generated PKs (UUID/etc.) go

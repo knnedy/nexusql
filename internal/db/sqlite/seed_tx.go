@@ -49,7 +49,7 @@ func (s *seedTx) Rollback(ctx context.Context) error {
 }
 
 // QuoteIdentifier, QuoteTable, and EmptyInsertSQL were previously
-// free-standing functions in db/seed.go (quoteIdent, quoteTable, and an
+// free-standing functions in seed/seed.go (quoteIdent, quoteTable, and an
 // inline "INSERT INTO t DEFAULT VALUES" literal). Moved onto the provider
 // per the shared Provider interface. quoteIdent itself (used elsewhere in
 // this package, e.g. schema.go/rows.go) is unchanged — QuoteIdentifier just

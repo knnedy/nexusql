@@ -1,4 +1,5 @@
-package db
+// Package seed fills a connected database with fake rows in foreign-key order.
+package seed
 
 import (
 	"context"
@@ -7,14 +8,15 @@ import (
 	"strings"
 
 	"github.com/brianvoe/gofakeit/v7"
+	"github.com/knnedy/nexusql/internal/db"
 )
 
-type SeedOptions struct {
+type Options struct {
 	RowsPerTable int
 	NullChance   float64 // probability [0,1] a nullable, non-key column gets NULL
 }
 
-type SeedResult struct {
+type Result struct {
 	RowsInserted map[string]int // tableName -> rows inserted
 }
 
@@ -41,7 +43,7 @@ const (
 
 // TopoSortTables orders tables so every table appears after all tables it
 // has a (non-self-referential) foreign key into.
-func TopoSortTables(schema *Schema) ([]string, error) {
+func TopoSortTables(schema *db.Schema) ([]string, error) {
 	inDegree := map[string]int{}
 	adj := map[string][]string{}
 	exists := map[string]bool{}
@@ -115,13 +117,13 @@ func sortStrings(s []string) {
 	}
 }
 
-// RunSeed generates and inserts fake rows for every table in schema, in FK
+// Run generates and inserts fake rows for every table in schema, in FK
 // dependency order, inside a single transaction. PK values that the DB
 // assigns (serial/AUTO_INCREMENT/etc.) are captured via InsertReturningPK
 // as each row is inserted; PK values generated client-side are already
 // known and reused directly, without a redundant round-trip. Either way,
 // child tables always reference real parent PKs.
-func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOptions) (*SeedResult, error) {
+func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Options) (*Result, error) {
 	if opts.RowsPerTable <= 0 {
 		return nil, fmt.Errorf("rowsPerTable must be positive")
 	}
@@ -131,15 +133,15 @@ func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOp
 		return nil, err
 	}
 
-	tablesByName := map[string]Table{}
+	tablesByName := map[string]db.Table{}
 	for _, t := range schema.Tables {
 		tablesByName[t.Name] = t
 	}
-	enumsByName := map[string]EnumType{}
+	enumsByName := map[string]db.EnumType{}
 	for _, e := range schema.Enums {
 		enumsByName[e.Name] = e
 	}
-	fkByField := map[string]Relation{}
+	fkByField := map[string]db.Relation{}
 	for _, r := range schema.Relations {
 		fkByField[r.SourceTable+"."+r.SourceField] = r
 	}
@@ -156,7 +158,7 @@ func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOp
 	}()
 
 	generatedPKs := map[string][]string{}
-	result := &SeedResult{RowsInserted: map[string]int{}}
+	result := &Result{RowsInserted: map[string]int{}}
 
 	for _, tableName := range order {
 		table := tablesByName[tableName]
@@ -197,7 +199,7 @@ func RunSeed(ctx context.Context, provider Provider, schema *Schema, opts SeedOp
 	return result, nil
 }
 
-func findPKField(table Table) *Field {
+func findPKField(table db.Table) *db.Field {
 	for i := range table.Fields {
 		if table.Fields[i].IsPrimaryKey {
 			return &table.Fields[i]
@@ -214,7 +216,7 @@ func findPKField(table Table) *Field {
 // pkSelfGenerated, and is the raw (unquoted) value already embedded in the
 // statement — the same shape InsertReturningPK's implementations return,
 // so callers can treat both sources identically afterward.
-func buildInsertSQL(provider Provider, table Table, fkByField map[string]Relation, generatedPKs map[string][]string, enums map[string]EnumType, nullChance float64) (sql string, pkMode pkInsertMode, selfGeneratedPK string) {
+func buildInsertSQL(provider db.Provider, table db.Table, fkByField map[string]db.Relation, generatedPKs map[string][]string, enums map[string]db.EnumType, nullChance float64) (sql string, pkMode pkInsertMode, selfGeneratedPK string) {
 	var cols, vals []string
 
 	for _, f := range table.Fields {
@@ -296,11 +298,11 @@ func buildInsertSQL(provider Provider, table Table, fkByField map[string]Relatio
 // value. Callers quote it themselves via needsQuoting/quoteLiteral when
 // embedding it in SQL — kept raw here so the same value can also be stored
 // directly in generatedPKs without stripping quotes back off.
-func generatePKValue(f Field) string {
+func generatePKValue(f db.Field) string {
 	switch f.Type {
-	case FieldTypeUUID:
+	case db.FieldTypeUUID:
 		return gofakeit.UUID()
-	case FieldTypeText, FieldTypeVarchar, FieldTypeChar:
+	case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar:
 		return gofakeit.UUID()
 	default:
 		// integer-ish PK with no sequence/default behind it
@@ -308,16 +310,16 @@ func generatePKValue(f Field) string {
 	}
 }
 
-func needsQuoting(t FieldType) bool {
+func needsQuoting(t db.FieldType) bool {
 	switch t {
-	case FieldTypeUUID, FieldTypeText, FieldTypeVarchar, FieldTypeChar:
+	case db.FieldTypeUUID, db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar:
 		return true
 	default:
 		return false
 	}
 }
 
-func valueOrNull(f Field, enums map[string]EnumType, nullChance float64) string {
+func valueOrNull(f db.Field, enums map[string]db.EnumType, nullChance float64) string {
 	if f.Nullable && mrand.Float64() < nullChance {
 		return "NULL"
 	}
@@ -330,7 +332,7 @@ func quoteLiteral(s string) string {
 
 // GenerateFakeValue is unchanged from the GoFakeIt version — enum match,
 // then column-name sniffing, then type-based fallback.
-func GenerateFakeValue(f Field, enums map[string]EnumType) string {
+func GenerateFakeValue(f db.Field, enums map[string]db.EnumType) string {
 	if enum, ok := enums[string(f.Type)]; ok && len(enum.Values) > 0 {
 		return quoteLiteral(gofakeit.RandomString(enum.Values))
 	}
@@ -338,38 +340,38 @@ func GenerateFakeValue(f Field, enums map[string]EnumType) string {
 		return v
 	}
 	switch f.Type {
-	case FieldTypeSerial, FieldTypeBigserial, FieldTypeInteger, FieldTypeBigint, FieldTypeSmallint:
+	case db.FieldTypeSerial, db.FieldTypeBigserial, db.FieldTypeInteger, db.FieldTypeBigint, db.FieldTypeSmallint:
 		return fmt.Sprintf("%d", gofakeit.Number(1, 10000))
-	case FieldTypeNumeric, FieldTypeReal, FieldTypeDoublePrecision:
+	case db.FieldTypeNumeric, db.FieldTypeReal, db.FieldTypeDoublePrecision:
 		return fmt.Sprintf("%.2f", gofakeit.Float64Range(0, 10000))
-	case FieldTypeBoolean:
+	case db.FieldTypeBoolean:
 		return fmt.Sprintf("%v", gofakeit.Bool())
-	case FieldTypeUUID:
+	case db.FieldTypeUUID:
 		return quoteLiteral(gofakeit.UUID())
-	case FieldTypeDate:
+	case db.FieldTypeDate:
 		return quoteLiteral(gofakeit.Date().Format("2006-01-02"))
-	case FieldTypeTime:
+	case db.FieldTypeTime:
 		return quoteLiteral(gofakeit.Date().Format("15:04:05"))
-	case FieldTypeTimestamp:
+	case db.FieldTypeTimestamp:
 		return quoteLiteral(gofakeit.Date().Format("2006-01-02 15:04:05"))
-	case FieldTypeTimestamptz:
+	case db.FieldTypeTimestamptz:
 		return quoteLiteral(gofakeit.Date().Format("2006-01-02 15:04:05-07"))
-	case FieldTypeInterval:
+	case db.FieldTypeInterval:
 		return quoteLiteral(fmt.Sprintf("%d days", gofakeit.Number(1, 30)))
-	case FieldTypeJSON, FieldTypeJSONB:
+	case db.FieldTypeJSON, db.FieldTypeJSONB:
 		return quoteLiteral(fmt.Sprintf(`{"seed": %d}`, gofakeit.Number(1, 1000)))
-	case FieldTypeBytea:
+	case db.FieldTypeBytea:
 		return quoteLiteral(fmt.Sprintf(`\x%x`, gofakeit.LetterN(16)))
-	case FieldTypeChar:
+	case db.FieldTypeChar:
 		return quoteLiteral(gofakeit.Letter())
-	case FieldTypeText:
+	case db.FieldTypeText:
 		return quoteLiteral(gofakeit.Sentence(8))
 	default: // varchar and anything else string-shaped
 		return quoteLiteral(gofakeit.Word())
 	}
 }
 
-func generateByColumnName(f Field) (string, bool) {
+func generateByColumnName(f db.Field) (string, bool) {
 	if !isStringType(f.Type) {
 		return "", false
 	}
@@ -418,9 +420,9 @@ func generateByColumnName(f Field) (string, bool) {
 	return "", false
 }
 
-func isStringType(t FieldType) bool {
+func isStringType(t db.FieldType) bool {
 	switch t {
-	case FieldTypeChar, FieldTypeVarchar, FieldTypeText:
+	case db.FieldTypeChar, db.FieldTypeVarchar, db.FieldTypeText:
 		return true
 	default:
 		return false

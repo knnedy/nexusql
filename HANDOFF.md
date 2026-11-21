@@ -30,15 +30,16 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   html-to-image kept at exact 1.11.11.
 - chore(deps): elkjs 0.12.1; canvas layout options verified on a sample FK graph.
 - chore(deps): @types/node ^22 to match the CI Node version.
+- refactor(seed): seeding moved from `internal/db` to `internal/seed` (`seed.Run`,
+  `seed.Options`, `seed.Result`); `db.SeedTx` stays in db. SQLite seed smoke test passed.
 
 ## Next 3 steps
 
-1. refactor(seed): move seeding to internal/seed.
-2. refactor(db): Exporter registry; drop dialect imports from api.
-3. refactor(server): extract HTTP server setup from main.go; health reports real Version.
+1. refactor(db): Exporter registry; drop dialect imports from api.
+2. refactor(server): extract HTTP server setup from main.go; health reports real Version.
+3. refactor(api): extract respond helpers and session guard.
 
-Remaining Stage 1 after that: api respond helpers + session guard, studio service
-layer, web shared/ + features/ moves (one feature per commit), README structure docs.
+Remaining Stage 1 after that: studio service layer, web shared/ + features/ moves (one feature per commit), README structure docs.
 
 ## Half-done files
 
