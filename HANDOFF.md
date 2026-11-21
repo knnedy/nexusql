@@ -50,8 +50,17 @@ None.
 - Web: minor/patch incl. next + eslint-config-next 16.4.6 together; elkjs 0.12 alone;
   @types/node pinned to ^22 (CI Node), not 26.
 - html-to-image stays exact 1.11.11: 1.11.12+ regressed image export with React Flow.
-- Deferred to Stage 3 (with tests): @tanstack/react-table 9, react-flow-smart-edge 5,
-  @xyflow/react 13. Deferred, separate evaluation: eslint 10, TypeScript 7.
+- Decided 2026-11-21: adopt @tanstack/react-table 9, @xyflow/react 13,
+  react-flow-smart-edge 5 and eslint 10, but only where they fit our code. TypeScript 7
+  is NOT adopted; stay on TypeScript 5.
+  - Timing: each major lands with the work on the surface it touches. react-table 9 goes
+    with the Stage 3 Explorer grid; xyflow 13 + smart-edge 5 go together with Stage 3
+    Canvas (smart-edge peers on xyflow); eslint 10 is a tooling step once
+    eslint-config-next supports it.
+  - Gate: check changelogs and peer ranges first, then one major per commit with a smoke
+    test of the affected surface. If a major conflicts with our code (breaking API we
+    rely on, peer mismatch, regression like html-to-image 1.11.12+), don't force it:
+    stay on the current major and record why here.
 
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
