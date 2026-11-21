@@ -10,12 +10,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 
 - docs(adr): ADRs 0001-0006 recording the target layout, layering, exporter
   registry, embedded UI package and web feature split. HANDOFF.md created.
+- chore(build): go.mod tidied (direct deps no longer `// indirect`); docs say
+  Go 1.26+ and Node 20.9+.
 
 ## Next 3 steps
 
-1. chore(build): `go mod tidy`; align documented Go/Node versions with go.mod and Next 16.
-2. refactor(ui): move the embed to `internal/ui` with a committed `dist/.gitkeep` (ADR 0005).
-3. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
+1. refactor(ui): move the embed to `internal/ui` with a committed `dist/.gitkeep` (ADR 0005).
+2. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
+3. chore(web): add `typecheck` script; align eslint-config-next with next.
 
 ## Half-done files
 

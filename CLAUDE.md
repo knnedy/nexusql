@@ -8,7 +8,7 @@ Zustand) embedded via go:embed (cmd/nexusql/out). Ships as one binary.
 
 - `make dev`: Go via air on :7080 + Next dev on :3000
 - `make build`: export frontend, embed, compile to bin/nexusql
-- `make run`, `make clean`; Go 1.22+, Node 18+, pnpm
+- `make run`, `make clean`; Go 1.26+, Node 20.9+, pnpm
 
 ## Rules
 

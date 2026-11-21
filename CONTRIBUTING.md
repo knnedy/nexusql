@@ -8,8 +8,8 @@ Thanks for your interest in contributing! This project is early (pre-1.0) and mo
 
 **Requirements**
 
-- Go 1.22+
-- Node.js 18+
+- Go 1.26+
+- Node.js 20.9+
 - pnpm
 - A local Postgres, MySQL, or SQLite instance to test against
 

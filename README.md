@@ -104,8 +104,8 @@ sudo mv nexusql /usr/local/bin/
 
 **Requirements**
 
-- Go 1.22+
-- Node.js 18+
+- Go 1.26+
+- Node.js 20.9+
 - pnpm
 
 ```bash
