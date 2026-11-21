@@ -28,6 +28,6 @@ func readJSON(r *http.Request, v any) error {
 func (h *handler) handleHealth(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, healthResponse{
 		Status:  "ok",
-		Version: "0.1.0",
+		Version: h.version,
 	})
 }

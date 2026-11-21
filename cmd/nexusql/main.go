@@ -5,22 +5,17 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
-	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"charm.land/lipgloss/v2"
-	"github.com/go-chi/chi/v5"
-	"github.com/knnedy/nexusql/internal/api"
 	"github.com/knnedy/nexusql/internal/config"
 	_ "github.com/knnedy/nexusql/internal/db/mysql"
 	_ "github.com/knnedy/nexusql/internal/db/postgres"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
+	"github.com/knnedy/nexusql/internal/server"
 	"github.com/knnedy/nexusql/internal/session"
-	"github.com/knnedy/nexusql/internal/ui"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=..."
@@ -88,38 +83,20 @@ func main() {
 		log.Fatalf("failed to initialise project store: %v", err)
 	}
 
-	sess := session.NewStore()
+	srv := server.New(server.Options{
+		Addr:     cfg.Addr(),
+		IsDev:    cfg.IsDev,
+		Version:  Version,
+		Session:  session.NewStore(),
+		Projects: proj,
+	})
 
-	r := chi.NewRouter()
-	r.Mount("/api", api.Router(sess, proj, cfg.IsDev))
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
 
-	r.Handle("/*", ui.Handler())
-
-	srv := &http.Server{
-		Addr:         cfg.Addr(),
-		Handler:      r,
-		ReadTimeout:  15 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
-
-	quit := make(chan os.Signal, 1)
-	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		printBanner(cfg.Addr(), cfg.IsDev)
-		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("server error: %v", err)
-		}
-	}()
-
-	<-quit
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := srv.Shutdown(ctx); err != nil {
-		log.Fatalf("shutdown error: %v", err)
+	printBanner(cfg.Addr(), cfg.IsDev)
+	if err := server.Run(ctx, srv); err != nil {
+		log.Fatalf("server error: %v", err)
 	}
 
 	fmt.Println("NexusQL stopped")

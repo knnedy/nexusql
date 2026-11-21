@@ -10,21 +10,29 @@ import (
 	"github.com/knnedy/nexusql/internal/session"
 )
 
+// Config carries build- and run-time settings the API needs.
+type Config struct {
+	IsDev   bool
+	Version string
+}
+
 type handler struct {
 	session  *session.Store
 	projects projects.Store
+	version  string
 }
 
-func Router(sess *session.Store, proj projects.Store, isDev bool) *chi.Mux {
+func Router(sess *session.Store, proj projects.Store, cfg Config) *chi.Mux {
 	h := &handler{
 		session:  sess,
 		projects: proj,
+		version:  cfg.Version,
 	}
 
 	r := chi.NewRouter()
 	r.Use(middleware.NoCache)
 
-	if isDev {
+	if cfg.IsDev {
 		r.Use(cors.Handler(cors.Options{
 			AllowedOrigins:   []string{"http://localhost:3000", "http://127.0.0.1:3000"},
 			AllowedMethods:   []string{http.MethodGet, http.MethodPost, http.MethodPatch, http.MethodDelete, http.MethodOptions},

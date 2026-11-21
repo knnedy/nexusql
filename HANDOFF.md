@@ -35,14 +35,17 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - refactor(db): `db.Exporter` registry (`RegisterExporter`/`ExporterFor`); each dialect
   registers in init(). `internal/api` imports no dialect package. Export output verified
   byte-identical to the previous commit on SQLite.
+- refactor(server): `internal/server` builds the router/http.Server (`server.New`) and
+  runs it with graceful shutdown (`server.Run`). main.go is flags + wiring only.
+  `/api/health` reports the ldflags `Version` ("dev" locally) instead of "0.1.0".
 
 ## Next 3 steps
 
-1. refactor(server): extract HTTP server setup from main.go; health reports real Version.
-2. refactor(api): extract respond helpers and session guard.
-3. refactor(studio): introduce service layer between api and db (pass-through).
+1. refactor(api): extract respond helpers and session guard.
+2. refactor(studio): introduce service layer between api and db (pass-through).
+3. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
 
-Remaining Stage 1 after that: web shared/ + features/ moves (one feature per commit), README structure docs.
+Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
 ## Half-done files
 
@@ -77,4 +80,5 @@ None.
 - `UpdateRow` cannot set NULL; single-column PKs only.
 - Connect has no timeout; request bodies are unbounded; raw driver errors reach the client.
 - SQLite introspection reports `INTEGER PRIMARY KEY` as nullable with default "AUTOINCREMENT".
+- Active DB connection is not closed on server shutdown (pool lifecycle).
 - React Query keys not scoped by project/connection.
