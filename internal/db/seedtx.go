@@ -30,20 +30,58 @@ type SQLSeedTx struct {
 	Returning  bool // RETURNING exists; otherwise LAST_INSERT_ID gives one auto value
 }
 
-func (s *SQLSeedTx) Insert(ctx context.Context, t Table, fields []Field, values []*string, auto []Field) (out []string, err error) {
-	if _, err := s.Tx.ExecContext(ctx, "SAVEPOINT "+seedSavepoint); err != nil {
-		return nil, err
+// UpdateSQL builds an UPDATE setting each of set to its placeholder (marks[i])
+// on the row where each of where equals its placeholder (marks[len(set)+i]).
+func UpdateSQL(table string, set, where, marks []string) string {
+	sets := make([]string, len(set))
+	for i, c := range set {
+		sets[i] = c + " = " + marks[i]
 	}
-	defer func() {
-		end := "RELEASE SAVEPOINT " + seedSavepoint
-		if err != nil {
-			end = "ROLLBACK TO SAVEPOINT " + seedSavepoint
-		}
-		if _, endErr := s.Tx.ExecContext(ctx, end); endErr != nil && err == nil {
-			err = endErr
-		}
-	}()
+	conds := make([]string, len(where))
+	for i, c := range where {
+		conds[i] = c + " = " + marks[len(set)+i]
+	}
+	return fmt.Sprintf("UPDATE %s SET %s WHERE %s", table, strings.Join(sets, ", "), strings.Join(conds, " AND "))
+}
 
+// savepoint runs fn so that its failure undoes only its own work.
+func (s *SQLSeedTx) savepoint(ctx context.Context, fn func() error) error {
+	if _, err := s.Tx.ExecContext(ctx, "SAVEPOINT "+seedSavepoint); err != nil {
+		return err
+	}
+	if err := fn(); err != nil {
+		_, _ = s.Tx.ExecContext(ctx, "ROLLBACK TO SAVEPOINT "+seedSavepoint)
+		return err
+	}
+	_, err := s.Tx.ExecContext(ctx, "RELEASE SAVEPOINT "+seedSavepoint)
+	return err
+}
+
+func (s *SQLSeedTx) Update(ctx context.Context, t Table, key []KeyValue, fields []Field, values []*string) error {
+	var set, where, marks []string
+	var args []any
+	for i, f := range fields {
+		set, marks, args = append(set, s.Quote(f.Name)), append(marks, "?"), append(args, s.Arg(f, values[i]))
+	}
+	for _, k := range key {
+		v := k.Value
+		where, marks, args = append(where, s.Quote(k.Field.Name)), append(marks, "?"), append(args, s.Arg(k.Field, &v))
+	}
+	return s.savepoint(ctx, func() error {
+		_, err := s.Tx.ExecContext(ctx, UpdateSQL(s.QuoteTable(t), set, where, marks), args...)
+		return err
+	})
+}
+
+func (s *SQLSeedTx) Insert(ctx context.Context, t Table, fields []Field, values []*string, auto []Field) (out []string, err error) {
+	err = s.savepoint(ctx, func() error {
+		out, err = s.insert(ctx, t, fields, values, auto)
+		return err
+	})
+	return out, err
+}
+
+func (s *SQLSeedTx) insert(ctx context.Context, t Table, fields []Field, values []*string, auto []Field) (out []string, err error) {
 	cols := make([]string, len(fields))
 	marks := make([]string, len(fields))
 	args := make([]any, len(fields))

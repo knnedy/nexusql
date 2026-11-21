@@ -22,18 +22,45 @@ func (p *provider) BeginSeedTx(ctx context.Context) (db.SeedTx, error) {
 	return &seedTx{tx: tx, quoteTable: p.QuoteTable}, nil
 }
 
-func (s *seedTx) Insert(ctx context.Context, t db.Table, fields []db.Field, values []*string, auto []db.Field) (out []string, err error) {
-	sp, err := s.tx.Begin(ctx) // a savepoint: a rejected row leaves the seed usable
+// savepoint runs fn in a nested transaction, so a rejected row leaves the seed usable.
+func (s *seedTx) savepoint(ctx context.Context, fn func(pgx.Tx) error) error {
+	sp, err := s.tx.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	defer func() {
-		if err != nil {
-			_ = sp.Rollback(ctx)
-		} else {
-			err = sp.Commit(ctx)
-		}
-	}()
+	if err := fn(sp); err != nil {
+		_ = sp.Rollback(ctx)
+		return err
+	}
+	return sp.Commit(ctx)
+}
+
+func (s *seedTx) Update(ctx context.Context, t db.Table, key []db.KeyValue, fields []db.Field, values []*string) error {
+	var set, where, marks []string
+	var args []any
+	for i, f := range fields {
+		args = append(args, values[i])
+		set, marks = append(set, pgx.Identifier{f.Name}.Sanitize()), append(marks, fmt.Sprintf("$%d", len(args)))
+	}
+	for _, k := range key {
+		args = append(args, k.Value)
+		where, marks = append(where, pgx.Identifier{k.Field.Name}.Sanitize()), append(marks, fmt.Sprintf("$%d", len(args)))
+	}
+	return s.savepoint(ctx, func(sp pgx.Tx) error {
+		_, err := sp.Exec(ctx, db.UpdateSQL(s.quoteTable(t), set, where, marks), args...)
+		return err
+	})
+}
+
+func (s *seedTx) Insert(ctx context.Context, t db.Table, fields []db.Field, values []*string, auto []db.Field) (out []string, err error) {
+	err = s.savepoint(ctx, func(sp pgx.Tx) error {
+		out, err = insert(ctx, sp, s.quoteTable(t), fields, values, auto)
+		return err
+	})
+	return out, err
+}
+
+func insert(ctx context.Context, sp pgx.Tx, table string, fields []db.Field, values []*string, auto []db.Field) (out []string, err error) {
 
 	cols := make([]string, len(fields))
 	marks := make([]string, len(fields))
@@ -42,7 +69,7 @@ func (s *seedTx) Insert(ctx context.Context, t db.Table, fields []db.Field, valu
 		// pgx sends text for any column type; a nil *string is NULL
 		cols[i], marks[i], args[i] = pgx.Identifier{f.Name}.Sanitize(), fmt.Sprintf("$%d", i+1), values[i]
 	}
-	query := db.InsertSQL(s.quoteTable(t), cols, marks, "DEFAULT VALUES")
+	query := db.InsertSQL(table, cols, marks, "DEFAULT VALUES")
 	if len(auto) == 0 {
 		_, err = sp.Exec(ctx, query, args...)
 		return nil, err

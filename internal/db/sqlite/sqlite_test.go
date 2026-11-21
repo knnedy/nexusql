@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/db/dbtest"
 	"github.com/knnedy/nexusql/internal/db/sqlite"
+	"github.com/knnedy/nexusql/internal/seed"
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
@@ -54,6 +56,14 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE files (id INTEGER PRIMARY KEY, data BLOB NOT NULL)`,
 				`CREATE TABLE flags (id INTEGER PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
 				`CREATE TABLE scores (id INTEGER PRIMARY KEY, n INTEGER NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+				`CREATE TABLE categories (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES categories (id))`,
+				`CREATE TABLE teams (id INTEGER PRIMARY KEY, captain_id INTEGER REFERENCES players (id))`,
+				`CREATE TABLE players (id INTEGER PRIMARY KEY, team_id INTEGER NOT NULL REFERENCES teams (id))`,
+				`CREATE TABLE memberships (player_id INTEGER NOT NULL REFERENCES players (id),
+					team_id INTEGER NOT NULL REFERENCES teams (id), PRIMARY KEY (player_id, team_id))`,
+				`CREATE TABLE regions (country VARCHAR(40), code VARCHAR(40), PRIMARY KEY (country, code))`,
+				`CREATE TABLE offices (id INTEGER PRIMARY KEY, country VARCHAR(40) NOT NULL, code VARCHAR(40) NOT NULL,
+					FOREIGN KEY (country, code) REFERENCES regions (country, code))`,
 			},
 			Stored: map[string]string{
 				"SELECT COUNT(*) FROM files WHERE typeof(data) <> 'blob'":      "0",
@@ -117,5 +127,27 @@ func TestReturningRows(t *testing.T) {
 		"CREATE TABLE ret (id INTEGER PRIMARY KEY, v TEXT); INSERT INTO ret (v) VALUES ('a'), ('b') RETURNING id", 0)
 	if err != nil || len(res.Rows) != 2 || !res.IsWrite {
 		t.Fatalf("got %+v err %v, want the 2 returned ids", res, err)
+	}
+}
+
+func TestSeedNamesACycleItCannotBreak(t *testing.T) {
+	ctx := context.Background()
+	p, err := sqlite.Connect(ctx, "sqlite://:memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	if _, err := dbtest.Script(ctx, p, `
+		CREATE TABLE a (id INTEGER PRIMARY KEY, b_id INTEGER NOT NULL REFERENCES b (id));
+		CREATE TABLE b (id INTEGER PRIMARY KEY, a_id INTEGER NOT NULL REFERENCES a (id))`, 0); err != nil {
+		t.Fatal(err)
+	}
+	schema, err := p.IntrospectSchema(ctx, p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = seed.Run(ctx, p, schema, seed.Options{RowsPerTable: 1})
+	if err == nil || !strings.Contains(err.Error(), "no nullable column") || !strings.Contains(err.Error(), "a, b") {
+		t.Fatalf("err = %v, want the cycle named and why it cannot be broken", err)
 	}
 }

@@ -15,6 +15,12 @@ import (
 //	files(id auto PK, data binary NOT NULL)
 //	flags(id auto PK, on_off boolean NOT NULL UNIQUE)
 //	scores(id auto PK, n integer NOT NULL CHECK (n BETWEEN 1 AND 50))
+//	categories(id auto PK, parent_id int NULL FK -> categories.id)
+//	teams(id auto PK, captain_id int NULL FK -> players.id)
+//	players(id auto PK, team_id int NOT NULL FK -> teams.id)
+//	memberships(player_id FK -> players, team_id FK -> teams, PK (player_id, team_id))
+//	regions(country varchar(40), code varchar(40), PK (country, code))
+//	offices(id auto PK, country, code NOT NULL, FK (country, code) -> regions)
 type Seed struct {
 	Setup  []string
 	Stored map[string]string // query -> expected first cell: how values were stored
@@ -102,6 +108,60 @@ func testSeedConstraints(t *testing.T, h Harness) {
 			t.Errorf("scores: %d inserted + skipped, want 5", n)
 		}
 	})
+}
+
+func testSeedLinks(t *testing.T, h Harness) {
+	if h.Seed.Setup == nil {
+		t.Skip("harness has no seed fixture")
+	}
+	ctx := context.Background()
+	p := h.Open(t)
+	for _, stmt := range h.Seed.Setup {
+		mustExec(t, p, stmt)
+	}
+	schema, err := p.IntrospectSchema(ctx, p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := seed.Run(ctx, p, schema, seed.Options{RowsPerTable: 5})
+	if err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	count := func(t *testing.T, q string) string {
+		t.Helper()
+		got, err := Script(ctx, p, q, 1)
+		if err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+		return str(firstCell(got))
+	}
+	cases := []struct{ name, table, orphans, unlinked string }{
+		{"a table referencing itself links its rows", "categories",
+			"SELECT COUNT(*) FROM categories c WHERE c.parent_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM categories p WHERE p.id = c.parent_id)",
+			"SELECT COUNT(*) FROM categories WHERE parent_id IS NULL"},
+		{"a cycle is broken at its nullable key, then linked", "teams",
+			"SELECT COUNT(*) FROM teams t WHERE t.captain_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM players p WHERE p.id = t.captain_id)",
+			"SELECT COUNT(*) FROM teams WHERE captain_id IS NULL"},
+		{"a composite key takes a whole parent row", "offices",
+			"SELECT COUNT(*) FROM offices o WHERE NOT EXISTS (SELECT 1 FROM regions r WHERE r.country = o.country AND r.code = o.code)",
+			"SELECT COUNT(*) FROM offices WHERE country IS NULL"},
+		{"a key made of foreign keys references parents", "memberships",
+			"SELECT COUNT(*) FROM memberships m WHERE NOT EXISTS (SELECT 1 FROM players p WHERE p.id = m.player_id) OR NOT EXISTS (SELECT 1 FROM teams t WHERE t.id = m.team_id)",
+			"SELECT 0"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if res.RowsInserted[c.table] == 0 {
+				t.Fatalf("%s: no rows inserted (%s)", c.table, res.Problems[c.table])
+			}
+			if n := count(t, c.orphans); n != "0" {
+				t.Errorf("%s: %s rows point at no parent", c.table, n)
+			}
+			if n := count(t, c.unlinked); n != "0" {
+				t.Errorf("%s: %s rows left unlinked", c.table, n)
+			}
+		})
+	}
 }
 
 func firstCell(r db.QueryResult) any {

@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	mrand "math/rand"
+	"slices"
 	"strings"
 
 	"github.com/brianvoe/gofakeit/v7"
@@ -22,82 +23,6 @@ type Result struct {
 	Problems     map[string]string // table -> why its last row was rejected
 }
 
-// TopoSortTables orders tables so every table appears after all tables it
-// has a (non-self-referential) foreign key into.
-func TopoSortTables(schema *db.Schema) ([]string, error) {
-	inDegree := map[string]int{}
-	adj := map[string][]string{}
-	exists := map[string]bool{}
-
-	for _, t := range schema.Tables {
-		exists[t.Name] = true
-		inDegree[t.Name] = 0
-	}
-
-	seenEdge := map[string]bool{}
-	for _, r := range schema.Relations {
-		if r.SourceTable == r.TargetTable {
-			continue
-		}
-		if !exists[r.SourceTable] || !exists[r.TargetTable] {
-			continue
-		}
-		edgeKey := r.TargetTable + "->" + r.SourceTable
-		if seenEdge[edgeKey] {
-			continue
-		}
-		seenEdge[edgeKey] = true
-		adj[r.TargetTable] = append(adj[r.TargetTable], r.SourceTable)
-		inDegree[r.SourceTable]++
-	}
-
-	var queue []string
-	for name, deg := range inDegree {
-		if deg == 0 {
-			queue = append(queue, name)
-		}
-	}
-	sortStrings(queue)
-
-	var order []string
-	for len(queue) > 0 {
-		n := queue[0]
-		queue = queue[1:]
-		order = append(order, n)
-
-		var next []string
-		for _, m := range adj[n] {
-			inDegree[m]--
-			if inDegree[m] == 0 {
-				next = append(next, m)
-			}
-		}
-		sortStrings(next)
-		queue = append(queue, next...)
-	}
-
-	if len(order) != len(exists) {
-		var stuck []string
-		for name, deg := range inDegree {
-			if deg > 0 {
-				stuck = append(stuck, name)
-			}
-		}
-		sortStrings(stuck)
-		return nil, fmt.Errorf("cyclic foreign key dependency involving: %s", strings.Join(stuck, ", "))
-	}
-
-	return order, nil
-}
-
-func sortStrings(s []string) {
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j-1] > s[j]; j-- {
-			s[j-1], s[j] = s[j], s[j-1]
-		}
-	}
-}
-
 // maxAttempts bounds how often a row the database rejects (unique or check
 // constraint) is regenerated before it is skipped and reported.
 const maxAttempts = 5
@@ -108,25 +33,17 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 	if opts.RowsPerTable <= 0 {
 		return nil, fmt.Errorf("rowsPerTable must be positive")
 	}
-
-	order, err := TopoSortTables(schema)
+	order, links, err := plan(schema)
 	if err != nil {
 		return nil, err
 	}
-
-	tablesByName := map[string]db.Table{}
+	tables := map[string]db.Table{}
 	for _, t := range schema.Tables {
-		tablesByName[t.Name] = t
+		tables[t.Name] = t
 	}
-	enumsByName := map[string]db.EnumType{}
+	enums := map[string]db.EnumType{}
 	for _, e := range schema.Enums {
-		enumsByName[e.Name] = e
-	}
-	fkByField := map[string]db.Relation{}
-	for _, r := range schema.Relations {
-		if !r.IsComposite() { // composite keys are seeded as plain columns for now
-			fkByField[r.SourceTable+"."+r.SourceField] = r
-		}
+		enums[e.Name] = e
 	}
 
 	tx, err := provider.BeginSeedTx(ctx)
@@ -140,26 +57,29 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 		}
 	}()
 
-	g := generator{fks: fkByField, enums: enumsByName, nullChance: opts.NullChance, pks: map[string][]string{}}
+	g := generator{links: links, enums: enums, nullChance: opts.NullChance, rows: map[string][]map[string]string{}}
 	result := &Result{RowsInserted: map[string]int{}, Skipped: map[string]int{}, Problems: map[string]string{}}
-
-	for _, tableName := range order {
-		table := tablesByName[tableName]
-		pk := findPKField(table)
-		for i := 0; i < opts.RowsPerTable; i++ {
-			pkValue, err := g.insertRow(ctx, tx, table, pk)
+	for _, name := range order {
+		for range opts.RowsPerTable {
+			row, err := g.insertRow(ctx, tx, tables[name])
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
 			}
 			if err != nil {
-				result.Skipped[tableName]++
-				result.Problems[tableName] = err.Error()
+				result.Skipped[name]++
+				result.Problems[name] = err.Error()
 				continue
 			}
-			result.RowsInserted[tableName]++
-			if pk != nil {
-				g.pks[tableName] = append(g.pks[tableName], pkValue)
+			result.RowsInserted[name]++
+			g.rows[name] = append(g.rows[name], row)
+		}
+	}
+	for _, name := range order {
+		if err := g.backfill(ctx, tx, tables[name]); err != nil {
+			if ctx.Err() != nil {
+				return nil, ctx.Err()
 			}
+			result.Problems[name] = err.Error()
 		}
 	}
 
@@ -170,90 +90,214 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 	return result, nil
 }
 
-func findPKField(table db.Table) *db.Field {
-	for i := range table.Fields {
-		if table.Fields[i].IsPrimaryKey {
-			return &table.Fields[i]
-		}
-	}
-	return nil
-}
-
 type generator struct {
-	fks        map[string]db.Relation
+	links      map[string][]*link // source table -> its foreign keys
 	enums      map[string]db.EnumType
 	nullChance float64
-	pks        map[string][]string // table -> primary key of every row inserted so far
+	rows       map[string][]map[string]string // table -> non-NULL values of each seeded row
 }
 
 // insertRow inserts one row, regenerating it when the database rejects it,
-// and returns its primary key value ("" when it has none).
-func (g *generator) insertRow(ctx context.Context, tx db.SeedTx, table db.Table, pk *db.Field) (string, error) {
+// and returns its non-NULL values, database-assigned keys included.
+func (g *generator) insertRow(ctx context.Context, tx db.SeedTx, table db.Table) (map[string]string, error) {
+	var auto []db.Field
+	for _, f := range table.Fields {
+		if f.IsPrimaryKey && f.AutoGenerated {
+			auto = append(auto, f)
+		}
+	}
 	var lastErr error
 	for range maxAttempts {
-		fields, values, err := g.row(table)
+		vals, err := g.row(table)
 		if err != nil {
-			return "", err // retrying cannot help
+			return nil, err // retrying cannot help
 		}
-		var auto []db.Field
-		if pk != nil && pk.AutoGenerated {
-			auto = []db.Field{*pk}
+		var fields []db.Field
+		var values []*string
+		for _, f := range table.Fields {
+			if v, ok := vals[f.Name]; ok {
+				fields, values = append(fields, f), append(values, v)
+			}
 		}
 		got, err := tx.Insert(ctx, table, fields, values, auto)
 		if err == nil {
-			if len(got) == 1 {
-				return got[0], nil
-			}
+			row := map[string]string{}
 			for i, f := range fields {
-				if pk != nil && f.Name == pk.Name && values[i] != nil {
-					return *values[i], nil
+				if values[i] != nil {
+					row[f.Name] = *values[i]
 				}
 			}
-			return "", nil
+			for i, v := range got {
+				row[auto[i].Name] = v
+			}
+			return row, nil
 		}
 		lastErr = err
 		if ctx.Err() != nil {
 			break
 		}
 	}
-	return "", lastErr
+	return nil, lastErr
 }
 
-// row generates one row's fields and text values; auto-generated columns are
-// left to the database.
-func (g *generator) row(table db.Table) ([]db.Field, []*string, error) {
-	var fields []db.Field
-	var values []*string
+// row generates one row as field -> text (nil: NULL); fields it leaves out
+// get the database's value. Foreign keys come first, so a key made of them
+// takes its parents' values.
+func (g *generator) row(table db.Table) (map[string]*string, error) {
+	vals := map[string]*string{}
+	reserved := map[string]bool{}
+	var selfLinks []*link
+	for _, l := range g.links[table.Name] {
+		if slices.ContainsFunc(l.SourceFields, func(f string) bool { _, ok := vals[f]; return ok || reserved[f] }) {
+			continue // overlaps a key already filled
+		}
+		switch {
+		case l.deferred:
+			for _, f := range l.SourceFields {
+				vals[f] = nil
+			}
+		case l.self():
+			selfLinks = append(selfLinks, l)
+			for _, f := range l.SourceFields {
+				reserved[f] = true
+			}
+		default:
+			parent := g.pick(l.TargetTable, l.TargetFields, -1)
+			if parent == nil && !l.nullable {
+				return nil, fmt.Errorf("no rows in %s for %s to reference", l.TargetTable, columns(l))
+			}
+			fill(vals, l, parent)
+		}
+	}
+
 	for _, f := range table.Fields {
-		if f.AutoGenerated {
+		if _, ok := vals[f.Name]; ok || reserved[f.Name] || f.AutoGenerated {
 			continue
 		}
-		var v *string
-		switch rel, isFK := g.fks[table.Name+"."+f.Name]; {
+		switch {
 		case f.IsPrimaryKey:
 			s := generatePKValue(f)
-			v = &s
-		case isFK && rel.TargetTable == table.Name:
-			if !f.Nullable {
-				continue // no earlier row to point at; leave it to a default
-			}
-		case isFK:
-			parents := g.pks[rel.TargetTable]
-			switch {
-			case len(parents) > 0:
-				v = &parents[mrand.Intn(len(parents))]
-			case !f.Nullable:
-				return nil, nil, fmt.Errorf("no rows in %s for %s.%s to reference", rel.TargetTable, table.Name, f.Name)
-			}
+			vals[f.Name] = &s
 		case f.Nullable && mrand.Float64() < g.nullChance:
+			vals[f.Name] = nil
 		default:
 			s := GenerateFakeValue(f, g.enums)
-			v = &s
+			vals[f.Name] = &s
 		}
-		fields = append(fields, f)
-		values = append(values, v)
 	}
-	return fields, values, nil
+
+	// A required self-reference points at an earlier row, or else at itself.
+	for _, l := range selfLinks {
+		parent := g.pick(table.Name, l.TargetFields, -1)
+		if parent == nil {
+			parent = own(vals, l.TargetFields)
+		}
+		if parent == nil {
+			return nil, fmt.Errorf("%s needs an existing row of %s to reference", columns(l), table.Name)
+		}
+		fill(vals, l, parent)
+	}
+	return vals, nil
+}
+
+// backfill points the deferred keys of table's seeded rows at parent rows.
+func (g *generator) backfill(ctx context.Context, tx db.SeedTx, table db.Table) error {
+	var pk []db.Field
+	byName := map[string]db.Field{}
+	for _, f := range table.Fields {
+		byName[f.Name] = f
+		if f.IsPrimaryKey {
+			pk = append(pk, f)
+		}
+	}
+	for _, l := range g.links[table.Name] {
+		if !l.deferred {
+			continue
+		}
+		if len(pk) == 0 {
+			return fmt.Errorf("%s left empty: %s has no primary key to update rows by", columns(l), table.Name)
+		}
+		fields := make([]db.Field, len(l.SourceFields))
+		for i, name := range l.SourceFields {
+			fields[i] = byName[name]
+		}
+	rows:
+		for i, row := range g.rows[table.Name] {
+			skip := -1
+			if l.self() {
+				skip = i // not itself, when another row exists
+			}
+			parent := g.pick(l.TargetTable, l.TargetFields, skip)
+			if parent == nil {
+				continue
+			}
+			key := make([]db.KeyValue, len(pk))
+			for j, f := range pk {
+				v, ok := row[f.Name]
+				if !ok {
+					continue rows
+				}
+				key[j] = db.KeyValue{Field: f, Value: v}
+			}
+			vals := map[string]*string{}
+			fill(vals, l, parent)
+			values := make([]*string, len(fields))
+			for j, f := range fields {
+				values[j] = vals[f.Name]
+			}
+			if err := tx.Update(ctx, table, key, fields, values); err != nil {
+				return fmt.Errorf("%s left empty: %w", columns(l), err)
+			}
+		}
+	}
+	return nil
+}
+
+// pick returns a random seeded row of table with every one of fields set,
+// other than row skip when another exists; nil when there is none.
+func (g *generator) pick(table string, fields []string, skip int) map[string]string {
+	var ok []int
+	for i, row := range g.rows[table] {
+		if !slices.ContainsFunc(fields, func(f string) bool { _, set := row[f]; return !set }) {
+			ok = append(ok, i)
+		}
+	}
+	if len(ok) > 1 {
+		ok = slices.DeleteFunc(ok, func(i int) bool { return i == skip })
+	}
+	if len(ok) == 0 {
+		return nil
+	}
+	return g.rows[table][ok[mrand.Intn(len(ok))]]
+}
+
+// own returns the row's own values for fields, when it has them all.
+func own(vals map[string]*string, fields []string) map[string]string {
+	row := map[string]string{}
+	for _, f := range fields {
+		if v := vals[f]; v != nil {
+			row[f] = *v
+		} else {
+			return nil
+		}
+	}
+	return row
+}
+
+// fill sets l's source columns from parent (all NULL when parent is nil).
+func fill(vals map[string]*string, l *link, parent map[string]string) {
+	for i, f := range l.SourceFields {
+		if parent == nil {
+			vals[f] = nil
+			continue
+		}
+		v := parent[l.TargetFields[i]]
+		vals[f] = &v
+	}
+}
+
+func columns(l *link) string {
+	return l.SourceTable + "." + strings.Join(l.SourceFields, ", ")
 }
 
 // generatePKValue returns a client-generated primary key value as text.

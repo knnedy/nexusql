@@ -45,6 +45,8 @@ type SeedTx interface {
 	// Insert adds a row of t, converting values like cell edits (nil: NULL),
 	// and returns the database-assigned values of the auto fields, in order.
 	Insert(ctx context.Context, t Table, fields []Field, values []*string, auto []Field) ([]string, error)
+	// Update sets fields on the row matching every key column.
+	Update(ctx context.Context, t Table, key []KeyValue, fields []Field, values []*string) error
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 }
