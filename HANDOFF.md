@@ -16,12 +16,17 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   `dist/.gitkeep`, so `go build ./...` works on a fresh clone; it serves a 503
   "frontend not built" page when no UI is embedded. The goreleaser `dist/` ignore is now
   root-anchored (it was hiding `internal/ui/dist`).
+- chore(web): `pnpm typecheck` script (`tsc --noEmit`).
 
 ## Next 3 steps
 
 1. chore(build): split Makefile targets (Go-only build, test, vet, check); goreleaser reuses them.
-2. chore(web): add `typecheck` script (eslint-config-next aligns with next in the deps step).
-3. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
+2. ci: add PR workflow (go vet/build/test, pnpm typecheck/lint/build).
+3. chore(deps): update Go modules (minor/patch).
+
+## Half-done files
+
+- Makefile: target split written, uncommitted (lands in step 1 above).
 
 ## Planned dependency updates (after CI step)
 
@@ -31,9 +36,6 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - html-to-image stays exact 1.11.11: 1.11.12+ regressed image export with React Flow.
 - Deferred to Stage 3 (with tests): @tanstack/react-table 9, react-flow-smart-edge 5.
 
-## Half-done files
-
-None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
