@@ -25,12 +25,15 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   1.10.2, pgx 5.13.0, modernc sqlite 1.62.0). SQLite API smoke test passed.
 - ci: Actions moved to Node 24 majors (checkout/setup-go/setup-node v7,
   goreleaser-action v7, pnpm/action-setup v6); force-Node24 env removed.
+- chore(deps): web minor/patch: next + eslint-config-next 16.4.6, react 19.3.1, TanStack
+  Query 5.108, tailwind 4.3.5, zustand 5.1, shiki 4.6, lucide 1.77, react-icons 5.7.
+  html-to-image kept at exact 1.11.11.
 
 ## Next 3 steps
 
-1. chore(deps): update web minor/patch (next + eslint-config-next together).
-2. chore(deps): elkjs 0.12; @types/node ^22.
-3. refactor(seed): move seeding to internal/seed.
+1. chore(deps): elkjs 0.12; @types/node ^22.
+2. refactor(seed): move seeding to internal/seed.
+3. refactor(db): Exporter registry; drop dialect imports from api.
 
 ## Half-done files
 
@@ -42,7 +45,8 @@ None.
 - Web: minor/patch incl. next + eslint-config-next 16.4.6 together; elkjs 0.12 alone;
   @types/node pinned to ^22 (CI Node), not 26.
 - html-to-image stays exact 1.11.11: 1.11.12+ regressed image export with React Flow.
-- Deferred to Stage 3 (with tests): @tanstack/react-table 9, react-flow-smart-edge 5.
+- Deferred to Stage 3 (with tests): @tanstack/react-table 9, react-flow-smart-edge 5,
+  @xyflow/react 13. Deferred, separate evaluation: eslint 10, TypeScript 7.
 
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
