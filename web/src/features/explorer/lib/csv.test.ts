@@ -37,6 +37,11 @@ describe("exportToCsv", () => {
     expect(text).toBe("id,email\n1,a@x.io");
   });
 
+  it("marks the file as UTF-8 so Excel keeps non-ASCII text", async () => {
+    const bytes = new Uint8Array(await (exportToCsv("users", ["n"], [{ n: "Zoë" }], {}), downloaded!.blob.arrayBuffer()));
+    expect([...bytes.slice(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
+  });
+
   it("quotes cells containing commas, quotes or newlines", async () => {
     const text = await csvOf(["v"], [{ v: "a,b" }, { v: 'say "hi"' }, { v: "two\nlines" }]);
 

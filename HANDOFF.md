@@ -173,14 +173,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   invalidates the whole scope (DDL left the canvas and exports stale). No `.slice()` key
   prefixes left; export query moved to `shared/hooks/use-export.ts`; `useReadOnly` no
   longer needs always-refetch.
+- fix(explorer): one RFC 4180 CSV builder (`shared/lib/csv.ts`) for the explorer download
+  and the console copy (the console's own copy wrote JSON as `[object Object]`). Headers
+  and cells quoted on comma/quote/CR/LF; text starting `= + - @ TAB CR` gets a `'` prefix
+  (OWASP), except plain numbers so `-5` and bigint strings survive. Download has a UTF-8
+  BOM for Excel.
 
 ## Next 3 steps
 
-1. fix(explorer): CSV escaping (headers, CR) + formula-injection guard.
-2. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
+1. fix(seed): parameterized inserts, self/cyclic and composite FKs, unique/check
    constraints, enums per dialect (may split in 2-3 commits).
-3. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
+2. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
    (SQLite autoIncrement on non-rowid INT PKs, Postgres formatDefault paren, composite FKs).
+3. End of Stage 2: summarize commits, ask before Stage 3.
 
 ## Half-done files
 
@@ -210,7 +215,6 @@ None.
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
   writes and show a count (ADR 0010).
-- CSV export: header cells not escaped; no formula-injection guard (`=`,`+`,`-`,`@`).
 - MySQL DSN drops URI query params (e.g. `tls=`); passwords are spliced raw into the
   DSN (special characters untested). Revisit with connection options (medium confidence).
 - SQLite Drizzle export emits `primaryKey({ autoIncrement: true })` for any integer PK,

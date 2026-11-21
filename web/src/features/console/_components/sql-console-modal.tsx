@@ -22,6 +22,7 @@ import {
   LockOpen,
 } from "lucide-react";
 import { useRunQuery } from "@/features/console/hooks/use-run-query";
+import { toCsv } from "@/shared/lib/csv";
 import { useReadOnly } from "@/shared/hooks/use-read-only";
 
 interface SqlConsoleModalProps {
@@ -39,21 +40,6 @@ const GUTTER_MIN_LINES = 7;
 
 function highlightSql(code: string): string {
   return Prism.highlight(code, Prism.languages.sql, "sql");
-}
-
-function rowsToCsv(columns: string[], rows: Record<string, unknown>[]): string {
-  const header = columns.join(",");
-  const lines = rows.map((row) =>
-    columns
-      .map((col) => {
-        const val = row[col];
-        if (val === null || val === undefined) return "";
-        const s = String(val).replace(/"/g, '""');
-        return /[",\n]/.test(s) ? `"${s}"` : s;
-      })
-      .join(","),
-  );
-  return [header, ...lines].join("\n");
 }
 
 export default function SqlConsoleModal({
@@ -179,7 +165,7 @@ export default function SqlConsoleModal({
     const text =
       format === "json"
         ? JSON.stringify(result.rows, null, 2)
-        : rowsToCsv(result.columns, result.rows);
+        : toCsv(result.columns, result.rows);
     await navigator.clipboard.writeText(text);
     setCopied(format);
     setTimeout(() => setCopied(null), 1500);

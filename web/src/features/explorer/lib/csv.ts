@@ -1,3 +1,5 @@
+import { toCsv } from "@/shared/lib/csv";
+
 export function exportToCsv(
   tableName: string,
   columns: string[],
@@ -8,24 +10,8 @@ export function exportToCsv(
     (col) => columnVisibility[col] !== false,
   );
 
-  function escapeCsvCell(value: unknown): string {
-    if (value === null || value === undefined) return "";
-    const str =
-      typeof value === "object" ? JSON.stringify(value) : String(value);
-    if (str.includes(",") || str.includes('"') || str.includes("\n")) {
-      return `"${str.replace(/"/g, '""')}"`;
-    }
-    return str;
-  }
-
-  const header = visibleColumns.join(",");
-  const body = rows
-    .map((row) =>
-      visibleColumns.map((col) => escapeCsvCell(row[col])).join(","),
-    )
-    .join("\n");
-
-  const csv = `${header}\n${body}`;
+  // The BOM tells Excel the file is UTF-8; without it non-ASCII text is garbled.
+  const csv = "\uFEFF" + toCsv(visibleColumns, rows);
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
