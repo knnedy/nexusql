@@ -64,12 +64,15 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
   point and cross-feature imports go through it (ADR 0006 amended).
 - refactor(web): `features/explorer` (explorer-studio, grid/toolbar/table-list,
   use-update-row); `exportToCsv` split out of shared utils into `explorer/lib/csv.ts`.
+- refactor(web): `features/connect` (connect-view, recent-projects, use-connect) and
+  `features/projects` (projects-view). All routes are thin wrappers; `src/hooks` and
+  `src/lib` are gone. `app/page.tsx` stays "use client" (connect entry exports a hook).
 
 ## Next 3 steps
 
-1. refactor(web): move connect and projects into features; drop src/hooks.
-2. docs: README/CONTRIBUTING project structure; preview images to docs/assets.
-3. Stage 1 wrap-up: summary + approval before Stage 2.
+1. docs: README/CONTRIBUTING project structure; preview images to docs/assets.
+2. Stage 1 wrap-up: summary + approval before Stage 2.
+3. Stage 2 step 1 (after approval): Go test harness on SQLite.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 

@@ -5,7 +5,7 @@ import { ArrowRight, Clock, Database, Loader2 } from "lucide-react";
 import { formatRelativeTime } from "@/shared/lib/utils";
 import ProviderBadge from "@/components/provider-badge";
 import { useProjects, useTouchProject } from "@/shared/hooks/use-projects";
-import { useConnect } from "@/hooks/use-connect";
+import { useConnect } from "@/features/connect/hooks/use-connect";
 import { DatabaseProvider } from "@/shared/types/provider";
 
 export default function RecentProjects() {
