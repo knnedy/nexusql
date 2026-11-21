@@ -23,6 +23,8 @@ type Harness struct {
 	Keys Keys
 	// Seed exercises the seeder on constrained tables.
 	Seed Seed
+	// Columns pins declared types and default expressions.
+	Columns Columns
 }
 
 // Run executes every conformance test against the harness.
@@ -38,6 +40,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Quoting", func(t *testing.T) { testQuoting(t, h) })
 	t.Run("Values", func(t *testing.T) { testValues(t, h) })
 	t.Run("Keys", func(t *testing.T) { testKeys(t, h) })
+	t.Run("Columns", func(t *testing.T) { testColumns(t, h) })
 }
 
 // setup opens a fresh database with the fixture schema and rows loaded.

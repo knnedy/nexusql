@@ -51,6 +51,15 @@ func TestConformance(t *testing.T) {
 				"blank": `null`,
 			},
 		},
+		Columns: dbtest.Columns{
+			Setup: []string{`CREATE TABLE d (id INT AUTO_INCREMENT PRIMARY KEY, title VARCHAR(20) DEFAULT 'it''s',
+				n INT DEFAULT 5, at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, price DECIMAL(10,2) DEFAULT 1.50,
+				u VARCHAR(36) DEFAULT (uuid()))`},
+			Want: map[string][2]string{
+				"id": {"int", "<none>"}, "title": {"varchar(20)", "'it''s'"}, "n": {"int", "5"},
+				"at": {"timestamp", "CURRENT_TIMESTAMP"}, "price": {"decimal(10,2)", "1.50"}, "u": {"varchar(36)", "(uuid())"},
+			},
+		},
 		Seed: dbtest.Seed{
 			Setup: []string{
 				`CREATE TABLE files (id INT AUTO_INCREMENT PRIMARY KEY, data VARBINARY(64) NOT NULL)`,

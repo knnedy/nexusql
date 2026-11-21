@@ -197,13 +197,30 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   types and MySQL ENUM columns already seeded valid members; now pinned by the suite.
   Unique columns rely on the 5 retries (decided: no up-front dedupe). Grid and export do
   not use `allowed` yet (Stage 3 candidate: enum picker for SQLite).
+- fix(db): fields carry `nativeType`, the declared type (`format_type` on Postgres,
+  `COLUMN_TYPE` on MySQL, the declared type on SQLite), and `defaultValue` is a SQL
+  expression on every dialect: MySQL reported string literals unquoted (`it's`) and
+  expressions without their parentheses (`uuid()`), so the canvas DDL preview and the
+  Drizzle export printed invalid defaults. Pinned by a `Columns` fixture per dialect.
 
 ## Next 3 steps
 
-1. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
-   (SQLite autoIncrement on non-rowid INT PKs, Postgres formatDefault paren, composite FKs).
+1. fix(export): one shared model + Prisma renderer (user approved); dialects supply type
+   and default facts only. Golden files per dialect from a real fixture database, and a
+   pinned `tools/exportcheck` (prisma 7.10.1) running `prisma validate` in CI and
+   `make export-check`. Then Drizzle on the same model, checked with tsc (drizzle-orm
+   0.45.4). Real tools rejected today's output: space in a table name, several `@id`,
+   autoincrement on text keys, Prisma 7 rejects datasource `url`, missing back-relations,
+   enums upper-cased without `@map`, `sql` not imported, boolean default `1`.
 2. End of Stage 2: summarize commits, ask before Stage 3.
 3. Stage 3 (after approval).
+
+## Stage 3 export formats (user decision 2026-11-21)
+
+Add, as renderers on the step 17 export model, each with goldens per dialect and a real
+tool check: SQL DDL (round-trip: run on a fresh database, introspect, compare; replaces the
+client-side canvas DDL), Mermaid ER, DBML, Kysely, SQLAlchemy. API becomes
+`/api/export/{format}` with the UI listing registered formats.
 
 ## Half-done files
 

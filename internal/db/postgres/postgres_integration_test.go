@@ -48,6 +48,15 @@ func TestConformance(t *testing.T) {
 				"u": `"a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11"`, "blank": `null`,
 			},
 		},
+		Columns: dbtest.Columns{
+			Setup: []string{`CREATE TABLE d (id SERIAL PRIMARY KEY, title VARCHAR(20) DEFAULT 'it''s',
+				n INTEGER DEFAULT 5, at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, price DECIMAL(10,2) DEFAULT 1.50)`},
+			Want: map[string][2]string{
+				"id": {"integer", "nextval('d_id_seq'::regclass)"}, "title": {"character varying(20)", "'it''s'::character varying"},
+				"n": {"integer", "5"}, "at": {"timestamp without time zone", "CURRENT_TIMESTAMP"},
+				"price": {"numeric(10,2)", "1.50"},
+			},
+		},
 		Seed: dbtest.Seed{
 			Setup: []string{
 				`CREATE TABLE files (id SERIAL PRIMARY KEY, data BYTEA NOT NULL)`,

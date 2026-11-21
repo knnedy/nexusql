@@ -51,6 +51,14 @@ func TestConformance(t *testing.T) {
 				"typeof(flag)": "integer", "typeof(js)": "text", "typeof(blank)": "null",
 			},
 		},
+		Columns: dbtest.Columns{
+			Setup: []string{`CREATE TABLE d (id INTEGER PRIMARY KEY, title VARCHAR(20) DEFAULT 'it''s',
+				n INTEGER DEFAULT 5, at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, price DECIMAL(10,2) DEFAULT 1.50)`},
+			Want: map[string][2]string{
+				"id": {"INTEGER", "<none>"}, "title": {"VARCHAR(20)", "'it''s'"}, "n": {"INTEGER", "5"},
+				"at": {"TIMESTAMP", "CURRENT_TIMESTAMP"}, "price": {"DECIMAL(10,2)", "1.50"},
+			},
+		},
 		Seed: dbtest.Seed{
 			Setup: []string{
 				`CREATE TABLE files (id INTEGER PRIMARY KEY, data BLOB NOT NULL)`,
