@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/session"
 )
 
 type exportResponse struct {
@@ -21,13 +20,8 @@ func (h *handler) handleExportDrizzle(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) export(w http.ResponseWriter, r *http.Request, target string, render func(db.Exporter, *db.Schema) string) {
-	conn, err := h.session.Get()
-	if err == session.ErrNoActiveConnection {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	conn, ok := h.activeConn(w)
+	if !ok {
 		return
 	}
 

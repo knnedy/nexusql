@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/session"
 )
 
 type queryRequest struct {
@@ -21,13 +20,8 @@ type queryResponse struct {
 }
 
 func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
-	conn, err := h.session.Get()
-	if err == session.ErrNoActiveConnection {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	conn, ok := h.activeConn(w)
+	if !ok {
 		return
 	}
 

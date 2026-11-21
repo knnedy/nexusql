@@ -1,7 +1,6 @@
 package api
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -20,7 +19,7 @@ func (h *handler) handleCreateProject(w http.ResponseWriter, r *http.Request) {
 		URI  string `json:"uri"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
@@ -65,7 +64,7 @@ func (h *handler) handleRenameProject(w http.ResponseWriter, r *http.Request) {
 		Name string `json:"name"`
 	}
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}

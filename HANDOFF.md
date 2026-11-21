@@ -38,12 +38,14 @@ Stage 1: architecture and file tree (approved; standard Go project layout requir
 - refactor(server): `internal/server` builds the router/http.Server (`server.New`) and
   runs it with graceful shutdown (`server.Run`). main.go is flags + wiring only.
   `/api/health` reports the ldflags `Version` ("dev" locally) instead of "0.1.0".
+- refactor(api): response helpers moved to `api/respond.go`; `h.activeConn(w)` replaces
+  7 copies of the session lookup; all bodies decoded via `readJSON`. 401 path verified.
 
 ## Next 3 steps
 
-1. refactor(api): extract respond helpers and session guard.
-2. refactor(studio): introduce service layer between api and db (pass-through).
-3. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
+1. refactor(studio): introduce service layer between api and db (pass-through).
+2. refactor(web): move api client, query keys, types into shared/; centralise sessionStorage.
+3. refactor(web): move canvas into features/canvas.
 
 Remaining Stage 1 after that: web features/ moves (one feature per commit), README structure docs.
 
@@ -73,7 +75,8 @@ None.
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
 - Postgres `FetchRows` interpolates an unvalidated table name with Go `%q` (SQL injection).
-- `"public"` schema hardcoded in `api/rows.go`, `api/seed.go`, postgres column lookups.
+- `"public"` schema hardcoded in `api/rows.go`, `api/seed.go`, `api/schema.go` default,
+  postgres column lookups.
 - `GET /api/projects` returns full URIs including passwords.
 - No Origin/Host checks (DNS rebinding); `sqlite://` can open any file path.
 - Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.

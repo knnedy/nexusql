@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/db"
-	"github.com/knnedy/nexusql/internal/session"
 )
 
 type rowsResponse struct {
@@ -37,13 +36,8 @@ type updateRowRequest struct {
 }
 
 func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
-	conn, err := h.session.Get()
-	if err == session.ErrNoActiveConnection {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	conn, ok := h.activeConn(w)
+	if !ok {
 		return
 	}
 
@@ -130,13 +124,8 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
-	conn, err := h.session.Get()
-	if err == session.ErrNoActiveConnection {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	conn, ok := h.activeConn(w)
+	if !ok {
 		return
 	}
 
@@ -170,13 +159,8 @@ func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {
-	conn, err := h.session.Get()
-	if err == session.ErrNoActiveConnection {
-		writeError(w, http.StatusUnauthorized, err.Error())
-		return
-	}
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+	conn, ok := h.activeConn(w)
+	if !ok {
 		return
 	}
 

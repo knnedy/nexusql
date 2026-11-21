@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -22,7 +21,7 @@ type connectResponse struct {
 
 func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 	var req connectRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := readJSON(r, &req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
