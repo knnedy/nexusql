@@ -311,9 +311,12 @@ func generatePKValue(f db.Field) string {
 	}
 }
 
-// GenerateFakeValue returns a fake value for f as text: an enum member, then a
+// GenerateFakeValue returns a fake value for f as text: an allowed or enum value, then a
 // value fitting the column name, then one fitting the type.
 func GenerateFakeValue(f db.Field, enums map[string]db.EnumType) string {
+	if len(f.Allowed) > 0 {
+		return gofakeit.RandomString(f.Allowed)
+	}
 	if enum, ok := enums[string(f.Type)]; ok && len(enum.Values) > 0 {
 		return gofakeit.RandomString(enum.Values)
 	}

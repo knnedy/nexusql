@@ -191,15 +191,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   self-reference points at an earlier row, or the row itself. Composite keys take every
   column of one parent row. Keys are filled before primary keys are generated, so join
   tables (PK made of FKs) no longer get random ids that match no parent.
+- fix(seed): SQLite `CHECK (col IN ('a', ...))` values are introspected as `Field.Allowed`
+  (`sqlite/checks.go`; only that exact shape, column names case-insensitive) and the
+  seeder picks from them; those columns were rejected on every row before. Postgres enum
+  types and MySQL ENUM columns already seeded valid members; now pinned by the suite.
+  Unique columns rely on the 5 retries (decided: no up-front dedupe). Grid and export do
+  not use `allowed` yet (Stage 3 candidate: enum picker for SQLite).
 
 ## Next 3 steps
 
-1. fix(seed): enums per dialect (SQLite `CHECK (x IN (...))` values; verify PG and MySQL
-   enum columns seed valid members). Unique columns rely on the retry (no up-front
-   dedupe): decide whether that is enough. Then step 17.
-2. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
+1. fix(export): golden-file tests per dialect for Prisma/Drizzle; fix fidelity gaps
    (SQLite autoIncrement on non-rowid INT PKs, Postgres formatDefault paren, composite FKs).
-3. End of Stage 2: summarize commits, ask before Stage 3.
+2. End of Stage 2: summarize commits, ask before Stage 3.
+3. Stage 3 (after approval).
 
 ## Half-done files
 
@@ -237,3 +241,5 @@ None.
 - SQLite connections never set `PRAGMA foreign_keys = ON`, so edits, console writes and
   the seeder are not FK-checked on SQLite (SQLite's default; most apps turn it on).
   Turning it on changes console behaviour: decide before changing (high confidence).
+- Postgres/MySQL `CHECK (col IN (...))` on non-enum columns is not read into `Allowed`
+  (catalog text differs per dialect); those rows are retried, then skipped and reported.

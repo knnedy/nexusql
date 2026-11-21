@@ -53,6 +53,8 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE files (id SERIAL PRIMARY KEY, data BYTEA NOT NULL)`,
 				`CREATE TABLE flags (id SERIAL PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
 				`CREATE TABLE scores (id SERIAL PRIMARY KEY, n INTEGER NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+				`CREATE TYPE task_status AS ENUM ('todo', 'doing', 'done')`,
+				`CREATE TABLE tasks (id SERIAL PRIMARY KEY, status task_status NOT NULL)`,
 				`CREATE TABLE categories (id SERIAL PRIMARY KEY, parent_id INTEGER REFERENCES categories (id))`,
 				`CREATE TABLE teams (id SERIAL PRIMARY KEY, captain_id INTEGER)`,
 				`CREATE TABLE players (id SERIAL PRIMARY KEY, team_id INTEGER NOT NULL REFERENCES teams (id))`,

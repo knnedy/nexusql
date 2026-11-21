@@ -21,6 +21,8 @@ import (
 //	memberships(player_id FK -> players, team_id FK -> teams, PK (player_id, team_id))
 //	regions(country varchar(40), code varchar(40), PK (country, code))
 //	offices(id auto PK, country, code NOT NULL, FK (country, code) -> regions)
+//	tasks(id auto PK, status NOT NULL, one of 'todo', 'doing', 'done' in the
+//	      dialect's own way: enum type, ENUM column, or CHECK (status IN (...)))
 type Seed struct {
 	Setup  []string
 	Stored map[string]string // query -> expected first cell: how values were stored
@@ -96,6 +98,16 @@ func testSeedConstraints(t *testing.T, h Harness) {
 			if err != nil || len(got.Rows) != 1 || str(firstCell(got)) != want {
 				t.Errorf("%s = %v (err %v), want %s", q, got.Rows, err, want)
 			}
+		}
+	})
+
+	t.Run("enum columns get allowed values", func(t *testing.T) {
+		if res.RowsInserted["tasks"] != 5 {
+			t.Fatalf("tasks: %d inserted, want 5 (%s)", res.RowsInserted["tasks"], res.Problems["tasks"])
+		}
+		got, err := Script(ctx, p, "SELECT COUNT(*) FROM tasks WHERE status NOT IN ('todo', 'doing', 'done')", 1)
+		if err != nil || str(firstCell(got)) != "0" {
+			t.Errorf("tasks with other statuses: %v (err %v), want 0", got.Rows, err)
 		}
 	})
 

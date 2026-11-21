@@ -56,6 +56,8 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE files (id INTEGER PRIMARY KEY, data BLOB NOT NULL)`,
 				`CREATE TABLE flags (id INTEGER PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
 				`CREATE TABLE scores (id INTEGER PRIMARY KEY, n INTEGER NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+				`CREATE TABLE tasks (id INTEGER PRIMARY KEY,
+					status TEXT NOT NULL CHECK ("status" IN ('todo', 'doing', 'done')))`,
 				`CREATE TABLE categories (id INTEGER PRIMARY KEY, parent_id INTEGER REFERENCES categories (id))`,
 				`CREATE TABLE teams (id INTEGER PRIMARY KEY, captain_id INTEGER REFERENCES players (id))`,
 				`CREATE TABLE players (id INTEGER PRIMARY KEY, team_id INTEGER NOT NULL REFERENCES teams (id))`,
@@ -149,5 +151,36 @@ func TestSeedNamesACycleItCannotBreak(t *testing.T) {
 	_, err = seed.Run(ctx, p, schema, seed.Options{RowsPerTable: 1})
 	if err == nil || !strings.Contains(err.Error(), "no nullable column") || !strings.Contains(err.Error(), "a, b") {
 		t.Fatalf("err = %v, want the cycle named and why it cannot be broken", err)
+	}
+}
+
+func TestOnlyPlainInListsBecomeAllowedValues(t *testing.T) {
+	ctx := context.Background()
+	p, err := sqlite.Connect(ctx, "sqlite://:memory:")
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	if _, err := dbtest.Script(ctx, p, `CREATE TABLE t (
+		plain TEXT CHECK (plain IN ('a', 'it''s')),
+		upper TEXT CHECK ((UPPER IN ('x'))),
+		[odd col] TEXT, -- CHECK (odd IN ('comment'))
+		negated TEXT CHECK (negated NOT IN ('a')),
+		either TEXT CHECK (either IN ('a') OR either IS NULL),
+		CONSTRAINT c CHECK ("odd col" IN ('p', 'q'))
+	)`, 0); err != nil {
+		t.Fatal(err)
+	}
+	schema, err := p.IntrospectSchema(ctx, p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := map[string]string{
+		"plain": "a|it's", "upper": "x", "odd col": "p|q", "negated": "", "either": "",
+	}
+	for _, f := range schema.Tables[0].Fields {
+		if got := strings.Join(f.Allowed, "|"); got != want[f.Name] {
+			t.Errorf("%s: allowed %q, want %q", f.Name, got, want[f.Name])
+		}
 	}
 }

@@ -56,6 +56,7 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE files (id INT AUTO_INCREMENT PRIMARY KEY, data VARBINARY(64) NOT NULL)`,
 				`CREATE TABLE flags (id INT AUTO_INCREMENT PRIMARY KEY, on_off BOOLEAN NOT NULL UNIQUE)`,
 				`CREATE TABLE scores (id INT AUTO_INCREMENT PRIMARY KEY, n INT NOT NULL CHECK (n BETWEEN 1 AND 50))`,
+				`CREATE TABLE tasks (id INT AUTO_INCREMENT PRIMARY KEY, status ENUM('todo', 'doing', 'done') NOT NULL)`,
 				`CREATE TABLE categories (id INT AUTO_INCREMENT PRIMARY KEY, parent_id INT,
 					FOREIGN KEY (parent_id) REFERENCES categories (id))`,
 				`CREATE TABLE teams (id INT AUTO_INCREMENT PRIMARY KEY, captain_id INT)`,
