@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -70,4 +71,14 @@ func JSONValue(b []byte) any {
 		return json.RawMessage(b)
 	}
 	return string(b)
+}
+
+// ParseHex reverses Hex; ok is false when s is not in that form.
+func ParseHex(s string) ([]byte, bool) {
+	rest, found := strings.CutPrefix(s, `\x`)
+	if !found {
+		return nil, false
+	}
+	b, err := hex.DecodeString(rest)
+	return b, err == nil
 }

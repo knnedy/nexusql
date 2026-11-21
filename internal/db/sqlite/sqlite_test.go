@@ -42,6 +42,10 @@ func TestConformance(t *testing.T) {
 				"ts": `"2026-01-02T03:04:05.5"`, "d": `"2026-01-02"`, "js": `{"a":1}`,
 				"bin": `"\\xdeadbeef"`, "flag": `true`, "blank": `null`,
 			},
+			Stored: map[string]string{
+				"typeof(big)": "integer", "typeof(fl)": "real", "typeof(bin)": "blob",
+				"typeof(flag)": "integer", "typeof(js)": "text", "typeof(blank)": "null",
+			},
 		},
 	})
 }

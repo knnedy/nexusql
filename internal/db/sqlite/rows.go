@@ -81,7 +81,7 @@ func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, va
 
 func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue, target db.Field, value *string) error {
 	where := make([]string, len(key))
-	args := []any{nullable(value)}
+	args := []any{editArg(target, value)}
 	for i, k := range key {
 		where[i] = quoteIdent(k.Field.Name) + " = ?"
 		args = append(args, k.Value)
@@ -103,12 +103,26 @@ func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue,
 	return nil
 }
 
-// nullable maps a nil value to SQL NULL.
-func nullable(v *string) any {
+// editArg converts the text the grid shows back into the column's type; nil is NULL.
+func editArg(f db.Field, v *string) any {
 	if v == nil {
 		return nil
 	}
-	return *v
+	s := *v
+	switch f.Type {
+	case db.FieldTypeBytea:
+		if b, ok := db.ParseHex(s); ok {
+			return b
+		}
+	case db.FieldTypeBoolean:
+		switch strings.ToLower(s) {
+		case "true", "1":
+			return int64(1)
+		case "false", "0":
+			return int64(0)
+		}
+	}
+	return s // INTEGER/REAL/NUMERIC affinity converts numeric text itself
 }
 
 // scanRows reads all rows from a *sql.Rows into a column list and a slice
