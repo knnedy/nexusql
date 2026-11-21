@@ -53,6 +53,8 @@ Usage of nexusql:
     	network interface to bind (default 127.0.0.1)
   -port string
     	TCP port for the web server (default 7080)
+  -query-timeout duration
+    	longest a single database statement may run (default 30s)
   -version
     	print version and exit
 ```

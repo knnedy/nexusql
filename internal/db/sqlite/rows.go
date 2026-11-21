@@ -128,14 +128,20 @@ func editArg(f db.Field, v *string) any {
 // scanRows reads all rows from a *sql.Rows into a column list and a slice
 // of generic maps, converting each value via normalizeValue.
 func scanRows(rows *sql.Rows) ([]string, []map[string]any, error) {
+	res, err := scanRowsCapped(rows, 0)
+	return res.Columns, res.Rows, err
+}
+
+// scanRowsCapped reads at most maxRows rows (0: all), noting whether more existed.
+func scanRowsCapped(rows *sql.Rows, maxRows int) (db.QueryResult, error) {
 	columns, err := rows.Columns()
 	if err != nil {
-		return nil, nil, fmt.Errorf("get columns: %w", err)
+		return db.QueryResult{}, fmt.Errorf("get columns: %w", err)
 	}
 
 	colTypes, err := rows.ColumnTypes()
 	if err != nil {
-		return nil, nil, fmt.Errorf("get column types: %w", err)
+		return db.QueryResult{}, fmt.Errorf("get column types: %w", err)
 	}
 	declaredTypes := make([]string, len(colTypes))
 	for i, ct := range colTypes {
@@ -143,14 +149,19 @@ func scanRows(rows *sql.Rows) ([]string, []map[string]any, error) {
 	}
 
 	result := make([]map[string]any, 0)
+	truncated := false
 	for rows.Next() {
+		if maxRows > 0 && len(result) == maxRows {
+			truncated = true
+			break
+		}
 		values := make([]any, len(columns))
 		scanArgs := make([]any, len(columns))
 		for i := range values {
 			scanArgs[i] = &values[i]
 		}
 		if err := rows.Scan(scanArgs...); err != nil {
-			return nil, nil, fmt.Errorf("scan row: %w", err)
+			return db.QueryResult{}, fmt.Errorf("scan row: %w", err)
 		}
 
 		row := make(map[string]any, len(columns))
@@ -160,10 +171,9 @@ func scanRows(rows *sql.Rows) ([]string, []map[string]any, error) {
 		result = append(result, row)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, nil, err
+		return db.QueryResult{}, err
 	}
-
-	return columns, result, nil
+	return db.QueryResult{Columns: columns, Rows: result, Truncated: truncated}, nil
 }
 
 // normalizeValue makes a scanned value JSON-safe. SQLite types values, not

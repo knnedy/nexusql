@@ -47,7 +47,7 @@ func setup(t *testing.T, h Harness) db.Provider {
 
 func mustExec(t *testing.T, p db.Provider, sql string) {
 	t.Helper()
-	if _, _, _, _, err := p.ExecuteQuery(context.Background(), sql); err != nil {
+	if _, err := p.ExecuteQuery(context.Background(), sql, 0); err != nil {
 		t.Fatalf("exec %q: %v", sql, err)
 	}
 }

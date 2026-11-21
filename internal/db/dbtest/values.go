@@ -49,11 +49,11 @@ func testValues(t *testing.T, h Harness) {
 		check(t, rows[0])
 	})
 	t.Run("console", func(t *testing.T) {
-		_, rows, _, _, err := p.ExecuteQuery(context.Background(), "SELECT * FROM vals")
-		if err != nil || len(rows) != 1 {
-			t.Fatalf("rows %v err %v", rows, err)
+		res, err := p.ExecuteQuery(context.Background(), "SELECT * FROM vals", 0)
+		if err != nil || len(res.Rows) != 1 {
+			t.Fatalf("rows %v err %v", res.Rows, err)
 		}
-		check(t, rows[0])
+		check(t, res.Rows[0])
 	})
 	t.Run("edits round-trip the shown text", func(t *testing.T) {
 		tbl := tableOf(t, p, "vals")
@@ -74,9 +74,9 @@ func testValues(t *testing.T, h Harness) {
 		}
 		check(t, rows[0])
 		for expr, want := range h.Values.Stored {
-			_, got, _, _, err := p.ExecuteQuery(context.Background(), "SELECT "+expr+" AS v FROM vals")
-			if err != nil || len(got) != 1 || str(got[0]["v"]) != want {
-				t.Errorf("%s = %v (err %v), want %s", expr, got, err, want)
+			res, err := p.ExecuteQuery(context.Background(), "SELECT "+expr+" AS v FROM vals", 0)
+			if err != nil || len(res.Rows) != 1 || str(res.Rows[0]["v"]) != want {
+				t.Errorf("%s = %v (err %v), want %s", expr, res.Rows, err, want)
 			}
 		}
 	})

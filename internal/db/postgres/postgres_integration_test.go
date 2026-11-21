@@ -5,6 +5,7 @@ package postgres_test
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/db/dbtest"
@@ -62,4 +63,24 @@ func TestConformance(t *testing.T) {
 			PK: map[string]bool{"twin_a.x": true, "twin_b.x": false},
 		},
 	})
+}
+
+func TestTruncatedQueryStopsReading(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+
+	start := time.Now()
+	res, err := p.ExecuteQuery(context.Background(), "SELECT generate_series(1, 50000000) AS g", 5) // streams; FROM would materialize
+	if err != nil || len(res.Rows) != 5 || !res.Truncated {
+		t.Fatalf("got %d rows truncated=%v err=%v", len(res.Rows), res.Truncated, err)
+	}
+	if d := time.Since(start); d > 3*time.Second {
+		t.Fatalf("took %s: the remaining rows were read instead of abandoned", d)
+	}
+	if _, err := p.ExecuteQuery(context.Background(), "SELECT 1", 0); err != nil {
+		t.Fatalf("pool unusable after truncation: %v", err)
+	}
 }

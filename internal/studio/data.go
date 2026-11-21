@@ -58,9 +58,11 @@ func (s *Service) Rows(ctx context.Context, q RowsQuery) (RowsPage, error) {
 		req.Sort = &f
 	}
 
-	cols, rows, total, err := conn.Impl.FetchRows(ctx, req)
+	qctx, cancel := s.bounded(ctx)
+	defer cancel()
+	cols, rows, total, err := conn.Impl.FetchRows(qctx, req)
 	if err != nil {
-		return RowsPage{}, err
+		return RowsPage{}, s.classify(qctx, err, func(e error) error { return e })
 	}
 	return RowsPage{Columns: cols, Rows: rows, Total: total}, nil
 }
@@ -79,9 +81,11 @@ func (s *Service) LookupRows(ctx context.Context, table, column, value string) (
 	if err != nil {
 		return nil, nil, err
 	}
-	cols, rows, err := conn.Impl.FetchRowWhere(ctx, t, f, value)
+	qctx, cancel := s.bounded(ctx)
+	defer cancel()
+	cols, rows, err := conn.Impl.FetchRowWhere(qctx, t, f, value)
 	if err != nil {
-		return nil, nil, invalid(err)
+		return nil, nil, s.classify(qctx, err, invalid)
 	}
 	return cols, rows, nil
 }
@@ -112,12 +116,14 @@ func (s *Service) UpdateRow(ctx context.Context, u RowUpdate) error {
 	if err != nil {
 		return err
 	}
-	err = conn.Impl.UpdateRow(ctx, t, key, target, u.Value)
+	qctx, cancel := s.bounded(ctx)
+	defer cancel()
+	err = conn.Impl.UpdateRow(qctx, t, key, target, u.Value)
 	switch {
 	case errors.Is(err, db.ErrRowNotFound):
 		return classed{ErrNotFound, err}
 	case err != nil:
-		return invalid(err)
+		return s.classify(qctx, err, invalid)
 	}
 	return nil
 }
@@ -151,6 +157,7 @@ type QueryResult struct {
 	Rows                 []map[string]any
 	RowsAffected         int64
 	IsWrite              bool
+	Truncated            bool // only the first MaxRows rows are included
 	RequiresConfirmation bool
 }
 
@@ -167,14 +174,19 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 		return QueryResult{RequiresConfirmation: true}, nil
 	}
 
-	cols, rows, affected, isWrite, err := conn.Impl.ExecuteQuery(ctx, sql)
-	if isWrite || err != nil {
+	qctx, cancel := s.bounded(ctx)
+	defer cancel()
+	res, err := conn.Impl.ExecuteQuery(qctx, sql, s.cfg.MaxRows)
+	if res.IsWrite || err != nil {
 		s.schemas.invalidate() // may have run DDL, even if a later part failed
 	}
 	if err != nil {
-		return QueryResult{}, invalid(err)
+		return QueryResult{}, s.classify(qctx, err, invalid)
 	}
-	return QueryResult{Columns: cols, Rows: rows, RowsAffected: affected, IsWrite: isWrite}, nil
+	return QueryResult{
+		Columns: res.Columns, Rows: res.Rows, RowsAffected: res.RowsAffected,
+		IsWrite: res.IsWrite, Truncated: res.Truncated,
+	}, nil
 }
 
 // Seed inserts fake rows into every table of the active connection.

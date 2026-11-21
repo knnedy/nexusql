@@ -6,7 +6,9 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	_ "github.com/knnedy/nexusql/internal/db/postgres"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/seed"
@@ -17,6 +19,12 @@ import (
 // newService returns a Service with an isolated project store and no connection.
 func newService(t *testing.T) *studio.Service {
 	t.Helper()
+	return newServiceWith(t, studio.Config{})
+}
+
+// newServiceWith is newService with explicit limits.
+func newServiceWith(t *testing.T, cfg studio.Config) *studio.Service {
+	t.Helper()
 	t.Setenv("HOME", t.TempDir())
 	proj, err := projects.NewStore()
 	if err != nil {
@@ -24,7 +32,7 @@ func newService(t *testing.T) *studio.Service {
 	}
 	sess := session.NewStore()
 	t.Cleanup(sess.Clear)
-	return studio.New(sess, proj)
+	return studio.New(sess, proj, cfg)
 }
 
 func sqliteURI(t *testing.T) string {
@@ -246,4 +254,17 @@ func TestOpenProject(t *testing.T) {
 	})
 }
 
-func TestSQLite(t *testing.T) { testDialect(t, sqliteURI(t)) }
+func TestSQLite(t *testing.T) {
+	testDialect(t, sqliteURI(t),
+		`WITH RECURSIVE c(x) AS (SELECT 1 UNION ALL SELECT x + 1 FROM c) SELECT count(*) FROM c`)
+}
+
+func TestConnectTimeout(t *testing.T) {
+	s := newServiceWith(t, studio.Config{ConnectTimeout: 300 * time.Millisecond})
+	start := time.Now()
+	// 10.255.255.1 is unroutable: without a timeout the dial hangs for minutes.
+	_, err := s.Connect(context.Background(), "postgres://u:p@10.255.255.1:5432/db", "x")
+	if err == nil || time.Since(start) > 3*time.Second {
+		t.Fatalf("err=%v after %s, want an error within the connect timeout", err, time.Since(start))
+	}
+}

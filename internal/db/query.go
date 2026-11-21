@@ -36,17 +36,8 @@ func IsDestructiveQuery(sql string) bool {
 
 // IsSelectQuery reports whether the given SQL statement is a read-only
 // statement (SELECT, WITH, EXPLAIN). Provider ExecuteQuery implementations
-// use this to decide whether to auto-append a row limit and whether to
-// return rows versus an affected-row count.
+// use this to decide whether to return rows or an affected-row count.
 func IsSelectQuery(sql string) bool {
 	kw := firstKeyword(sql)
 	return kw == "SELECT" || kw == "WITH" || kw == "EXPLAIN"
-}
-
-var hasLimitRe = regexp.MustCompile(`(?i)\blimit\s+\d+`)
-
-// HasExplicitLimit reports whether the SQL text already contains a LIMIT
-// clause, so callers can avoid appending a duplicate/conflicting one.
-func HasExplicitLimit(sql string) bool {
-	return hasLimitRe.MatchString(sql)
 }

@@ -5,14 +5,16 @@ import (
 	"errors"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/knnedy/nexusql/internal/seed"
 	"github.com/knnedy/nexusql/internal/studio"
 )
 
 // testDialect runs the studio behaviours that depend on the provider and its
-// schema resolution against a fresh, empty database at uri.
-func testDialect(t *testing.T, uri string) {
+// schema resolution against a fresh, empty database at uri; slowSQL must run
+// for well over a second.
+func testDialect(t *testing.T, uri, slowSQL string) {
 	s := newService(t)
 	ctx := context.Background()
 	if _, err := s.Connect(ctx, uri, "dialect"); err != nil {
@@ -145,6 +147,26 @@ func testDialect(t *testing.T, uri string) {
 		}
 		if res.RowsInserted["notes"] != 3 {
 			t.Fatalf("inserted %v, want 3 notes", res.RowsInserted)
+		}
+	})
+
+	t.Run("console limits", func(t *testing.T) {
+		limited := newServiceWith(t, studio.Config{QueryTimeout: 300 * time.Millisecond, MaxRows: 1})
+		if _, err := limited.Connect(ctx, uri, "limited"); err != nil {
+			t.Fatal(err)
+		}
+		res, err := limited.Query(ctx, "SELECT label FROM items", false)
+		if err != nil || len(res.Rows) != 1 || !res.Truncated {
+			t.Errorf("capped query: rows=%d truncated=%v err=%v, want 1 row, truncated", len(res.Rows), res.Truncated, err)
+		}
+
+		start := time.Now()
+		_, err = limited.Query(ctx, slowSQL, false)
+		if !errors.Is(err, studio.ErrTimeout) || time.Since(start) > 5*time.Second {
+			t.Errorf("slow query: err=%v after %s, want ErrTimeout soon after 300ms", err, time.Since(start))
+		}
+		if _, err := limited.Query(ctx, "SELECT 1", false); err != nil {
+			t.Errorf("connection unusable after a timeout: %v", err)
 		}
 	})
 

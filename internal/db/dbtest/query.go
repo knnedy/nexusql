@@ -14,28 +14,58 @@ func testQuery(t *testing.T, h Harness) {
 	p := setup(t, h)
 
 	t.Run("select returns rows", func(t *testing.T) {
-		cols, rows, _, isWrite, err := p.ExecuteQuery(ctx, "SELECT email FROM users ORDER BY id")
+		res, err := p.ExecuteQuery(ctx, "SELECT email FROM users ORDER BY id", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if isWrite || len(cols) != 1 || cols[0] != "email" || len(rows) != 3 {
-			t.Fatalf("isWrite=%v cols=%v rows=%d, want false [email] 3", isWrite, cols, len(rows))
+		if res.IsWrite || len(res.Columns) != 1 || res.Columns[0] != "email" || len(res.Rows) != 3 || res.Truncated {
+			t.Fatalf("got %+v, want 3 email rows, not truncated", res)
+		}
+	})
+
+	t.Run("caps rows without rewriting the SQL", func(t *testing.T) {
+		for _, c := range []struct {
+			sql       string
+			max, rows int
+			truncated bool
+		}{
+			{"SELECT email FROM users ORDER BY id", 2, 2, true},
+			{"SELECT email FROM users ORDER BY id", 3, 3, false},
+			// a "limit" inside a literal used to suppress the appended LIMIT
+			{"SELECT email FROM users WHERE email <> 'limit 1' ORDER BY id", 2, 2, true},
+			{"SELECT email FROM users ORDER BY id\n-- trailing comment", 1, 1, true},
+		} {
+			res, err := p.ExecuteQuery(ctx, c.sql, c.max)
+			if err != nil {
+				t.Fatalf("%q: %v", c.sql, err)
+			}
+			if len(res.Rows) != c.rows || res.Truncated != c.truncated {
+				t.Errorf("%q max %d: rows=%d truncated=%v, want %d %v", c.sql, c.max, len(res.Rows), res.Truncated, c.rows, c.truncated)
+			}
 		}
 	})
 
 	t.Run("write reports affected rows", func(t *testing.T) {
-		_, _, affected, isWrite, err := p.ExecuteQuery(ctx, "UPDATE posts SET title = 'x' WHERE user_id = 1")
+		res, err := p.ExecuteQuery(ctx, "UPDATE posts SET title = 'x' WHERE user_id = 1", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if !isWrite || affected != 2 {
-			t.Fatalf("isWrite=%v affected=%d, want true 2", isWrite, affected)
+		if !res.IsWrite || res.RowsAffected != 2 {
+			t.Fatalf("got %+v, want a write affecting 2", res)
 		}
 	})
 
 	t.Run("invalid SQL errors", func(t *testing.T) {
-		if _, _, _, _, err := p.ExecuteQuery(ctx, "SELEC 1"); err == nil {
+		if _, err := p.ExecuteQuery(ctx, "SELEC 1", 0); err == nil {
 			t.Fatal("expected syntax error")
+		}
+	})
+
+	t.Run("cancelled context stops the query", func(t *testing.T) {
+		cctx, cancel := context.WithCancel(ctx)
+		cancel()
+		if _, err := p.ExecuteQuery(cctx, "SELECT email FROM users", 0); err == nil {
+			t.Fatal("expected an error from a cancelled context")
 		}
 	})
 }
@@ -64,12 +94,12 @@ func testSeed(t *testing.T, h Harness) {
 	})
 
 	t.Run("seeded foreign keys reference existing rows", func(t *testing.T) {
-		_, rows, _, _, err := p.ExecuteQuery(ctx,
-			"SELECT COUNT(*) AS orphans FROM posts WHERE user_id NOT IN (SELECT id FROM users)")
+		res, err := p.ExecuteQuery(ctx,
+			"SELECT COUNT(*) AS orphans FROM posts WHERE user_id NOT IN (SELECT id FROM users)", 0)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got := str(rows[0]["orphans"]); got != "0" {
+		if got := str(res.Rows[0]["orphans"]); got != "0" {
 			t.Fatalf("orphaned posts = %s, want 0", got)
 		}
 	})

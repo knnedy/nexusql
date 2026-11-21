@@ -8,5 +8,7 @@ export interface QueryResponse {
   rows: Record<string, unknown>[];
   rowsAffected: number;
   isWrite: boolean;
+  /** The server stopped at its row cap; more rows matched than are listed. */
+  truncated: boolean;
   requiresConfirmation: boolean;
 }

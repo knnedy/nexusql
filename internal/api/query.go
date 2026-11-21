@@ -14,6 +14,7 @@ type queryResponse struct {
 	Rows                 []map[string]any `json:"rows"`
 	RowsAffected         int64            `json:"rowsAffected"`
 	IsWrite              bool             `json:"isWrite"`
+	Truncated            bool             `json:"truncated"`
 	RequiresConfirmation bool             `json:"requiresConfirmation"`
 }
 
@@ -34,6 +35,7 @@ func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
 		Rows:                 res.Rows,
 		RowsAffected:         res.RowsAffected,
 		IsWrite:              res.IsWrite,
+		Truncated:            res.Truncated,
 		RequiresConfirmation: res.RequiresConfirmation,
 	})
 }

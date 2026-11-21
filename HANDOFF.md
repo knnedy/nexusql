@@ -128,13 +128,22 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   skip composite relations until steps 16/17. Export diff vs before: only the invalid
   Drizzle `.default(AUTOINCREMENT)` (SQLite) and `.default(nextval(...)` (Postgres) gone.
   Canvas DDL preview moved to `features/canvas/lib/ddl.ts` (composite PK/FK lines).
+- fix(studio): `studio.Config` bounds every statement (`-query-timeout`, default 30s;
+  504 `ErrTimeout`), console rows capped at 1000 with `truncated` (no more appended
+  `LIMIT 500`; providers stop scanning and cancel, so Postgres/MySQL do not drain the
+  rest), connect timeout 10s (Postgres dial now honours the deadline; pgxpool dials in
+  the background), DB pool closed after `Shutdown` drains requests (`server.Server`;
+  `RegisterOnShutdown` hooks are async and raced), HTTP write
+  timeout = query timeout + 15s. Console shows "first N rows · more not shown".
 
 ## Next 3 steps
 
-1. fix(studio): statement timeout, row cap + truncated flag, cancellation, connect
-   timeout, close pool on shutdown/replace.
-2. fix(console): `internal/sqlscan` lexer for statement splitting and classification.
-3. feat(console): read-only toggle enforced by the database.
+1. fix(console): `internal/sqlscan` lexer: split statements, classify each (unknown =
+   write), run in order, confirm if any writes; replaces first-keyword regexes
+   (`WITH ... DELETE`, `SHOW`, `PRAGMA`, `VALUES` are misclassified today).
+2. feat(console): read-only toggle enforced by the database.
+3. fix(explorer): Set NULL, PK-less tables read-only, optimistic edit + rollback,
+   type-aware rendering; Playwright setup.
 
 ## Half-done files
 
@@ -162,9 +171,7 @@ None.
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
 - `sqlite://` can open any file path (acceptable locally; revisit with -expose).
-- Destructive-query detection is first-keyword only; LIMIT detection/appending is regex-based.
-- Connect has no timeout (bodies now capped; URIs redacted in errors).
-- Active DB connection is not closed on server shutdown (pool lifecycle).
+- Destructive-query detection is first-keyword only (LIMIT appending removed in step 10).
 - `use-disconnect` removes `QUERY_KEYS.lookup`/`.export` (`["lookup"]`), but cache keys
   are `[["lookup"], ...]`, so the prefix never matches: lookup/export caches survive
   disconnect (high confidence).

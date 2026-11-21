@@ -26,8 +26,13 @@ func (s *Service) Connect(ctx context.Context, uri, name string) (ConnectResult,
 		s.session.Clear()
 	}
 
-	conn, err := db.Connect(context.Background(), uri)
+	cctx, cancel := context.WithTimeout(ctx, s.cfg.ConnectTimeout)
+	defer cancel()
+	conn, err := db.Connect(cctx, uri)
 	if err != nil {
+		if errors.Is(cctx.Err(), context.DeadlineExceeded) {
+			err = fmt.Errorf("no answer within %s: %w", s.cfg.ConnectTimeout, err)
+		}
 		return ConnectResult{}, invalid(scrubPassword(err, uri))
 	}
 

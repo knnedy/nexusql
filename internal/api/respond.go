@@ -48,6 +48,8 @@ func writeServiceError(w http.ResponseWriter, err error) {
 		status = http.StatusNotFound
 	case errors.Is(err, studio.ErrConflict):
 		status = http.StatusConflict
+	case errors.Is(err, studio.ErrTimeout):
+		status = http.StatusGatewayTimeout
 	}
 	writeError(w, status, err.Error())
 }

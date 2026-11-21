@@ -7,8 +7,7 @@ import (
 
 	"github.com/knnedy/nexusql/internal/db/dbtest"
 	_ "github.com/knnedy/nexusql/internal/db/mysql"
-	_ "github.com/knnedy/nexusql/internal/db/postgres"
 )
 
-func TestPostgres(t *testing.T) { testDialect(t, dbtest.PostgresDB(t)) }
-func TestMySQL(t *testing.T)    { testDialect(t, dbtest.MySQLDB(t)) }
+func TestPostgres(t *testing.T) { testDialect(t, dbtest.PostgresDB(t), `SELECT pg_sleep(30)`) }
+func TestMySQL(t *testing.T)    { testDialect(t, dbtest.MySQLDB(t), `SELECT SLEEP(30)`) }

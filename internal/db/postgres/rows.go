@@ -97,6 +97,12 @@ func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue,
 
 // collect reads every row into column names and value maps, then closes rows.
 func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
+	res, err := collectCapped(rows, 0, nil)
+	return res.Columns, res.Rows, err
+}
+
+// collectCapped reads at most maxRows rows (0: all), noting whether more existed.
+func collectCapped(rows pgx.Rows, maxRows int, stop context.CancelFunc) (db.QueryResult, error) {
 	defer rows.Close()
 	fields := rows.FieldDescriptions()
 	columns := make([]string, len(fields))
@@ -105,10 +111,18 @@ func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
 	}
 
 	result := make([]map[string]any, 0)
+	truncated := false
 	for rows.Next() {
+		if maxRows > 0 && len(result) == maxRows {
+			truncated = true
+			if stop != nil {
+				stop() // abandon the rest instead of reading it
+			}
+			break
+		}
 		values, err := rows.Values()
 		if err != nil {
-			return nil, nil, fmt.Errorf("scan row: %w", err)
+			return db.QueryResult{}, fmt.Errorf("scan row: %w", err)
 		}
 		row := make(map[string]any, len(columns))
 		for i, col := range columns {
@@ -116,10 +130,11 @@ func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
 		}
 		result = append(result, row)
 	}
-	if err := rows.Err(); err != nil {
-		return nil, nil, err
+	rows.Close()
+	if err := rows.Err(); err != nil && !truncated {
+		return db.QueryResult{}, err
 	}
-	return columns, result, nil
+	return db.QueryResult{Columns: columns, Rows: result, Truncated: truncated}, nil
 }
 
 func normalizeValue(v any, oid uint32) any {

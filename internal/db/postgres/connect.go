@@ -31,6 +31,11 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 	cfg.MaxConnLifetime = 30 * time.Minute
 	cfg.MaxConnIdleTime = 5 * time.Minute
 	cfg.ConnConfig.ConnectTimeout = 10 * time.Second
+	// The pool dials in the background and ignores ctx, so the dial itself
+	// must carry the caller's deadline.
+	if deadline, ok := ctx.Deadline(); ok {
+		cfg.ConnConfig.ConnectTimeout = max(time.Until(deadline), time.Millisecond)
+	}
 
 	pool, err := pgxpool.NewWithConfig(ctx, cfg)
 	if err != nil {

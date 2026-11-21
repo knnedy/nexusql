@@ -16,6 +16,7 @@ import (
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/server"
 	"github.com/knnedy/nexusql/internal/session"
+	"github.com/knnedy/nexusql/internal/studio"
 )
 
 // Version is set at build time via -ldflags "-X main.Version=..."
@@ -77,6 +78,7 @@ func main() {
 	host := flag.String("host", "", "network interface to bind (default 127.0.0.1)")
 	port := flag.String("port", "", "TCP port for the web server (default 7080)")
 	expose := flag.Bool("expose", false, "allow a non-loopback -host; requires an access token")
+	queryTimeout := flag.Duration("query-timeout", studio.DefaultQueryTimeout, "longest a single database statement may run")
 	showVersion := flag.Bool("version", false, "print version and exit")
 	flag.Parse()
 
@@ -96,12 +98,13 @@ func main() {
 	}
 
 	srv := server.New(server.Options{
-		Addr:     cfg.Addr(),
-		IsDev:    cfg.IsDev,
-		Token:    cfg.Token,
-		Version:  Version,
-		Session:  session.NewStore(),
-		Projects: proj,
+		Addr:         cfg.Addr(),
+		IsDev:        cfg.IsDev,
+		Token:        cfg.Token,
+		QueryTimeout: *queryTimeout,
+		Version:      Version,
+		Session:      session.NewStore(),
+		Projects:     proj,
 	})
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

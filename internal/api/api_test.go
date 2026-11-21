@@ -24,7 +24,7 @@ func newAPI(t *testing.T) http.Handler {
 	}
 	sess := session.NewStore()
 	t.Cleanup(sess.Clear)
-	return api.Router(studio.New(sess, proj), api.Config{})
+	return api.Router(studio.New(sess, proj, studio.Config{}), api.Config{})
 }
 
 func call(h http.Handler, method, path, body string) *httptest.ResponseRecorder {

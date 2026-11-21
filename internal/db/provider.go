@@ -48,6 +48,15 @@ type SeedTx interface {
 // Provider is implemented once per database engine (postgres, mysql, sqlite).
 // Each implementation owns its own driver connection and translates its
 // native SQL dialect and type system into the canonical shapes in types.go.
+// QueryResult is the outcome of console SQL.
+type QueryResult struct {
+	Columns      []string
+	Rows         []map[string]any
+	RowsAffected int64
+	IsWrite      bool
+	Truncated    bool // more rows existed beyond the cap
+}
+
 // KeyValue pins one primary-key column of a row.
 type KeyValue struct {
 	Field Field
@@ -80,7 +89,9 @@ type Provider interface {
 	// writes NULL. It returns ErrRowNotFound when no row matches.
 	UpdateRow(ctx context.Context, t Table, key []KeyValue, target Field, value *string) error
 
-	ExecuteQuery(ctx context.Context, sql string) (columns []string, rows []map[string]any, rowsAffected int64, isWrite bool, err error)
+	// ExecuteQuery runs console SQL unchanged, returning at most maxRows rows
+	// (0 means no cap) and Truncated when more were available.
+	ExecuteQuery(ctx context.Context, sql string, maxRows int) (QueryResult, error)
 
 	BeginSeedTx(ctx context.Context) (SeedTx, error)
 

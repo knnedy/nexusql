@@ -326,8 +326,9 @@ export default function SqlConsoleModal({
             {showResults && !result.isWrite && (
               <div className="flex items-center gap-2.5">
                 <span className="text-[10.5px] font-mono text-text-tertiary">
-                  {result.rows.length}{" "}
-                  {result.rows.length === 1 ? "row" : "rows"}
+                  {result.truncated
+                    ? `first ${result.rows.length} rows · more not shown`
+                    : `${result.rows.length} ${result.rows.length === 1 ? "row" : "rows"}`}
                   {elapsedMs !== null && ` · ${elapsedMs.toFixed(0)}ms`}
                 </span>
                 <div className="flex items-center gap-1.5">
