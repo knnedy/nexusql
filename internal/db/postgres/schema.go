@@ -80,8 +80,8 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 		return nil, fmt.Errorf("introspect tables: %w", err)
 	}
 
-	if err := p.introspectUnique(ctx, schema, tables); err != nil {
-		return nil, fmt.Errorf("introspect unique indexes: %w", err)
+	if err := p.introspectIndexes(ctx, schema, tables); err != nil {
+		return nil, fmt.Errorf("introspect indexes: %w", err)
 	}
 
 	relations, err := p.introspectRelations(ctx, schema)

@@ -57,6 +57,9 @@ func Prisma(m *Model) string {
 				block = append(block, fmt.Sprintf("@@unique([%s])", idents(u)))
 			}
 		}
+		for _, ix := range t.Indexes {
+			block = append(block, fmt.Sprintf("@@index([%s]%s)", idents(ix.Fields), indexMap(t, ix)))
+		}
 		if t.Ident != t.Name {
 			block = append(block, fmt.Sprintf("@@map(%s)", prismaString(t.Name)))
 		}
@@ -184,6 +187,18 @@ func prismaActions(r *Relation) string {
 		}
 	}
 	return out
+}
+
+// indexMap names the index unless it has Prisma's default name.
+func indexMap(t *Table, ix Index) string {
+	names := []string{t.Name}
+	for _, f := range ix.Fields {
+		names = append(names, f.Name)
+	}
+	if ix.Name == strings.Join(names, "_")+"_idx" {
+		return ""
+	}
+	return ", map: " + prismaString(ix.Name)
 }
 
 func relName(r *Relation) string {

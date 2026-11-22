@@ -36,6 +36,7 @@ type Table struct {
 	PK        []*Field // in column order
 	Out, In   []*Relation
 	Unique    [][]*Field // unique column sets other than the primary key
+	Indexes   []Index
 	identUsed map[string]bool
 }
 
@@ -101,6 +102,15 @@ func Build(schema *db.Schema, dialect db.Exporter) *Model {
 			}
 			if !slices.Contains(set, nil) && !sameSet(set, tb.PK) && !tb.hasUnique(set) {
 				tb.Unique = append(tb.Unique, set)
+			}
+		}
+		for _, ix := range t.Indexes {
+			var fs []*Field
+			for _, c := range ix.Columns {
+				fs = append(fs, tb.field(c))
+			}
+			if !slices.Contains(fs, nil) {
+				tb.Indexes = append(tb.Indexes, Index{Name: ix.Name, Fields: fs})
 			}
 		}
 		tables[t.Name] = tb
@@ -175,6 +185,12 @@ func nameRelations(m *Model) {
 			r.ToIdent = unique(base, t.identUsed)
 		}
 	}
+}
+
+// Index is a plain index, with its database name.
+type Index struct {
+	Name   string
+	Fields []*Field
 }
 
 func (t *Table) hasUnique(set []*Field) bool {

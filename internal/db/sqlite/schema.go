@@ -37,11 +37,11 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 		if err != nil {
 			return nil, fmt.Errorf("introspect columns for %s: %w", name, err)
 		}
-		unique, err := p.uniqueSets(ctx, name)
+		unique, indexes, err := p.indexes(ctx, name)
 		if err != nil {
-			return nil, fmt.Errorf("introspect unique indexes for %s: %w", name, err)
+			return nil, fmt.Errorf("introspect indexes for %s: %w", name, err)
 		}
-		tables = append(tables, db.Table{Name: name, Schema: "", Fields: fields, Unique: unique})
+		tables = append(tables, db.Table{Name: name, Schema: "", Fields: fields, Unique: unique, Indexes: indexes})
 
 		rels, err := buildRelations(ctx, p, name, fkRows)
 		if err != nil {

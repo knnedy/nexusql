@@ -50,7 +50,7 @@ func Drizzle(m *Model) string {
 	for name := range z.imports {
 		z.consts[name] = true
 	}
-	for _, name := range []string{"sql", "primaryKey", "foreignKey", "unique", "customType", z.d.AnyColumn} {
+	for _, name := range []string{"sql", "primaryKey", "foreignKey", "unique", "index", "customType", z.d.AnyColumn} {
 		z.consts[name] = true // imported later, while tables render
 	}
 	for _, e := range m.Enums {
@@ -156,6 +156,10 @@ func (z *drizzle) table(b *strings.Builder, t *Table, calls map[*Field]string) {
 			z.imports["unique"] = true
 			extra = append(extra, fmt.Sprintf("unique().on(%s)", z.refs("t", u)))
 		}
+	}
+	for _, ix := range t.Indexes {
+		z.imports["index"] = true
+		extra = append(extra, fmt.Sprintf("index(%s).on(%s)", db.JSString(ix.Name), z.refs("t", ix.Fields)))
 	}
 
 	fmt.Fprintf(b, "\nexport const %s = %s(%s, {\n", z.tables[t], z.d.Table, db.JSString(t.Name))

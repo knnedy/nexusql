@@ -68,6 +68,9 @@ type Table struct {
 	// Unique lists each unique constraint or full unique index other than the
 	// primary key, as column names in key order.
 	Unique [][]string `json:"unique,omitempty"`
+	// Indexes are the plain (non-unique) column indexes, by name; partial and
+	// expression indexes are left out.
+	Indexes []Index `json:"indexes,omitempty"`
 }
 
 type Relation struct {
@@ -95,6 +98,12 @@ const (
 	SetNull    RefAction = "SET NULL"
 	SetDefault RefAction = "SET DEFAULT"
 )
+
+// Index is a non-unique index on columns, in key order.
+type Index struct {
+	Name    string   `json:"name"`
+	Columns []string `json:"columns"`
+}
 
 // IsComposite reports whether the foreign key spans several columns.
 func (r Relation) IsComposite() bool { return len(r.SourceFields) > 1 }

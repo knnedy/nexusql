@@ -294,11 +294,18 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   BY DEFAULT), smallint identity no longer exported as integer, SQLite
   primaryKey({ autoIncrement: true }). Prisma unchanged (autoincrement() for all, as db pull).
 
+- feat(db): A3 `Table.Indexes` (`db.Index{Name, Columns}`, by name): plain column
+  indexes, read with the unique sets in one pass (`*/indexes.go`, was `unique.go`).
+  Partial, expression and mixed expression indexes are left out (tested with
+  `(c, (a + 1))`). MySQL lists its automatic foreign key indexes, as prisma db pull does.
+  Prisma `@@index([...])` with `map:` unless the name is Prisma's default
+  `{table}_{cols}_idx`; Drizzle `index('name').on(...)`.
+
 ## Next 3 steps
 
-1. A3: non-unique indexes (Prisma @@index, Drizzle index()).
-2. A4: PG/MySQL CHECK IN -> Allowed; then STOP and summarize group A.
-3. B5: export format registry + /api/export/{format}.
+1. A4: PG/MySQL CHECK IN -> Allowed; then STOP and summarize group A.
+2. B5: export format registry + /api/export/{format}.
+3. B6: SQL DDL export (round-trip).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
@@ -331,6 +338,8 @@ None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
+- Partial and expression indexes are not introspected, so exports (and the B6 DDL) leave
+  them out; index sort order (DESC) and collations are not kept either.
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
   writes and show a count (ADR 0010).
 - Postgres/MySQL `CHECK (col IN (...))` on non-enum columns is not read into `Allowed`

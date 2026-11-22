@@ -61,6 +61,30 @@ func testKeys(t *testing.T, h Harness) {
 		}
 	})
 
+	t.Run("plain indexes are listed by name", func(t *testing.T) {
+		for _, stmt := range []string{
+			`CREATE TABLE idx (id INTEGER PRIMARY KEY, a INTEGER, b INTEGER, c INTEGER)`,
+			`CREATE INDEX idx_c ON idx (c)`,
+			`CREATE INDEX idx_ab ON idx (a, b)`,
+			`CREATE UNIQUE INDEX idx_u ON idx (b)`,
+			`CREATE INDEX idx_expr ON idx (c, (a + 1))`,
+		} {
+			mustExec(t, p, stmt)
+		}
+		s, err := p.IntrospectSchema(context.Background(), p.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		tbl, _ := s.Table("idx")
+		var got []string
+		for _, ix := range tbl.Indexes {
+			got = append(got, ix.Name+":"+strings.Join(ix.Columns, ","))
+		}
+		if want := []string{"idx_ab:a,b", "idx_c:c"}; !slices.Equal(got, want) {
+			t.Fatalf("indexes = %v, want %v (unique and expression indexes left out)", got, want)
+		}
+	})
+
 	t.Run("referential actions are read per foreign key", func(t *testing.T) {
 		for _, stmt := range []string{
 			`CREATE TABLE ra_parent (id INTEGER PRIMARY KEY)`,

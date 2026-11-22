@@ -74,6 +74,9 @@ model posts {
   author       users                    @relation("posts_author", fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   editor       users?                   @relation("posts_editor", fields: [editor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   post_tags    post_tags[]
+
+  @@index([author_id, published_on], map: "by_author")
+  @@index([title])
 }
 
 model regions {

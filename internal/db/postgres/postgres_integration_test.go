@@ -59,6 +59,8 @@ func TestConformance(t *testing.T) {
 					author_id INTEGER NOT NULL REFERENCES users (id), editor_id INTEGER REFERENCES users (id),
 					title VARCHAR(200) NOT NULL DEFAULT 'it''s "new"', status task_status NOT NULL DEFAULT 'todo',
 					body BYTEA, score NUMERIC(10,2) DEFAULT 1.50, ratio REAL, published_on DATE, span INTERVAL)`,
+				`CREATE INDEX posts_title_idx ON posts (title)`,
+				`CREATE INDEX by_author ON posts (author_id, published_on)`,
 				`CREATE TABLE categories (id SERIAL PRIMARY KEY, parent_id INTEGER REFERENCES categories (id), slug VARCHAR(40) NOT NULL,
 					UNIQUE (parent_id, slug))`,
 				`CREATE TABLE tags (code VARCHAR(20) PRIMARY KEY, label TEXT)`,

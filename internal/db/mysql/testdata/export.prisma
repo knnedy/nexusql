@@ -34,6 +34,8 @@ model invites {
   id    Int     @id @default(autoincrement())
   email String? @db.VarChar(255)
   users users?  @relation(fields: [email], references: [email], onUpdate: NoAction)
+
+  @@index([email], map: "email")
 }
 
 model offices {
@@ -41,6 +43,8 @@ model offices {
   country String  @db.Char(2)
   code    String  @db.VarChar(10)
   regions regions @relation(fields: [country, code], references: [country, code], onDelete: Cascade)
+
+  @@index([country, code], map: "country")
 }
 
 model order_items {
@@ -58,6 +62,7 @@ model post_tags {
   tags     tags   @relation(fields: [tag_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
 
   @@id([post_id, tag_code])
+  @@index([tag_code], map: "tag_code")
 }
 
 model posts {
@@ -73,6 +78,10 @@ model posts {
   author       users        @relation("posts_author", fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   editor       users?       @relation("posts_editor", fields: [editor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   post_tags    post_tags[]
+
+  @@index([author_id, published_on], map: "by_author")
+  @@index([editor_id], map: "editor_id")
+  @@index([title])
 }
 
 model regions {

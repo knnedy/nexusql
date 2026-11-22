@@ -86,6 +86,13 @@ export interface Table {
   fields: Field[];
   /** Unique constraints and full unique indexes other than the primary key. */
   unique?: string[][];
+  /** Plain (non-unique) column indexes by name; partial and expression ones are left out. */
+  indexes?: Index[];
+}
+
+export interface Index {
+  name: string;
+  columns: string[];
 }
 
 export interface Relation {

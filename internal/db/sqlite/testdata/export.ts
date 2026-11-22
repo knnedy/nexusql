@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnySQLiteColumn, blob, foreignKey, integer, numeric, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
+import { type AnySQLiteColumn, blob, foreignKey, index, integer, numeric, primaryKey, real, sqliteTable, text, unique } from 'drizzle-orm/sqlite-core';
 
 export const audit_log = sqliteTable('audit_log', {
   at: text('at'),
@@ -50,7 +50,10 @@ export const posts = sqliteTable('posts', {
   score: numeric('score').default('1.50'),
   ratio: real('ratio'),
   stamp: text('stamp').default(sql`(datetime('now'))`),
-});
+}, (t) => [
+  index('by_author').on(t.author_id, t.stamp),
+  index('posts_title_idx').on(t.title),
+]);
 
 export const regions = sqliteTable('regions', {
   country: text('country'),

@@ -1,45 +1,57 @@
 package sqlite
 
 import (
+	"cmp"
 	"context"
 	"fmt"
+	"slices"
+
+	"github.com/knnedy/nexusql/internal/db"
 )
 
-// uniqueSets lists the table's unique constraints and full unique indexes,
-// leaving out the primary key, partial indexes and expression indexes.
-func (p *provider) uniqueSets(ctx context.Context, table string) ([][]string, error) {
+// indexes lists the table's unique constraints and full unique indexes, then
+// its plain indexes by name; the primary key, partial and expression indexes are left out.
+func (p *provider) indexes(ctx context.Context, table string) ([][]string, []db.Index, error) {
 	rows, err := p.conn.QueryContext(ctx, fmt.Sprintf("PRAGMA index_list(%s)", quoteIdent(table)))
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	var names []string
+	plain := map[string]bool{}
 	for rows.Next() {
 		var seq, unique, partial int
 		var name, origin string
 		if err := rows.Scan(&seq, &name, &unique, &origin, &partial); err != nil {
 			rows.Close()
-			return nil, err
+			return nil, nil, err
 		}
-		if unique == 1 && origin != "pk" && partial == 0 {
+		if partial == 0 && (unique == 1 && origin != "pk" || unique == 0 && origin == "c") {
 			names = append(names, name)
+			plain[name] = unique == 0
 		}
 	}
 	rows.Close() // the one connection is needed for index_info below
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	var out [][]string
+	var sets [][]string
+	var idx []db.Index
 	for i := len(names) - 1; i >= 0; i-- { // index_list lists newest first
 		cols, err := p.indexColumns(ctx, names[i])
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
-		if cols != nil {
-			out = append(out, cols)
+		switch {
+		case cols == nil:
+		case plain[names[i]]:
+			idx = append(idx, db.Index{Name: names[i], Columns: cols})
+		default:
+			sets = append(sets, cols)
 		}
 	}
-	return out, nil
+	slices.SortFunc(idx, func(a, b db.Index) int { return cmp.Compare(a.Name, b.Name) })
+	return sets, idx, nil
 }
 
 // indexColumns returns the index's columns in order, or nil when a part is an expression.

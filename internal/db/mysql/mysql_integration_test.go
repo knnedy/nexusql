@@ -62,6 +62,8 @@ func TestConformance(t *testing.T) {
 					status ENUM('todo', 'in progress', 'done') NOT NULL DEFAULT 'todo',
 					body BLOB, score DECIMAL(10,2) DEFAULT 1.50, ratio FLOAT, published_on DATE,
 					FOREIGN KEY (author_id) REFERENCES users (id), FOREIGN KEY (editor_id) REFERENCES users (id))`,
+				`CREATE INDEX posts_title_idx ON posts (title)`,
+				`CREATE INDEX by_author ON posts (author_id, published_on)`,
 				`CREATE TABLE categories (id INT AUTO_INCREMENT PRIMARY KEY, parent_id INT, slug VARCHAR(40) NOT NULL,
 					FOREIGN KEY (parent_id) REFERENCES categories (id), UNIQUE (parent_id, slug))`,
 				`CREATE TABLE tags (code VARCHAR(20) PRIMARY KEY, label TEXT)`,

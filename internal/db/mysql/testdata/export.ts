@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnyMySqlColumn, bigint, boolean, char, customType, date, datetime, decimal, float, foreignKey, int, json, mysqlEnum, mysqlTable, primaryKey, text, timestamp, unique, varchar } from 'drizzle-orm/mysql-core';
+import { type AnyMySqlColumn, bigint, boolean, char, customType, date, datetime, decimal, float, foreignKey, index, int, json, mysqlEnum, mysqlTable, primaryKey, text, timestamp, unique, varchar } from 'drizzle-orm/mysql-core';
 
 // blob has no drizzle-orm builder.
 const blobType = customType<{ data: string }>({ dataType: () => 'blob' });
@@ -20,7 +20,9 @@ export const categories = mysqlTable('categories', {
 export const invites = mysqlTable('invites', {
   id: int('id').autoincrement().primaryKey(),
   email: varchar('email', { length: 255 }).references((): AnyMySqlColumn => users.email, { onDelete: 'set null' }),
-});
+}, (t) => [
+  index('email').on(t.email),
+]);
 
 export const offices = mysqlTable('offices', {
   id: int('id').primaryKey(),
@@ -28,6 +30,7 @@ export const offices = mysqlTable('offices', {
   code: varchar('code', { length: 10 }).notNull(),
 }, (t) => [
   foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }).onDelete('cascade').onUpdate('cascade'),
+  index('country').on(t.country, t.code),
 ]);
 
 export const order_items = mysqlTable('order items', {
@@ -41,6 +44,7 @@ export const post_tags = mysqlTable('post_tags', {
   tag_code: varchar('tag_code', { length: 20 }).notNull().references((): AnyMySqlColumn => tags.code),
 }, (t) => [
   primaryKey({ columns: [t.post_id, t.tag_code] }),
+  index('tag_code').on(t.tag_code),
 ]);
 
 export const posts = mysqlTable('posts', {
@@ -53,7 +57,11 @@ export const posts = mysqlTable('posts', {
   score: decimal('score', { precision: 10, scale: 2 }).default('1.50'),
   ratio: float('ratio'),
   published_on: date('published_on'),
-});
+}, (t) => [
+  index('by_author').on(t.author_id, t.published_on),
+  index('editor_id').on(t.editor_id),
+  index('posts_title_idx').on(t.title),
+]);
 
 export const regions = mysqlTable('regions', {
   country: char('country', { length: 2 }).notNull(),

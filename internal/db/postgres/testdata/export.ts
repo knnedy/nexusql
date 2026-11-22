@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { type AnyPgColumn, bigint, boolean, char, customType, date, foreignKey, integer, interval, jsonb, numeric, pgEnum, pgTable, primaryKey, real, serial, smallint, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core';
+import { type AnyPgColumn, bigint, boolean, char, customType, date, foreignKey, index, integer, interval, jsonb, numeric, pgEnum, pgTable, primaryKey, real, serial, smallint, text, timestamp, unique, uuid, varchar } from 'drizzle-orm/pg-core';
 
 // bytea has no drizzle-orm builder.
 const byteaType = customType<{ data: string }>({ dataType: () => 'bytea' });
@@ -56,7 +56,10 @@ export const posts = pgTable('posts', {
   ratio: real('ratio'),
   published_on: date('published_on'),
   span: interval('span'),
-});
+}, (t) => [
+  index('by_author').on(t.author_id, t.published_on),
+  index('posts_title_idx').on(t.title),
+]);
 
 export const regions = pgTable('regions', {
   country: char('country', { length: 2 }).notNull(),
