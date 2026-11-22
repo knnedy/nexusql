@@ -18,12 +18,11 @@ import {
   useReactFlow,
   type NodeTypes,
   type EdgeTypes,
-  type OnNodesChange,
-  type OnEdgesChange,
   type Node,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { useTheme } from "next-themes";
 import { toPng } from "html-to-image";
 import { SlidersHorizontal } from "lucide-react";
 import { buildCanvasGraph } from "@/features/canvas/lib/canvas-utils";
@@ -84,6 +83,7 @@ function CanvasInner() {
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
   const { getViewport, setViewport, getNodes, getNodesBounds } = useReactFlow();
+  const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
 
@@ -279,12 +279,14 @@ function CanvasInner() {
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
-          onNodesChange={onNodesChange as OnNodesChange}
-          onEdgesChange={onEdgesChange as OnEdgesChange}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
-          fitViewOptions={{ padding: 0.38, includeHiddenNodes: false }}
+          // v12's 0.38 padding: numbers are pixels since v13, so give the same share
+          fitViewOptions={{ padding: "14%", includeHiddenNodes: false }}
+          forceColorMode={resolvedTheme === "light" ? "light" : "dark"} // follow the app theme, not the OS
           minZoom={0.2}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}>

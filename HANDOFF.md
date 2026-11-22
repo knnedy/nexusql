@@ -25,13 +25,25 @@ checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and
   columns.
 - C. Explorer: 13 react-table 9; 14 column filters (typed, validated, parameterized);
   15 keyset paging when sorted by a key, count in its own request.
-- D. Canvas: 16 xyflow 13 + smart-edge 5; 17 large schemas (visible-only render, ELK in a
-  worker, no smart edges above a threshold). Also in 17: the export drawer warns when a
+- D. Canvas: 16 xyflow 13 (smart-edge is a dependency no code imports: drop it, not
+  upgrade it); 17 large schemas (visible-only render, ELK in a worker). Also in 17: the export drawer warns when a
   Mermaid diagram exceeds mermaid's limits (50,000 characters or 500 relationships, per
   mermaid 12.3.0's maxTextSize/maxEdges), since GitHub and other viewers then show an
   error; it suggests the canvas PNG or DBML instead.
-- E. 18 CALL/FETCH show rows; 19 explicit "create new SQLite database", else mode=rw.
-- F. 20 eslint 10 if eslint-config-next supports it, else record why.
+  18 (user 2026-11-23) readable layout for many tables: no table overlaps another, edges
+  route around tables (never under one) with as few crossings as possible. Today ELK
+  computes orthogonal routes but they are discarded; edges draw a handle-to-handle smooth
+  step that ignores tables, and node heights are guessed constants. Plan: draw ELK's
+  routed sections (fall back to smooth step only for edges of a table the user dragged,
+  until re-layout); tune ELK (layer-sweep crossing minimisation at higher thoroughness,
+  Brandes-Koepf/network-simplex placement, model order, edge spacing); pack disconnected
+  groups and lone tables into a near-square area instead of one long strip; lay out with
+  the real rendered node sizes. Gate: a vitest layout check on generated schemas (about
+  30, 150 and 400 tables, real-world FK fan-in): zero node overlaps, zero edge segments
+  through a table that is not an endpoint, crossing count recorded and lower than today's
+  baseline, layout time bounded.
+- E. 19 CALL/FETCH show rows; 20 explicit "create new SQLite database", else mode=rw.
+- F. 21 eslint 10 if eslint-config-next supports it, else record why.
 
 Stage 2 record follows.
 
@@ -523,12 +535,17 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   (user choice). vitest: every server format has a mark; screenshots checked both themes.
 - chore: gitignore web/AGENTS.md, which `next dev` 16.4 writes on every run (user choice).
 
+- D16 feat(canvas): @xyflow/react 13.0.2 (exact). Typecheck was clean as-is; behaviour
+  changes handled: fitView padding numbers are pixels now, so 0.38 became "14%"; v13
+  follows the OS colour scheme by default, so forceColorMode follows the app theme.
+  Dropped @tisoap/react-flow-smart-edge (no code imported it). Screenshots v12 vs v13
+  match in both themes with the OS set opposite to the app.
+
 ## Next 3 steps
 
-1. D16: @xyflow/react 13 + react-flow-smart-edge 5 together.
-2. D17: large schemas (visible-only render, ELK in a worker, no smart edges above a
-   threshold) + the Mermaid size warning in the export drawer; then STOP for group D.
-3. E18: CALL/FETCH show their rows.
+1. D17: large schemas (visible-only render, ELK in a worker) + Mermaid size warning.
+2. D18: readable layout for many tables (see plan); then STOP for group D.
+3. E19: CALL/FETCH show their rows.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
