@@ -205,3 +205,26 @@ func (exporter) SQLColumnType(f db.Field) (string, bool) {
 	}
 	return "serial", false
 }
+
+// KyselyType follows node-postgres: int8 and numeric arrive as strings, dates as Date.
+func (exporter) KyselyType(f db.Field) string {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial, db.FieldTypeReal, db.FieldTypeDoublePrecision:
+		return "number"
+	case db.FieldTypeBigint, db.FieldTypeBigserial:
+		return "Int8"
+	case db.FieldTypeNumeric:
+		return "Numeric"
+	case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeUUID, db.FieldTypeTime:
+		return "string"
+	case db.FieldTypeBoolean:
+		return "boolean"
+	case db.FieldTypeDate, db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
+		return "Timestamp"
+	case db.FieldTypeJSON, db.FieldTypeJSONB:
+		return "Json"
+	case db.FieldTypeBytea:
+		return "Buffer"
+	}
+	return ""
+}

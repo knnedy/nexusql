@@ -47,6 +47,7 @@ func testExport(t *testing.T, h Harness) {
 	m := export.Build(schema, dialect)
 	golden(t, "testdata/export.prisma", export.Prisma(m))
 	golden(t, "testdata/export.ts", export.Drizzle(m))
+	golden(t, "testdata/export.kysely.ts", export.Kysely(m))
 	golden(t, "testdata/export.dbml", export.DBML(m))
 	golden(t, "testdata/export.mmd", export.Mermaid(m))
 	ddl := export.SQL(m)

@@ -169,15 +169,21 @@ importers:
       '@dbml/core':
         specifier: 11.1.0
         version: 11.1.0
+      '@types/node':
+        specifier: 22.20.5
+        version: 22.20.5
       drizzle-orm:
         specifier: 0.45.4
-        version: 0.45.4(@electric-sql/pglite@0.4.3)(mysql2@3.24.4(@types/node@26.6.6))(postgres@3.4.7)(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))
+        version: 0.45.4(@electric-sql/pglite@0.4.3)(kysely@0.29.8)(mysql2@3.24.4(@types/node@22.20.5))(postgres@3.4.7)(prisma@7.10.1(@types/node@22.20.5)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3))
+      kysely:
+        specifier: 0.29.8
+        version: 0.29.8
       mermaid:
         specifier: 12.3.0
         version: 12.3.0
       prisma:
         specifier: 7.10.1
-        version: 7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
+        version: 7.10.1(@types/node@22.20.5)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -455,8 +461,8 @@ packages:
   '@types/lodash@4.17.27':
     resolution: {integrity: sha512-VenMRv/eKNrspX9v3H4dbmjsrnCOYdYBG3kxXKk3dG6X+urBGcj2Prww3xw1U5K4FV/mE4h5GbWd0szEKf+9ew==}
 
-  '@types/node@26.6.6':
-    resolution: {integrity: sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog==}
+  '@types/node@22.20.5':
+    resolution: {integrity: sha512-U2+DNr+wSjpsTS/wZGYHq7GcwfuSmKiKvoPvK22zwTlRhU91yOniN4qRR5KhIjvif7ysw/dz/hKmfDH0Ris4aA==}
 
   '@types/react@19.3.0':
     resolution: {integrity: sha512-N0rFCuH9YoxG9/m61l9MfpJKfmLOVU0em7ipIz6TRgSSkvReLB9vL85GB+yr8Bs5leqpvg96JSwF4ZS1s4viQg==}
@@ -991,6 +997,10 @@ packages:
   khroma@2.1.0:
     resolution: {integrity: sha512-Ls993zuzfayK269Svk9hzpeGUKob/sIgZzyHYdjQoAdQetRKpOLj+k/QQQ/6Qi0Yz65mlROrfd+Ev+1+7dz9Kw==}
 
+  kysely@0.29.8:
+    resolution: {integrity: sha512-ixHU1H4R+LeC5Y0nAhYgiGRFpFRHm2DXKEmJSs/vbes9sKXyssyzxzE/NYiOJX5fY0BL28biCre3GqlCqUwyXQ==}
+    engines: {node: '>=22.0.0'}
+
   layout-base@1.0.2:
     resolution: {integrity: sha512-8h2oVEZNktL4BH2JCOI90iD1yXwL6iNW7KcCKT2QZgQJR2vbqDsldCTPRU9NifTCqHZci57XvQQ15YTu+sTYPg==}
 
@@ -1179,8 +1189,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  undici-types@8.9.0:
-    resolution: {integrity: sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg==}
+  undici-types@6.21.0:
+    resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
 
   valibot@1.4.2:
     resolution: {integrity: sha512-gjdCvJ6d3RyHAneqxMYMW9QMCwYMb3jpOO0IyHZV1bnRHFBHrX3VkIILt5XYR0WhwHiH7Mty8ovuPZ/O3gamrg==}
@@ -1521,9 +1531,9 @@ snapshots:
 
   '@types/lodash@4.17.27': {}
 
-  '@types/node@26.6.6':
+  '@types/node@22.20.5':
     dependencies:
-      undici-types: 8.9.0
+      undici-types: 6.21.0
 
   '@types/react@19.3.0':
     dependencies:
@@ -1929,12 +1939,13 @@ snapshots:
 
   dotenv@17.4.2: {}
 
-  drizzle-orm@0.45.4(@electric-sql/pglite@0.4.3)(mysql2@3.24.4(@types/node@26.6.6))(postgres@3.4.7)(prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)):
+  drizzle-orm@0.45.4(@electric-sql/pglite@0.4.3)(kysely@0.29.8)(mysql2@3.24.4(@types/node@22.20.5))(postgres@3.4.7)(prisma@7.10.1(@types/node@22.20.5)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)):
     optionalDependencies:
       '@electric-sql/pglite': 0.4.3
-      mysql2: 3.24.4(@types/node@26.6.6)
+      kysely: 0.29.8
+      mysql2: 3.24.4(@types/node@22.20.5)
       postgres: 3.4.7
-      prisma: 7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
+      prisma: 7.10.1(@types/node@22.20.5)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3)
 
   effect@3.20.0:
     dependencies:
@@ -2022,6 +2033,8 @@ snapshots:
 
   khroma@2.1.0: {}
 
+  kysely@0.29.8: {}
+
   layout-base@1.0.2: {}
 
   layout-base@2.0.1: {}
@@ -2063,9 +2076,9 @@ snapshots:
       stylis: 4.4.0
       ts-dedent: 2.3.0
 
-  mysql2@3.24.4(@types/node@26.6.6):
+  mysql2@3.24.4(@types/node@22.20.5):
     dependencies:
-      '@types/node': 26.6.6
+      '@types/node': 22.20.5
       aws-ssl-profiles: 1.1.2
       generate-function: 2.3.1
       iconv-lite: 0.7.3
@@ -2109,13 +2122,13 @@ snapshots:
 
   postgres@3.4.7: {}
 
-  prisma@7.10.1(@types/node@26.6.6)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3):
+  prisma@7.10.1(@types/node@22.20.5)(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(typescript@5.9.3):
     dependencies:
       '@prisma/config': 7.10.1
       '@prisma/dev': 0.24.17(typescript@5.9.3)
       '@prisma/engines': 7.10.1
       '@prisma/studio-core': 0.33.0(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      mysql2: 3.24.4(@types/node@26.6.6)
+      mysql2: 3.24.4(@types/node@22.20.5)
       postgres: 3.4.7
     optionalDependencies:
       typescript: 5.9.3
@@ -2198,7 +2211,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  undici-types@8.9.0: {}
+  undici-types@6.21.0: {}
 
   valibot@1.4.2(typescript@5.9.3):
     optionalDependencies:

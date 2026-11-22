@@ -1,5 +1,6 @@
 // Validates every export golden under internal/db/*/testdata with the real
-// tools: prisma validate for export.prisma, tsc against drizzle-orm for export.ts,
+// tools: prisma validate for export.prisma, tsc against drizzle-orm and kysely
+// for export.ts and export.kysely.ts,
 // the @dbml/core parser for export.dbml, mermaid's parser for export.mmd.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -66,8 +67,13 @@ for (const d of dialects) {
     copyFileSync(drizzle, join(out, `${d}.ts`));
     checked++;
   }
+  const kysely = join(root, "internal/db", d, "testdata/export.kysely.ts");
+  if (existsSync(kysely)) {
+    copyFileSync(kysely, join(out, `${d}.kysely.ts`));
+    checked++;
+  }
 }
 // The copies sit next to node_modules so drizzle-orm resolves.
-run("export.ts (tsc)", bin("tsc"), ["-p", "tsconfig.json"]);
+run("export.ts, export.kysely.ts (tsc)", bin("tsc"), ["-p", "tsconfig.json"]);
 if (checked === 0) throw new Error("no export golden files found");
 process.exit(failed ? 1 : 0);

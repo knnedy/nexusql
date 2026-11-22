@@ -87,3 +87,18 @@ func (exporter) SQL() db.SQLDialect { return db.SQLDialect{Quote: '"', InlineFor
 // SQLColumnType keeps the declared type: it sets the column's affinity, and
 // INTEGER PRIMARY KEY makes the rowid alias.
 func (exporter) SQLColumnType(f db.Field) (string, bool) { return f.NativeType, true }
+
+// KyselyType follows storage, as better-sqlite3 returns it: dates and JSON
+// are text, booleans are integers.
+func (exporter) KyselyType(f db.Field) string {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial, db.FieldTypeBigint,
+		db.FieldTypeBigserial, db.FieldTypeReal, db.FieldTypeDoublePrecision, db.FieldTypeNumeric, db.FieldTypeBoolean:
+		return "number"
+	case db.FieldTypeBytea:
+		return "Buffer"
+	case "":
+		return ""
+	}
+	return "string"
+}

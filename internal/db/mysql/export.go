@@ -177,3 +177,24 @@ func (exporter) SQLColumnType(f db.Field) (string, bool) {
 	}
 	return f.NativeType, true
 }
+
+// KyselyType follows mysql2: decimal arrives as a string, bigint as a number
+// (without supportBigNumbers), dates as Date, tinyint(1) as a number.
+func (exporter) KyselyType(f db.Field) string {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial, db.FieldTypeBigint,
+		db.FieldTypeBigserial, db.FieldTypeReal, db.FieldTypeDoublePrecision, db.FieldTypeBoolean:
+		return "number"
+	case db.FieldTypeNumeric:
+		return "Numeric"
+	case db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeUUID, db.FieldTypeTime:
+		return "string"
+	case db.FieldTypeDate, db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
+		return "Timestamp"
+	case db.FieldTypeJSON, db.FieldTypeJSONB:
+		return "Json"
+	case db.FieldTypeBytea:
+		return "Buffer"
+	}
+	return ""
+}

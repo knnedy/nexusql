@@ -22,6 +22,10 @@ type Exporter interface {
 	PrismaType(f Field) (scalar, native string)
 	// Default classifies the field's default expression.
 	Default(f Field) Default
+	// KyselyType is the TypeScript type the dialect's usual Node driver returns
+	// for a non-enum field: a primitive or a helper (Int8, Numeric, Timestamp,
+	// Json); "" means unknown.
+	KyselyType(f Field) string
 	// SQL describes how the dialect writes DDL.
 	SQL() SQLDialect
 	// SQLColumnType is the column's DDL type with any generation clause (serial,

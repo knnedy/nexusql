@@ -361,11 +361,21 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   `mermaid.parse` runs in Node without a DOM, so `tools/exportcheck` parses every
   export.mmd with it (mermaid 12.3.0, exact).
 
+- feat(export): B9 Kysely (`export.Kysely`, format `kysely`, db.ts): kysely-codegen
+  style. One interface per table (PascalCase, unique against helper and enum names),
+  `DB` naming them; `Generated<>` for auto or defaulted columns, `GeneratedAlways<>` for
+  identity ALWAYS; enums as string unions. `Exporter.KyselyType` gives the usual Node
+  driver's types (medium confidence on driver defaults): node-postgres int8/numeric as
+  strings (Int8, Numeric helpers), dates as Date (Timestamp), json as Json; mysql2
+  decimal as string, bigint as number; better-sqlite3 by storage (dates text, booleans
+  numbers). tsc checks it against kysely 0.29.8 and @types/node 22.20.5 (exact).
+  README lists all formats.
+
 ## Next 3 steps
 
-1. B9: Kysely.
-2. B10: TypeORM.
-3. B11: SQLAlchemy; B12: GORM; then STOP and summarize group B.
+1. B10: TypeORM.
+2. B11: SQLAlchemy.
+3. B12: GORM; then STOP and summarize group B.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
