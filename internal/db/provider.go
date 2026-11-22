@@ -127,7 +127,6 @@ type Provider interface {
 	FetchRows(ctx context.Context, req RowsRequest) (columns []string, rows []map[string]any, err error)
 	// CountRows counts the rows matching req's search and filters.
 	CountRows(ctx context.Context, req RowsRequest) (int64, error)
-	FetchRowWhere(ctx context.Context, t Table, f Field, value string) ([]string, []map[string]any, error)
 	// UpdateRow sets target on the row matching every key column; a nil value
 	// writes NULL. It returns ErrRowNotFound when no row matches.
 	UpdateRow(ctx context.Context, t Table, key []KeyValue, target Field, value *string) error

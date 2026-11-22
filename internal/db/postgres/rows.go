@@ -64,15 +64,6 @@ func searchable(f db.Field) bool {
 	return false
 }
 
-func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, value string) ([]string, []map[string]any, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = $1 LIMIT 100", p.QuoteTable(t), p.QuoteIdentifier(f.Name))
-	rows, err := p.pool.Query(ctx, query, value)
-	if err != nil {
-		return nil, nil, fmt.Errorf("query rows: %w", err)
-	}
-	return collect(rows)
-}
-
 func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue, target db.Field, value *string) error {
 	where := make([]string, len(key))
 	args := []any{value} // pgx sends a nil *string as NULL

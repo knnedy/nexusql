@@ -129,29 +129,6 @@ func (s *Service) Count(ctx context.Context, q CountQuery) (int64, error) {
 	return n, nil
 }
 
-// LookupRows returns up to 100 rows of table where field equals value.
-func (s *Service) LookupRows(ctx context.Context, table, column, value string) ([]string, []map[string]any, error) {
-	conn, err := s.conn()
-	if err != nil {
-		return nil, nil, err
-	}
-	t, err := s.table(ctx, conn, table)
-	if err != nil {
-		return nil, nil, err
-	}
-	f, err := field(t, column)
-	if err != nil {
-		return nil, nil, err
-	}
-	qctx, cancel := s.bounded(ctx)
-	defer cancel()
-	cols, rows, err := conn.Impl.FetchRowWhere(qctx, t, f, value)
-	if err != nil {
-		return nil, nil, s.classify(qctx, err, invalid)
-	}
-	return cols, rows, nil
-}
-
 // RowUpdate sets one column of the row identified by its full primary key.
 type RowUpdate struct {
 	Table  string

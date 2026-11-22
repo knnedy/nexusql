@@ -502,12 +502,18 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   composite key, count), studio (cursor walk, eligibility, bad cursors, count), API,
   Playwright (cursor sent, reload offset, back). Mutation-checked at each seam.
 
+- Group C summarized 2026-11-23. User: remove the lookup endpoint; fix canvas PNG export
+  in dev; give each export format its official icon (before group D).
+- refactor(rows): drop GET /api/rows/{t}/lookup, Service.LookupRows and
+  Provider.FetchRowWhere, unused since FK navigation became an `=` filter (C14). Tests
+  that read rows through it now use FetchRows/Rows with an `=` filter.
+
 ## Next 3 steps
 
-1. Group C stop: summarize C13-C15; ask about removing the unused lookup endpoint
-   (GET /api/rows/{t}/lookup, Provider.FetchRowWhere).
-2. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
-3. D17: large schemas + the Mermaid size warning in the export drawer.
+1. fix(canvas): PNG export fails in dev (next/image error on a data: URL; getNodesBounds
+   warning).
+2. feat(export): official icon per export format in the export drawer.
+3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

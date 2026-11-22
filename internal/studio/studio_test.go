@@ -67,7 +67,7 @@ func TestOperationsWithoutConnection(t *testing.T) {
 	ops := map[string]func() error{
 		"Schema":     func() error { _, err := s.Schema(ctx, ""); return err },
 		"Rows":       func() error { _, err := s.Rows(ctx, studio.RowsQuery{Table: "users"}); return err },
-		"LookupRows": func() error { _, _, err := s.LookupRows(ctx, "users", "id", "1"); return err },
+		"Count":      func() error { _, err := s.Count(ctx, studio.CountQuery{Table: "users"}); return err },
 		"UpdateRow":  func() error { return s.UpdateRow(ctx, studio.RowUpdate{Table: "users"}) },
 		"Query":      func() error { _, err := s.Query(ctx, "SELECT 1", false); return err },
 		"Seed":       func() error { _, err := s.Seed(ctx, seed.Options{RowsPerTable: 1}); return err },

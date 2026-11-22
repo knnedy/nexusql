@@ -124,11 +124,12 @@ func page(t *testing.T, p db.Provider, table string, limit, offset int, sortCol 
 	return cols, rows, total, err
 }
 
-// lookup runs FetchRowWhere on named identifiers.
+// lookup fetches the rows of a named table whose field equals value.
 func lookup(t *testing.T, p db.Provider, table, field, value string) ([]string, []map[string]any, error) {
 	t.Helper()
 	tbl := tableOf(t, p, table)
-	return p.FetchRowWhere(context.Background(), tbl, fieldOf(t, tbl, field), value)
+	return p.FetchRows(context.Background(), db.RowsRequest{Table: tbl, Limit: 100,
+		Filters: []db.Filter{{Field: fieldOf(t, tbl, field), Op: db.FilterEq, Values: []string{value}}}})
 }
 
 // update runs UpdateRow on named identifiers.

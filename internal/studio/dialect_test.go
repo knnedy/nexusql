@@ -55,7 +55,7 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 	})
 
 	t.Run("lookup and update", func(t *testing.T) {
-		_, rows, err := s.LookupRows(ctx, "items", "label", "alpha")
+		rows, err := rowsWhere(s, "items", "label", "alpha")
 		if err != nil || len(rows) != 1 {
 			t.Fatalf("lookup: %v %v", rows, err)
 		}
@@ -63,7 +63,7 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if _, rows, _ := s.LookupRows(ctx, "items", "label", "gamma"); len(rows) != 1 {
+		if rows, _ := rowsWhere(s, "items", "label", "gamma"); len(rows) != 1 {
 			t.Fatalf("updated row not found: %v", rows)
 		}
 	})
@@ -72,8 +72,7 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 		for name, err := range map[string]error{
 			"rows table":    rowsErr(s.Rows(ctx, studio.RowsQuery{Table: "ghost", Limit: 1})),
 			"sort column":   rowsErr(s.Rows(ctx, studio.RowsQuery{Table: "items", Limit: 1, SortCol: "ghost"})),
-			"lookup table":  lookupErr(s.LookupRows(ctx, "ghost", "id", "1")),
-			"lookup field":  lookupErr(s.LookupRows(ctx, "items", "ghost", "1")),
+			"filter column": rowsErr(s.Rows(ctx, studio.RowsQuery{Table: "items", Limit: 1, Filters: []studio.RowFilter{{Column: "ghost", Op: "isNull"}}})),
 			"update table":  s.UpdateRow(ctx, studio.RowUpdate{Table: "ghost", Key: map[string]string{"id": "1"}, Column: "label"}),
 			"update key":    s.UpdateRow(ctx, studio.RowUpdate{Table: "items", Key: map[string]string{"ghost": "1"}, Column: "label"}),
 			"update target": s.UpdateRow(ctx, studio.RowUpdate{Table: "items", Key: map[string]string{"id": "1"}, Column: "ghost"}),
@@ -92,7 +91,7 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 		t.Cleanup(func() { exec(`DROP TABLE members`); exec(`DROP TABLE loose`) })
 		role := func(user string) any {
 			t.Helper()
-			_, rows, err := s.LookupRows(ctx, "members", "user_id", user)
+			rows, err := rowsWhere(s, "members", "user_id", user)
 			if err != nil || len(rows) != 1 {
 				t.Fatalf("lookup user %s: %v %v", user, rows, err)
 			}
@@ -178,8 +177,14 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 	})
 }
 
-func rowsErr(_ studio.RowsPage, err error) error                { return err }
-func lookupErr(_ []string, _ []map[string]any, err error) error { return err }
+func rowsErr(_ studio.RowsPage, err error) error { return err }
+
+// rowsWhere returns the rows of table whose column equals value.
+func rowsWhere(s *studio.Service, table, column, value string) ([]map[string]any, error) {
+	page, err := s.Rows(context.Background(), studio.RowsQuery{Table: table, Limit: 100,
+		Filters: []studio.RowFilter{{Column: column, Op: "eq", Values: []string{value}}}})
+	return page.Rows, err
+}
 
 // str renders a scanned value dialect-neutrally ([]byte vs string).
 func str(v any) string {

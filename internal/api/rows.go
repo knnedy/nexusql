@@ -23,14 +23,6 @@ type rowsResponse struct {
 	Search    string           `json:"search"`
 }
 
-type lookupResponse struct {
-	TableName string           `json:"tableName"`
-	Field     string           `json:"field"`
-	Value     string           `json:"value"`
-	Columns   []string         `json:"columns"`
-	Rows      []map[string]any `json:"rows"`
-}
-
 // rowFilter is one element of the rows endpoint's filters parameter (JSON).
 type rowFilter struct {
 	Column string   `json:"column"`
@@ -149,36 +141,6 @@ func (h *handler) handleRowCount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]int64{"total": n})
-}
-
-func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {
-	tableName := chi.URLParam(r, "tableName")
-	if tableName == "" {
-		writeError(w, http.StatusBadRequest, "tableName is required")
-		return
-	}
-
-	field := r.URL.Query().Get("field")
-	value := r.URL.Query().Get("value")
-
-	if field == "" || value == "" {
-		writeError(w, http.StatusBadRequest, "field and value are required")
-		return
-	}
-
-	columns, rows, err := h.studio.LookupRows(r.Context(), tableName, field, value)
-	if err != nil {
-		writeServiceError(w, err)
-		return
-	}
-
-	writeJSON(w, http.StatusOK, lookupResponse{
-		TableName: tableName,
-		Field:     field,
-		Value:     value,
-		Columns:   columns,
-		Rows:      rows,
-	})
 }
 
 func (h *handler) handleUpdateRow(w http.ResponseWriter, r *http.Request) {

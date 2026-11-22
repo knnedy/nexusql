@@ -109,7 +109,7 @@ func TestUpdateRowBody(t *testing.T) {
 			t.Errorf("%s: %d %s, want %d", c.body, w.Code, w.Body, c.want)
 		}
 	}
-	w := call(h, "GET", "/rows/t/lookup?field=id&value=1", "")
+	w := call(h, "GET", "/rows/t?filters="+url.QueryEscape(`[{"column":"id","op":"eq","values":["1"]}]`), "")
 	if !strings.Contains(w.Body.String(), `"v":null`) {
 		t.Fatalf("value after null update: %s", w.Body)
 	}

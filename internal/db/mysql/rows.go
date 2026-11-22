@@ -65,16 +65,6 @@ func searchable(t db.Table, f db.Field) bool {
 	return f.Type == db.FieldType(enumTypeName(t.Name, f.Name))
 }
 
-func (p *provider) FetchRowWhere(ctx context.Context, t db.Table, f db.Field, value string) ([]string, []map[string]any, error) {
-	query := fmt.Sprintf("SELECT * FROM %s WHERE %s = ? LIMIT 100", p.QuoteTable(t), quoteIdent(f.Name))
-	rows, err := p.conn.QueryContext(ctx, query, value)
-	if err != nil {
-		return nil, nil, fmt.Errorf("query rows: %w", err)
-	}
-	defer rows.Close()
-	return scanRows(rows)
-}
-
 func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue, target db.Field, value *string) error {
 	where := make([]string, len(key))
 	args := []any{editArg(target, value)}

@@ -81,16 +81,6 @@ func testRows(t *testing.T, h Harness) {
 			t.Fatalf("bob's name = %v, want nil", rows)
 		}
 	})
-
-	t.Run("lookup filters by column value", func(t *testing.T) {
-		_, rows, err := lookup(t, p, "posts", "user_id", "1")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if len(rows) != 2 {
-			t.Fatalf("posts for user 1 = %d rows, want 2", len(rows))
-		}
-	})
 }
 
 func testUpdate(t *testing.T, h Harness) {
