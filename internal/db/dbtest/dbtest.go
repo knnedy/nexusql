@@ -43,6 +43,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Values", func(t *testing.T) { testValues(t, h) })
 	t.Run("Keys", func(t *testing.T) { testKeys(t, h) })
 	t.Run("Columns", func(t *testing.T) { testColumns(t, h) })
+	t.Run("Checks", func(t *testing.T) { testChecks(t, h) })
 }
 
 // setup opens a fresh database with the fixture schema and rows loaded.

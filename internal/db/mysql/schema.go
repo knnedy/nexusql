@@ -60,6 +60,9 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 	if err := p.introspectIndexes(ctx, schema, tables); err != nil {
 		return nil, fmt.Errorf("introspect indexes: %w", err)
 	}
+	if err := p.introspectChecks(ctx, schema, tables); err != nil {
+		return nil, fmt.Errorf("introspect checks: %w", err)
+	}
 
 	return &db.Schema{
 		Tables:    tables,

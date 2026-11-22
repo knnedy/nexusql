@@ -301,9 +301,18 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Prisma `@@index([...])` with `map:` unless the name is Prisma's default
   `{table}_{cols}_idx`; Drizzle `index('name').on(...)`.
 
+- feat(db): A4 `Field.Allowed` on Postgres and MySQL. SQLite's CHECK tokenizer moved to
+  `db.Tokenize`/`db.AllowedIn` (standard shapes: `col IN ('a', ...)`, `col = 'a'`; SQLite
+  gained the `=` form). Each dialect strips its own syntax first (as with ParseDefault):
+  Postgres prints IN as `= ANY (ARRAY[...])` with casts (`(v)::text`, `::character
+  varying`, `::text[]`); MySQL 8.4 stores CHECK_CLAUSE with backslash-escaped quotes and
+  charset introducers (`_utf8mb4\'x\'`), un-escaped only when no bare quote exists.
+  Verified against Postgres 17 and MySQL 8.4 output; servers before MySQL 8.0.16 have no
+  CHECK_CONSTRAINTS (error 1109) and report none.
+
 ## Next 3 steps
 
-1. A4: PG/MySQL CHECK IN -> Allowed; then STOP and summarize group A.
+1. Group A done: STOP, summarize, wait for the user before group B.
 2. B5: export format registry + /api/export/{format}.
 3. B6: SQL DDL export (round-trip).
 
@@ -342,5 +351,6 @@ None.
   them out; index sort order (DESC) and collations are not kept either.
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
   writes and show a count (ADR 0010).
-- Postgres/MySQL `CHECK (col IN (...))` on non-enum columns is not read into `Allowed`
-  (catalog text differs per dialect); those rows are retried, then skipped and reported.
+- Other CHECK constraints (ranges, multi-column, `IN (...) OR x IS NULL`) are not
+  introspected: the seeder retries then skips such rows, and the B6 DDL will not recreate
+  them unless general CHECK text is introspected first (decide in B6).
