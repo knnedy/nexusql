@@ -25,6 +25,8 @@ type Harness struct {
 	Seed Seed
 	// Columns pins declared types and default expressions.
 	Columns Columns
+	// Filters adds an enum-valued table to the row-filter tests.
+	Filters Filters
 	// Export is the schema whose exports are compared with testdata/.
 	Export Export
 	// URI names a fresh, empty database for outside tools; Connect opens one.
@@ -36,6 +38,7 @@ type Harness struct {
 func Run(t *testing.T, h Harness) {
 	t.Run("Introspection", func(t *testing.T) { testIntrospection(t, h) })
 	t.Run("Rows", func(t *testing.T) { testRows(t, h) })
+	t.Run("Filters", func(t *testing.T) { testFilters(t, h) })
 	t.Run("Update", func(t *testing.T) { testUpdate(t, h) })
 	t.Run("Query", func(t *testing.T) { testQuery(t, h) })
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })

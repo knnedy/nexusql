@@ -32,6 +32,7 @@ type RowsQuery struct {
 	SortCol string
 	SortDir db.SortDir
 	Search  string
+	Filters []RowFilter
 }
 
 // RowsPage is one page of table data.
@@ -51,7 +52,15 @@ func (s *Service) Rows(ctx context.Context, q RowsQuery) (RowsPage, error) {
 	if err != nil {
 		return RowsPage{}, err
 	}
-	req := db.RowsRequest{Table: t, Limit: q.Limit, Offset: q.Offset, SortDir: q.SortDir, Search: q.Search}
+	sch, err := s.schemas.get(ctx, conn, false)
+	if err != nil {
+		return RowsPage{}, err
+	}
+	filters, err := resolveFilters(sch, t, q.Filters)
+	if err != nil {
+		return RowsPage{}, err
+	}
+	req := db.RowsRequest{Table: t, Limit: q.Limit, Offset: q.Offset, SortDir: q.SortDir, Search: q.Search, Filters: filters}
 	if q.SortCol != "" {
 		f, err := field(t, q.SortCol)
 		if err != nil {

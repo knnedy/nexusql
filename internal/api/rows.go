@@ -30,6 +30,13 @@ type lookupResponse struct {
 	Rows      []map[string]any `json:"rows"`
 }
 
+// rowFilter is one element of the rows endpoint's filters parameter (JSON).
+type rowFilter struct {
+	Column string   `json:"column"`
+	Op     string   `json:"op"`
+	Values []string `json:"values"`
+}
+
 // updateRowRequest edits one cell; value is required and null writes NULL.
 type updateRowRequest struct {
 	Key    map[string]string `json:"key"`
@@ -64,6 +71,18 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		sortDir = db.SortDesc
 	}
 
+	var filters []studio.RowFilter
+	if raw := r.URL.Query().Get("filters"); raw != "" {
+		var in []rowFilter
+		if err := json.Unmarshal([]byte(raw), &in); err != nil {
+			writeError(w, http.StatusBadRequest, "filters must be a JSON array of {column, op, values}")
+			return
+		}
+		for _, f := range in {
+			filters = append(filters, studio.RowFilter{Column: f.Column, Op: f.Op, Values: f.Values})
+		}
+	}
+
 	q := studio.RowsQuery{
 		Table:   tableName,
 		Limit:   pageSize,
@@ -71,6 +90,7 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		SortCol: r.URL.Query().Get("sort"),
 		SortDir: sortDir,
 		Search:  r.URL.Query().Get("search"),
+		Filters: filters,
 	}
 
 	res, err := h.studio.Rows(r.Context(), q)

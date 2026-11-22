@@ -44,6 +44,12 @@ func TestConformance(t *testing.T) {
 				title TEXT NOT NULL
 			)`,
 		},
+		Filters: dbtest.Filters{
+			Setup: []string{
+				`CREATE TABLE moods (id INTEGER PRIMARY KEY, mood TEXT NOT NULL CHECK (mood IN ('happy', 'sad', 'meh')))`,
+				`INSERT INTO moods (mood) VALUES ('happy'), ('sad'), ('happy')`,
+			},
+		},
 		Values: dbtest.Values{
 			Setup: []string{
 				`CREATE TABLE vals (id INTEGER PRIMARY KEY, big INTEGER, small INTEGER, amount NUMERIC,

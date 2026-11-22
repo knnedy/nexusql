@@ -14,7 +14,7 @@ _Explorer — spreadsheet-style data grid with inline editing and foreign-key na
 
 - **Single binary** — no separate services. One file, run it anywhere.
 - **Visual ERD canvas** — interactive schema graph with automatic layout, relation edges, and an inspector panel for tables and relations.
-- **Data explorer** — spreadsheet-style grid with inline cell editing, server-side sorting/search/pagination, foreign-key navigation, and CSV export.
+- **Data explorer** — spreadsheet-style grid with inline cell editing, server-side sorting/search/pagination, typed column filters, foreign-key navigation, and CSV export.
 - **SQL console** — syntax-highlighted editor with query history, a confirmation gate on destructive queries, and JSON/CSV export of results.
 - **Seed data generator** — populates every table with realistic fake data in dependency order, respecting foreign keys and enum constraints.
 - **Schema export** — generate SQL DDL, Prisma, Drizzle, Kysely, TypeORM, GORM, SQLAlchemy, DBML or Mermaid ER files directly from an introspected database.
@@ -90,7 +90,7 @@ MySQL URIs accept the options `tls` (`true`, `skip-verify`, `preferred`), `chars
 | Mode         | Contents                                                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
 | **Canvas**   | Interactive ERD graph · auto-layout · table/relation inspector · SQL console · seed generator · SQL/Prisma/Drizzle/Kysely/TypeORM/GORM/SQLAlchemy/DBML/Mermaid export · PNG export |
-| **Explorer** | Table list · sortable/searchable data grid · inline cell editing · foreign-key navigation · CSV export                             |
+| **Explorer** | Table list · sortable/searchable/filterable data grid · inline cell editing · foreign-key navigation · CSV export                             |
 
 ---
 

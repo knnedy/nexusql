@@ -138,6 +138,60 @@ func TestRowsSortValidation(t *testing.T) {
 	}
 }
 
+func TestRowsFilterValidation(t *testing.T) {
+	s := connected(t)
+	ctx := context.Background()
+	if _, err := s.Query(ctx, `CREATE TABLE items (id INTEGER PRIMARY KEY, label TEXT, qty INTEGER,
+		done BOOLEAN, added DATE, meta JSON, size TEXT CHECK (size IN ('s', 'm', 'l')));
+		INSERT INTO items (label, qty, done, added, size) VALUES ('pen', 3, 1, '2026-01-02', 's'),
+		('Pencil', 10, 0, '2026-02-01', 'l')`, true); err != nil {
+		t.Fatal(err)
+	}
+	rows := func(fs ...studio.RowFilter) (studio.RowsPage, error) {
+		return s.Rows(ctx, studio.RowsQuery{Table: "items", Limit: 10, Filters: fs})
+	}
+
+	for name, f := range map[string]studio.RowFilter{
+		"unknown column":            {Column: "nope", Op: "eq", Values: []string{"1"}},
+		"unknown operator":          {Column: "qty", Op: "like", Values: []string{"1"}},
+		"contains on a number":      {Column: "qty", Op: "contains", Values: []string{"1"}},
+		"less than on text":         {Column: "label", Op: "lt", Values: []string{"p"}},
+		"is one of on plain text":   {Column: "label", Op: "in", Values: []string{"pen"}},
+		"equals on JSON":            {Column: "meta", Op: "eq", Values: []string{"{}"}},
+		"a number that is not":      {Column: "qty", Op: "gt", Values: []string{"three"}},
+		"a boolean that is not":     {Column: "done", Op: "in", Values: []string{"maybe"}},
+		"a value outside the CHECK": {Column: "size", Op: "in", Values: []string{"xl"}},
+		"is null with a value":      {Column: "label", Op: "isNull", Values: []string{"x"}},
+		"equals with no value":      {Column: "label", Op: "eq"},
+		"equals with two values":    {Column: "label", Op: "eq", Values: []string{"a", "b"}},
+		"is one of with none":       {Column: "size", Op: "in"},
+	} {
+		if _, err := rows(f); !errors.Is(err, studio.ErrInvalid) {
+			t.Errorf("%s: err = %v, want ErrInvalid", name, err)
+		}
+	}
+
+	for name, c := range map[string]struct {
+		filters []studio.RowFilter
+		want    int64
+	}{
+		"text contains":     {[]studio.RowFilter{{Column: "label", Op: "contains", Values: []string{"PEN"}}}, 2},
+		"number at least":   {[]studio.RowFilter{{Column: "qty", Op: "gte", Values: []string{"4"}}}, 1},
+		"boolean is one of": {[]studio.RowFilter{{Column: "done", Op: "in", Values: []string{"true"}}}, 1},
+		"date before":       {[]studio.RowFilter{{Column: "added", Op: "lt", Values: []string{"2026-02-01"}}}, 1},
+		"CHECK is one of":   {[]studio.RowFilter{{Column: "size", Op: "in", Values: []string{"m", "l"}}}, 1},
+		"JSON is null":      {[]studio.RowFilter{{Column: "meta", Op: "isNull"}}, 2},
+		"both hold": {[]studio.RowFilter{
+			{Column: "label", Op: "startsWith", Values: []string{"p"}}, {Column: "qty", Op: "lt", Values: []string{"5"}},
+		}, 1},
+	} {
+		page, err := rows(c.filters...)
+		if err != nil || page.Total != c.want {
+			t.Errorf("%s: total=%d err=%v, want %d", name, page.Total, err, c.want)
+		}
+	}
+}
+
 func TestQuery(t *testing.T) {
 	s := connected(t)
 	ctx := context.Background()

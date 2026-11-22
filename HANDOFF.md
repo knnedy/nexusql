@@ -469,15 +469,28 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   three dialects; mutation-checked (unescaped backslash, missing ESCAPE). C14's
   `contains` / `starts with` reuse the escaping.
 
+- feat(explorer): C14 column filters (user 2026-11-23: toolbar "Filters" popover +
+  removable chips; typed core set). `db.RowsRequest.Filters`; one shared `db.Where`
+  builder renders search (OR group, parenthesised) AND every filter, with each dialect
+  giving only quoting, placeholders, its case-insensitive LIKE and its `editArg` (MySQL
+  booleans as 1/0). studio resolves columns against the schema and allows ops per kind:
+  text = != contains startsWith null; number/temporal = != < <= > >= null; boolean and
+  choice (enum or CHECK IN) = != in null; JSON null only; other = != null. Numbers must
+  parse, booleans be true/false, choices be allowed values; <= 20 filters, <= 100 in-values.
+  API: `filters` query param, JSON [{column, op, values}]. UI: filters live in the URL;
+  lib/filters.ts mirrors the server's kind rules (vitest). FK navigation is now an `=`
+  filter (paged, sortable), replacing the frontend lookup hook; empty and error states
+  say why. Tests: conformance on all three dialects (incl. PG enum, MySQL tinyint
+  boolean, quote-laden value), studio validation, API parsing, Playwright (filter +
+  reload + chip, is one of, FK). Mutation-checked at each seam.
+  Open question for the group C stop: GET /api/rows/{t}/lookup and
+  `Provider.FetchRowWhere` now have no caller; removing them is a structural cut.
+
 ## Next 3 steps
 
-1. C14: column filters (user 2026-11-23: toolbar "Filters" popover + removable chips;
-   typed core set: =, !=, is null, is not null on all; <, <=, >, >= on numbers/dates;
-   contains, starts with on text, case-insensitive; is one of on enum/boolean; AND with
-   search; server rejects an operator that does not fit the type; values as parameters,
-   WHERE built per dialect behind the provider interface).
-2. C15: keyset paging when sorted by a key (offset with PK tiebreak otherwise), count in
+1. C15: keyset paging when sorted by a key (offset with PK tiebreak otherwise), count in
    its own request; then STOP and summarize group C.
+2. Group C stop: summarize C13-C15 and ask about removing the unused lookup endpoint.
 3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)

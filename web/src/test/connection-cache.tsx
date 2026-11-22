@@ -4,7 +4,6 @@ import { vi } from "vitest";
 import { projectsQueryOptions } from "@/shared/hooks/use-projects";
 import { schemaQueryOptions } from "@/shared/hooks/use-schema";
 import { tableRowsQueryOptions } from "@/shared/hooks/use-table-rows";
-import { rowLookupQueryOptions } from "@/shared/hooks/use-row-lookup";
 import { exportQueryOptions } from "@/shared/hooks/use-export";
 import { readOnlyQueryOptions } from "@/shared/hooks/use-read-only";
 import { studioSession } from "@/shared/lib/session-storage";
@@ -19,7 +18,6 @@ export function openProject(projectId: string) {
 export function fillConnectionCache(qc: QueryClient) {
   qc.setQueryData(schemaQueryOptions().queryKey, { tables: [], relations: [], enums: [] } as never);
   qc.setQueryData(tableRowsQueryOptions("users", true).queryKey, { rows: [] } as never);
-  qc.setQueryData(rowLookupQueryOptions("users", "id", "1", true).queryKey, { rows: [] } as never);
   qc.setQueryData(exportQueryOptions("prisma", true).queryKey, { schema: "" } as never);
   qc.setQueryData(readOnlyQueryOptions().queryKey, { readOnly: true });
   qc.setQueryData(projectsQueryOptions.queryKey, { projects: [] } as never);

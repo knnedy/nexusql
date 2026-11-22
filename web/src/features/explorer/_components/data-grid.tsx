@@ -53,6 +53,10 @@ interface DataGridProps {
   rows: Record<string, unknown>[];
   isLoading: boolean;
   isError: boolean;
+  /** Why the rows failed to load, when the server said. */
+  errorMessage?: string;
+  /** Search or filters are narrowing the rows. */
+  isFiltered?: boolean;
   sortCol: string;
   sortDir: "asc" | "desc";
   onSort: (col: string) => void;
@@ -374,6 +378,8 @@ export default function DataGrid({
   rows,
   isLoading,
   isError,
+  errorMessage,
+  isFiltered = false,
   sortCol,
   sortDir,
   onSort,
@@ -552,8 +558,8 @@ export default function DataGrid({
   if (isError) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <span className="text-[12px] text-text-tertiary">
-          Failed to load table data.
+        <span className="max-w-md px-4 text-center text-[12px] text-text-tertiary">
+          {errorMessage ? `Failed to load table data: ${errorMessage}` : "Failed to load table data."}
         </span>
       </div>
     );
@@ -563,7 +569,7 @@ export default function DataGrid({
     return (
       <div className="flex-1 flex items-center justify-center">
         <span className="text-[12px] text-text-tertiary">
-          No rows found in this table.
+          {isFiltered ? "No rows match the search or filters." : "No rows found in this table."}
         </span>
       </div>
     );

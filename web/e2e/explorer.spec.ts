@@ -82,6 +82,62 @@ test("dragging a header edge resizes its column", async ({ page }) => {
   await expect.poll(async () => (await th.boundingBox())!.width).toBeGreaterThan(before.width + 90);
 });
 
+async function addFilter(page: Page, column: string, op: string, value?: string) {
+  await page.getByRole("button", { name: "Filters" }).click();
+  const dialog = page.getByRole("dialog", { name: "Filters" });
+  const columns = dialog.getByLabel("Filter column");
+  await columns.last().selectOption(column);
+  await dialog.getByLabel("Filter operator").last().selectOption({ label: op });
+  if (value !== undefined) await dialog.getByLabel("Filter value").last().fill(value);
+  await dialog.getByRole("button", { name: "Apply" }).click();
+}
+
+test("a filter narrows the rows, survives a reload, and its chip removes it", async ({ page }) => {
+  await connectSqlite(page, SETUP);
+  await openPets(page);
+  await addFilter(page, "age", "≥", "4");
+  await expect(page.getByText("Tom", { exact: true })).toBeVisible();
+  await expect(page.getByText("Rex", { exact: true })).toBeHidden();
+
+  await page.reload();
+  await expect(page.getByText("age ≥ 4")).toBeVisible();
+  await expect(page.getByText("Rex", { exact: true })).toBeHidden();
+
+  await page.getByRole("button", { name: "Remove filter age ≥ 4" }).click();
+  await expect(page.getByText("Rex", { exact: true })).toBeVisible();
+});
+
+test("is one of picks from a column's allowed values", async ({ page }) => {
+  await connectSqlite(page, `CREATE TABLE sizes (id INTEGER PRIMARY KEY,
+    s TEXT CHECK (s IN ('small', 'large')));
+    INSERT INTO sizes (s) VALUES ('small'), ('large'), ('small')`);
+  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("button", { name: /sizes/ }).click();
+  await page.getByRole("button", { name: "Filters" }).click();
+  const dialog = page.getByRole("dialog", { name: "Filters" });
+  await dialog.getByLabel("Filter column").selectOption("s");
+  await dialog.getByLabel("Filter operator").selectOption({ label: "is one of" });
+  await dialog.getByRole("button", { name: "large", exact: true }).click();
+  await dialog.getByRole("button", { name: "Apply" }).click();
+  await expect(page.getByText("s is one of large")).toBeVisible();
+  await expect(page.getByText("small", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("large", { exact: true })).toHaveCount(1);
+});
+
+test("following a foreign key filters the target table", async ({ page }) => {
+  await connectSqlite(page, `CREATE TABLE owners (id INTEGER PRIMARY KEY, who TEXT);
+    CREATE TABLE dogs (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id), dog TEXT);
+    INSERT INTO owners (who) VALUES ('Ann'), ('Ben');
+    INSERT INTO dogs (owner_id, dog) VALUES (2, 'Fido')`);
+  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("button", { name: /dogs/ }).click();
+  await page.getByText("Fido", { exact: true }).hover();
+  await page.getByTitle("Go to related row").click();
+  await expect(page.getByText("id = 2")).toBeVisible();
+  await expect(page.getByText("Ben", { exact: true })).toBeVisible();
+  await expect(page.getByText("Ann", { exact: true })).toBeHidden();
+});
+
 test("a read-only connection makes the grid read-only", async ({ page }) => {
   await connectSqlite(page, SETUP);
   await page.request.put("/api/connection/read-only", { data: { readOnly: true } });

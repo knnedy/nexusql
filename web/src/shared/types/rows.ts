@@ -10,14 +10,6 @@ export interface RowsResponse {
   search: string;
 }
 
-export interface LookupResponse {
-  tableName: string;
-  field: string;
-  value: string;
-  columns: string[];
-  rows: Record<string, unknown>[];
-}
-
 /** Edits one cell. key holds every primary-key column; value null writes NULL. */
 export interface UpdateRowRequest {
   key: Record<string, string>;

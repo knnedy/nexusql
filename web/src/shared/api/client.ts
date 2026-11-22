@@ -16,7 +16,6 @@ import {
   ReadOnlyState,
 } from "@/shared/types/query";
 import {
-  LookupResponse,
   RowsResponse,
   UpdateRowRequest,
   UpdateRowResponse,
@@ -87,6 +86,7 @@ export const api = {
     sortCol = "",
     sortDir: "asc" | "desc" = "asc",
     search = "",
+    filters = "",
   ): Promise<RowsResponse> {
     const params = new URLSearchParams({
       page: String(page),
@@ -99,21 +99,14 @@ export const api = {
     if (search) {
       params.set("search", search);
     }
+    if (filters) {
+      params.set("filters", filters); // JSON, as serializeFilters writes it
+    }
     return request<RowsResponse>(
       `/api/rows/${encodeURIComponent(tableName)}?${params.toString()}`,
     );
   },
 
-  lookup(
-    tableName: string,
-    field: string,
-    value: string,
-  ): Promise<LookupResponse> {
-    const params = new URLSearchParams({ field, value });
-    return request<LookupResponse>(
-      `/api/rows/${encodeURIComponent(tableName)}/lookup?${params.toString()}`,
-    );
-  },
 
   updateRow(
     tableName: string,

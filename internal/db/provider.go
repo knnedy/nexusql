@@ -85,7 +85,33 @@ type RowsRequest struct {
 	Offset  int
 	Sort    *Field // nil leaves the order to the database
 	SortDir SortDir
-	Search  string // case-insensitive match on the table's text columns
+	Search  string   // case-insensitive match on the table's text columns
+	Filters []Filter // all must hold, as well as Search
+}
+
+// FilterOp compares a column with a filter's values.
+type FilterOp string
+
+const (
+	FilterEq         FilterOp = "eq"
+	FilterNe         FilterOp = "ne"
+	FilterLt         FilterOp = "lt"
+	FilterLte        FilterOp = "lte"
+	FilterGt         FilterOp = "gt"
+	FilterGte        FilterOp = "gte"
+	FilterContains   FilterOp = "contains"   // case-insensitive
+	FilterStartsWith FilterOp = "startsWith" // case-insensitive
+	FilterIsNull     FilterOp = "isNull"
+	FilterNotNull    FilterOp = "notNull"
+	FilterIn         FilterOp = "in"
+)
+
+// Filter is one condition on an introspected column. Values holds one value,
+// none for the null tests, or one or more for FilterIn; all are text.
+type Filter struct {
+	Field  Field
+	Op     FilterOp
+	Values []string
 }
 
 type Provider interface {

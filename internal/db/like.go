@@ -9,3 +9,8 @@ var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 func LikeContains(s string) string {
 	return "%" + likeEscaper.Replace(s) + "%"
 }
+
+// LikePrefix is a LIKE pattern matching values that start with s.
+func LikePrefix(s string) string {
+	return likeEscaper.Replace(s) + "%"
+}

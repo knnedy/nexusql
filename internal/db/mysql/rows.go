@@ -13,24 +13,20 @@ import (
 func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, int64, error) {
 	table := p.QuoteTable(req.Table)
 
-	whereClause := ""
-	var searchArgs []any
-	if req.Search != "" {
-		var conditions []string
-		for _, f := range req.Table.Fields {
-			if searchable(req.Table, f) {
-				// LOWER() on both sides: case-insensitive whatever the column collation.
-				conditions = append(conditions, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", quoteIdent(f.Name)))
-				searchArgs = append(searchArgs, db.LikeContains(req.Search))
-			}
-		}
-		if len(conditions) > 0 {
-			whereClause = " WHERE " + strings.Join(conditions, " OR ")
-		}
+	whereClause, whereArgs, err := db.Where{
+		Quote: quoteIdent,
+		Param: func(int) string { return "?" },
+		// LOWER() on both sides: case-insensitive whatever the column collation.
+		ILike:      func(col, param string) string { return "LOWER(" + col + ") LIKE LOWER(" + param + ")" },
+		Arg:        func(f db.Field, v string) any { return editArg(f, &v) },
+		Searchable: func(f db.Field) bool { return searchable(req.Table, f) },
+	}.Clause(req)
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
 	var total int64
-	if err := p.conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+table+whereClause, searchArgs...).Scan(&total); err != nil {
+	if err := p.conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+table+whereClause, whereArgs...).Scan(&total); err != nil {
 		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
 	}
 
@@ -45,7 +41,7 @@ func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string,
 	query += " LIMIT ? OFFSET ?"
 
 	// copy so the count query's args are never aliased
-	dataArgs := append(append([]any{}, searchArgs...), req.Limit, req.Offset)
+	dataArgs := append(append([]any{}, whereArgs...), req.Limit, req.Offset)
 	rows, err := p.conn.QueryContext(ctx, query, dataArgs...)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("query rows: %w", err)

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -110,6 +111,36 @@ func TestUpdateRowBody(t *testing.T) {
 	w := call(h, "GET", "/rows/t/lookup?field=id&value=1", "")
 	if !strings.Contains(w.Body.String(), `"v":null`) {
 		t.Fatalf("value after null update: %s", w.Body)
+	}
+}
+
+func TestRowsFilterParam(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	q := `{"sql":"CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t (v) VALUES ('a'), ('b')","confirmed":true}`
+	if w := call(h, "POST", "/query", q); w.Code != http.StatusOK {
+		t.Fatalf("query: %d %s", w.Code, w.Body)
+	}
+	for _, c := range []struct {
+		filters string
+		want    int
+		total   int64
+	}{
+		{`[{"column":"v","op":"eq","values":["b"]}]`, http.StatusOK, 1},
+		{`[]`, http.StatusOK, 2},
+		{`[{"column":"v","op":"eq","values":["b"]}`, http.StatusBadRequest, 0}, // not JSON
+		{`[{"column":"nope","op":"eq","values":["b"]}]`, http.StatusBadRequest, 0},
+		{`[{"column":"v","op":"lt","values":["b"]}]`, http.StatusBadRequest, 0},
+	} {
+		w := call(h, "GET", "/rows/t?filters="+url.QueryEscape(c.filters), "")
+		var res struct{ Total int64 }
+		_ = json.Unmarshal(w.Body.Bytes(), &res)
+		if w.Code != c.want || (c.want == http.StatusOK && res.Total != c.total) {
+			t.Errorf("%s: %d %s, want %d with total %d", c.filters, w.Code, w.Body, c.want, c.total)
+		}
 	}
 }
 

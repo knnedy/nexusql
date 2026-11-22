@@ -12,6 +12,7 @@ export function tableRowsQueryOptions(
   sortCol: string = "",
   sortDir: "asc" | "desc" = "asc",
   search: string = "",
+  filters: string = "",
 ) {
   return queryOptions({
     queryKey: [
@@ -21,9 +22,10 @@ export function tableRowsQueryOptions(
       sortCol,
       sortDir,
       search,
+      filters,
     ],
     queryFn: () =>
-      api.rows(tableName, page, pageSize, sortCol, sortDir, search),
+      api.rows(tableName, page, pageSize, sortCol, sortDir, search, filters),
     enabled: enabled && !!tableName,
     staleTime: Infinity,
   });
@@ -37,6 +39,7 @@ export function useTableRows(
   sortCol: string = "",
   sortDir: "asc" | "desc" = "asc",
   search: string = "",
+  filters: string = "",
 ) {
   return useQuery(
     tableRowsQueryOptions(
@@ -47,6 +50,7 @@ export function useTableRows(
       sortCol,
       sortDir,
       search,
+      filters,
     ),
   );
 }

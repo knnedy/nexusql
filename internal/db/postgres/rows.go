@@ -15,23 +15,19 @@ import (
 func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, int64, error) {
 	table := p.QuoteTable(req.Table)
 
-	whereClause := ""
-	var searchArgs []any
-	if req.Search != "" {
-		var conditions []string
-		for _, f := range req.Table.Fields {
-			if searchable(f) {
-				searchArgs = append(searchArgs, db.LikeContains(req.Search))
-				conditions = append(conditions, fmt.Sprintf("%s::text ILIKE $%d", p.QuoteIdentifier(f.Name), len(searchArgs)))
-			}
-		}
-		if len(conditions) > 0 {
-			whereClause = " WHERE " + strings.Join(conditions, " OR ")
-		}
+	whereClause, whereArgs, err := db.Where{
+		Quote:      p.QuoteIdentifier,
+		Param:      func(n int) string { return fmt.Sprintf("$%d", n) },
+		ILike:      func(col, param string) string { return col + "::text ILIKE " + param },
+		Arg:        func(_ db.Field, v string) any { return v },
+		Searchable: searchable,
+	}.Clause(req)
+	if err != nil {
+		return nil, nil, 0, err
 	}
 
 	var total int64
-	if err := p.pool.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+whereClause, searchArgs...).Scan(&total); err != nil {
+	if err := p.pool.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+whereClause, whereArgs...).Scan(&total); err != nil {
 		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
 	}
 
@@ -43,9 +39,9 @@ func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string,
 		}
 		query += fmt.Sprintf(" ORDER BY %s %s", p.QuoteIdentifier(req.Sort.Name), dir)
 	}
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(searchArgs)+1, len(searchArgs)+2)
+	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(whereArgs)+1, len(whereArgs)+2)
 
-	dataArgs := append(append([]any{}, searchArgs...), req.Limit, req.Offset)
+	dataArgs := append(append([]any{}, whereArgs...), req.Limit, req.Offset)
 	rows, err := p.pool.Query(ctx, query, dataArgs...)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("query rows: %w", err)

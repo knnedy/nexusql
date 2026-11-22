@@ -10,7 +10,6 @@ export function useSeed() {
     mutationFn: (req: SeedRequest) => api.seed(req),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.rows() });
-      qc.invalidateQueries({ queryKey: queryKeys.lookups() });
     },
   });
 }

@@ -43,6 +43,12 @@ func TestConformance(t *testing.T) {
 				FOREIGN KEY (user_id) REFERENCES users(id)
 			)`,
 		},
+		Filters: dbtest.Filters{
+			Setup: []string{
+				`CREATE TABLE moods (id INT AUTO_INCREMENT PRIMARY KEY, mood ENUM('happy', 'sad', 'meh') NOT NULL)`,
+				`INSERT INTO moods (mood) VALUES ('happy'), ('sad'), ('happy')`,
+			},
+		},
 		Values: dbtest.Values{
 			Setup: []string{
 				`CREATE TABLE vals (id INT PRIMARY KEY, big BIGINT, small INT, amount DECIMAL(30,6),

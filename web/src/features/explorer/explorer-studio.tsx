@@ -9,7 +9,6 @@ import {
   tableRowsQueryOptions,
   DEFAULT_PAGE_SIZE,
 } from "@/shared/hooks/use-table-rows";
-import { useRowLookup, rowLookupQueryOptions } from "@/shared/hooks/use-row-lookup";
 import { useUpdateRow } from "@/features/explorer/hooks/use-update-row";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
@@ -21,6 +20,12 @@ import DataGrid, {
 } from "@/features/explorer/_components/data-grid";
 import { editKey } from "@/features/explorer/lib/row-key";
 import { isUnchanged } from "@/features/explorer/lib/cell";
+import {
+  describeFilter,
+  parseFilters,
+  serializeFilters,
+  type RowFilter,
+} from "@/features/explorer/lib/filters";
 import { queryKeys } from "@/shared/api/query-keys";
 import { useReadOnly } from "@/shared/hooks/use-read-only";
 import ExplorerToolbar from "@/features/explorer/_components/explorer-toolbar";
@@ -114,9 +119,9 @@ function ExplorerInner() {
   const sortCol = searchParams.get("sort") ?? "";
   const sortDir = (searchParams.get("dir") as "asc" | "desc") ?? "asc";
   const urlSearch = searchParams.get("search") ?? "";
-  const filterField = searchParams.get("filterField") ?? "";
-  const filterValue = searchParams.get("filterValue") ?? "";
-  const hasFilter = !!filterField && !!filterValue;
+  const filtersParam = searchParams.get("filters") ?? "";
+  const filters = useMemo(() => parseFilters(filtersParam), [filtersParam]);
+  const filtersKey = serializeFilters(filters); // drops what the URL held but could not be read
 
   const [searchValue, setSearchValue] = useState(urlSearch);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
@@ -157,44 +162,17 @@ function ExplorerInner() {
 
   const tableRowsResult = useTableRows(
     selectedTable ?? "",
-    !!selectedTable && !hasFilter,
+    !!selectedTable,
     page,
     pageSize,
     sortCol,
     sortDir,
     debouncedSearch,
+    filtersKey,
   );
 
-  const lookupResult = useRowLookup(
-    selectedTable ?? "",
-    filterField,
-    filterValue,
-    !!selectedTable && hasFilter,
-  );
-
-  const rowsData = hasFilter
-    ? lookupResult.data
-      ? {
-          tableName: lookupResult.data.tableName,
-          columns: lookupResult.data.columns,
-          rows: lookupResult.data.rows,
-          total: lookupResult.data.rows.length,
-          page: 1,
-          pageSize: lookupResult.data.rows.length,
-          sortCol: "",
-          sortDir: "asc" as const,
-          search: "",
-        }
-      : undefined
-    : tableRowsResult.data;
-
-  const isLoading = hasFilter
-    ? lookupResult.isLoading
-    : tableRowsResult.isLoading;
-  const isError = hasFilter ? lookupResult.isError : tableRowsResult.isError;
-  const isFetching = hasFilter
-    ? lookupResult.isFetching
-    : tableRowsResult.isFetching;
+  const rowsData = tableRowsResult.data;
+  const { isLoading, isError, isFetching } = tableRowsResult;
 
   const updateRow = useUpdateRow(selectedTable ?? "");
   const { readOnly } = useReadOnly();
@@ -210,8 +188,7 @@ function ExplorerInner() {
       sort: null,
       dir: null,
       search: null,
-      filterField: null,
-      filterValue: null,
+      filters: null,
     });
   }
 
@@ -236,17 +213,6 @@ function ExplorerInner() {
 
   function handleRefresh() {
     if (!selectedTable) return;
-    if (hasFilter) {
-      qc.invalidateQueries({
-        queryKey: rowLookupQueryOptions(
-          selectedTable,
-          filterField,
-          filterValue,
-          true,
-        ).queryKey,
-      });
-      return;
-    }
     qc.invalidateQueries({
       queryKey: tableRowsQueryOptions(
         selectedTable,
@@ -256,6 +222,7 @@ function ExplorerInner() {
         sortCol,
         sortDir,
         debouncedSearch,
+        filtersKey,
       ).queryKey,
     });
   }
@@ -305,14 +272,9 @@ function ExplorerInner() {
 
     // Saved cells keep showing their new value until the refetch has it,
     // so they never flash back to the old one.
-    await Promise.all([
-      qc.invalidateQueries({
-        queryKey: queryKeys.tableRows(selectedTable),
-      }),
-      qc.invalidateQueries({
-        queryKey: queryKeys.tableLookups(selectedTable),
-      }),
-    ]);
+    await qc.invalidateQueries({
+      queryKey: queryKeys.tableRows(selectedTable),
+    });
 
     setPendingEdits((prev) => {
       const next = new Map(prev);
@@ -346,13 +308,12 @@ function ExplorerInner() {
       sort: null,
       dir: null,
       search: null,
-      filterField: targetField,
-      filterValue: value,
+      filters: serializeFilters([{ column: targetField, op: "eq", values: [value] }]),
     });
   }
 
-  function handleClearFilter() {
-    updateParams({ filterField: null, filterValue: null });
+  function handleFiltersChange(next: RowFilter[]) {
+    updateParams({ filters: serializeFilters(next) || null, page: null });
   }
 
   return (
@@ -366,6 +327,10 @@ function ExplorerInner() {
         columns={selectedTableFields.map((f) => f.name)}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
+        fields={selectedTableFields}
+        enums={schema?.enums ?? []}
+        filters={filters}
+        onFiltersChange={handleFiltersChange}
         onExportCsv={handleExportCsv}
         pendingEditsCount={pendingEdits.size}
         failedEditsCount={failedCount}
@@ -374,17 +339,25 @@ function ExplorerInner() {
         onDiscardChanges={handleDiscardChanges}
       />
 
-      {hasFilter && (
-        <div className="flex items-center gap-2 px-4 py-2 border-b border-node-border/60 dark:border-node-border/40 bg-teal/5 dark:bg-teal/10 shrink-0">
-          <span className="text-[11px] font-mono text-teal">
-            Filtered by <span className="font-semibold">{filterField}</span> ={" "}
-            <span className="font-semibold">{filterValue}</span>
-          </span>
+      {filters.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-node-border/60 dark:border-node-border/40 bg-teal/5 dark:bg-teal/10 shrink-0">
+          {filters.map((f, i) => (
+            <span
+              key={i}
+              className="inline-flex items-center gap-1 h-6 pl-2 pr-0.5 rounded-md border border-teal/30 bg-node-bg/80 text-[11px] font-mono text-teal">
+              {describeFilter(f)}
+              <button
+                aria-label={`Remove filter ${describeFilter(f)}`}
+                onClick={() => handleFiltersChange(filters.filter((_, j) => j !== i))}
+                className="flex items-center justify-center w-5 h-5 rounded border-none bg-transparent text-teal/70 hover:text-text-primary cursor-pointer transition-[color,transform] duration-150 active:scale-[0.97]">
+                <X size={11} aria-hidden />
+              </button>
+            </span>
+          ))}
           <button
-            onClick={handleClearFilter}
-            className="flex items-center gap-1 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors border-none bg-transparent cursor-pointer">
-            <X size={12} aria-hidden />
-            <span>Clear filter</span>
+            onClick={() => handleFiltersChange([])}
+            className="h-6 px-1.5 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors border-none bg-transparent cursor-pointer">
+            Clear filters
           </button>
         </div>
       )}
@@ -409,6 +382,8 @@ function ExplorerInner() {
                 rows={rowsData?.rows ?? []}
                 isLoading={isLoading}
                 isError={isError}
+                errorMessage={tableRowsResult.error?.message}
+                isFiltered={!!debouncedSearch || filters.length > 0}
                 sortCol={sortCol}
                 sortDir={sortDir}
                 onSort={handleSort}
@@ -423,15 +398,13 @@ function ExplorerInner() {
                     : null
                 }
               />
-              {!hasFilter && (
-                <Pagination
-                  page={page}
-                  pageSize={pageSize}
-                  total={rowsData?.total ?? 0}
-                  onPageChange={handlePageChange}
-                  onPageSizeChange={setPageSize}
-                />
-              )}
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={rowsData?.total ?? 0}
+                onPageChange={handlePageChange}
+                onPageSizeChange={setPageSize}
+              />
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center">

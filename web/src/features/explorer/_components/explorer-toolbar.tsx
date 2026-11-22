@@ -15,6 +15,9 @@ import {
 import { useStudioStore } from "@/shared/store/studio-store";
 import { DisconnectButton, ModeSwitcher } from "@/features/studio";
 import ThemeToggle from "@/components/theme-toggle";
+import type { EnumType, Field } from "@/shared/types/schema";
+import type { RowFilter } from "../lib/filters";
+import FilterMenu from "./filter-menu";
 import icon from "@/app/icon.png";
 
 interface ExplorerToolbarProps {
@@ -26,6 +29,10 @@ interface ExplorerToolbarProps {
   columns: string[];
   columnVisibility: Record<string, boolean>;
   onColumnVisibilityChange: (visibility: Record<string, boolean>) => void;
+  fields: Field[];
+  enums: EnumType[];
+  filters: RowFilter[];
+  onFiltersChange: (filters: RowFilter[]) => void;
   onExportCsv: () => void;
   pendingEditsCount: number;
   failedEditsCount: number;
@@ -43,6 +50,10 @@ export default function ExplorerToolbar({
   columns = [],
   columnVisibility,
   onColumnVisibilityChange,
+  fields,
+  enums,
+  filters,
+  onFiltersChange,
   onExportCsv,
   pendingEditsCount,
   failedEditsCount,
@@ -207,6 +218,10 @@ export default function ExplorerToolbar({
             </div>
           )}
         </div>
+      )}
+
+      {tableSelected && (
+        <FilterMenu fields={fields} enums={enums} filters={filters} onApply={onFiltersChange} />
       )}
 
       {tableSelected && (
