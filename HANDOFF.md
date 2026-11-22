@@ -388,6 +388,9 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   DataSource.buildMetadatas on pg/mysql2 (no connection), full sync into sql.js for SQLite
   (typeorm 1.1.2, reflect-metadata 0.2.2, pg 8.23.1, mysql2 3.24.6, sql.js 1.15.2, exact).
 
+- refactor(export): SQL, DBML and Kysely writers append to their strings.Builder piece by
+  piece instead of concatenating first (user's change; goldens unchanged).
+
 ## Next 3 steps
 
 1. B11: SQLAlchemy (venv, configure_mappers, CreateTable).

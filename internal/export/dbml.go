@@ -213,7 +213,9 @@ func dbmlExpr(s string) string {
 		if dbmlBare.MatchString(t.Text) {
 			b.WriteString(t.Text)
 		} else {
-			b.WriteString(`"` + strings.ReplaceAll(t.Text, `"`, `""`) + `"`)
+			b.WriteString(`"`)
+			b.WriteString(strings.ReplaceAll(t.Text, `"`, `""`))
+			b.WriteString(`"`)
 		}
 		last = t.End
 	}

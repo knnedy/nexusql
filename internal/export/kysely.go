@@ -118,7 +118,8 @@ func pascal(ident string) string {
 	var b strings.Builder
 	for _, part := range strings.Split(ident, "_") {
 		if part != "" {
-			b.WriteString(strings.ToUpper(part[:1]) + part[1:])
+			b.WriteString(strings.ToUpper(part[:1]))
+			b.WriteString(part[1:])
 		}
 	}
 	if b.Len() == 0 || b.String()[0] >= '0' && b.String()[0] <= '9' {
