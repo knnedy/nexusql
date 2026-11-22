@@ -17,7 +17,7 @@ _Explorer — spreadsheet-style data grid with inline editing and foreign-key na
 - **Data explorer** — spreadsheet-style grid with inline cell editing, server-side sorting/search/pagination, foreign-key navigation, and CSV export.
 - **SQL console** — syntax-highlighted editor with query history, a confirmation gate on destructive queries, and JSON/CSV export of results.
 - **Seed data generator** — populates every table with realistic fake data in dependency order, respecting foreign keys and enum constraints.
-- **Schema export** — generate SQL DDL, Prisma, Drizzle, Kysely, TypeORM, GORM, DBML or Mermaid ER files directly from an introspected database.
+- **Schema export** — generate SQL DDL, Prisma, Drizzle, Kysely, TypeORM, GORM, SQLAlchemy, DBML or Mermaid ER files directly from an introspected database.
 - **Multi-provider** — works with Postgres, MySQL, and SQLite through a common provider interface.
 - **Dark & light theme** — clean, modern UI, toggleable at runtime.
 
@@ -89,7 +89,7 @@ MySQL URIs accept the options `tls` (`true`, `skip-verify`, `preferred`), `chars
 
 | Mode         | Contents                                                                                                                           |
 | ------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
-| **Canvas**   | Interactive ERD graph · auto-layout · table/relation inspector · SQL console · seed generator · SQL/Prisma/Drizzle/Kysely/TypeORM/GORM/DBML/Mermaid export · PNG export |
+| **Canvas**   | Interactive ERD graph · auto-layout · table/relation inspector · SQL console · seed generator · SQL/Prisma/Drizzle/Kysely/TypeORM/GORM/SQLAlchemy/DBML/Mermaid export · PNG export |
 | **Explorer** | Table list · sortable/searchable data grid · inline cell editing · foreign-key navigation · CSV export                             |
 
 ---
@@ -141,7 +141,7 @@ make go-build  # Go only; embeds whatever is in internal/ui/dist
 make test      # go test ./...
 make test-integration  # Postgres/MySQL tests in Docker
 make e2e       # browser tests against the built binary (Playwright)
-make export-check  # validate export golden files with the real Prisma/Drizzle/Kysely/TypeORM/GORM/DBML/Mermaid tools
+make export-check  # validate export golden files with the real Prisma/Drizzle/Kysely/TypeORM/GORM/SQLAlchemy/DBML/Mermaid tools
 make check     # everything CI runs (vet, test, Go build, web typecheck/lint/build)
 make clean     # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
 ```

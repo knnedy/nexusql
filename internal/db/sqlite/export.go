@@ -177,3 +177,27 @@ func (exporter) GORM(f db.Field) db.GORMColumn {
 	}
 	return c
 }
+
+// sqlalchemyTypes are SQLite declared types SQLAlchemy renders back verbatim.
+var sqlalchemyTypes = map[string]bool{"INTEGER": true, "SMALLINT": true, "BIGINT": true, "TEXT": true,
+	"REAL": true, "BLOB": true, "BOOLEAN": true, "DATE": true, "DATETIME": true, "TIME": true, "JSON": true}
+
+// SQLAlchemyType: SQLite keeps the declared type text, so only types whose
+// SQLAlchemy rendering is the same text map; others stay Raw.
+func (exporter) SQLAlchemy(f db.Field) db.SQLAlchemyColumn {
+	return db.SQLAlchemyColumn{Type: sqlalchemyType(f)}
+}
+
+func sqlalchemyType(f db.Field) string {
+	t := strings.TrimSpace(f.NativeType)
+	if sqlalchemyTypes[t] {
+		return t + "()"
+	}
+	if open := strings.IndexByte(t, '('); open > 0 && strings.HasSuffix(t, ")") {
+		name, arg := t[:open], t[open+1:len(t)-1]
+		if (name == "VARCHAR" || name == "CHAR") && !strings.Contains(arg, ",") {
+			return t
+		}
+	}
+	return ""
+}

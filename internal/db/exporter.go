@@ -26,6 +26,8 @@ type Exporter interface {
 	// for a non-enum field: a primitive or a helper (Int8, Numeric, Timestamp,
 	// Json); "" means unknown.
 	KyselyType(f Field) string
+	// SQLAlchemy is how SQLAlchemy recreates f's type and default on this dialect.
+	SQLAlchemy(f Field) SQLAlchemyColumn
 	// GORM is the type and default a gorm tag needs to recreate f.
 	GORM(f Field) GORMColumn
 	// TypeORM is how TypeORM sees a non-enum field on this dialect.
@@ -59,6 +61,12 @@ type DrizzleDialect struct {
 	BigInt     bool   // bigint columns hold JS bigint values
 	// AutoIncrementPK: primaryKey({ autoIncrement: true }) marks never-reused keys.
 	AutoIncrementPK bool
+}
+
+// SQLAlchemyColumn is a field as SQLAlchemy writes it.
+type SQLAlchemyColumn struct {
+	Type    string // a type rendering the native one exactly (VARCHAR(40)); "" means none does
+	Literal string // a default to pass as a quoted literal, not text(); "" uses text(DefaultValue)
 }
 
 // GORMColumn is a field as a gorm tag writes it.

@@ -262,3 +262,42 @@ func (exporter) GORM(f db.Field) db.GORMColumn {
 	}
 	return c
 }
+
+// SQLAlchemyType names the SQLAlchemy type that renders f's type as Postgres declares it.
+func (exporter) SQLAlchemy(f db.Field) db.SQLAlchemyColumn {
+	return db.SQLAlchemyColumn{Type: sqlalchemyType(f)}
+}
+
+func sqlalchemyType(f db.Field) string {
+	base, args := db.TypeArgs(f.NativeType)
+	opt := func(name string) string { // name(arg) when the type has an argument
+		if len(args) == 0 {
+			return name + "()"
+		}
+		return name + "(" + strings.Join(args, ", ") + ")"
+	}
+	switch base {
+	case "smallint", "integer", "bigint", "real", "text", "boolean", "date", "json":
+		return strings.ToUpper(base) + "()"
+	case "double precision":
+		return "DOUBLE_PRECISION()"
+	case "numeric":
+		return opt("NUMERIC")
+	case "character varying":
+		return opt("VARCHAR")
+	case "character":
+		return opt("CHAR")
+	case "uuid":
+		return "UUID()"
+	case "jsonb", "bytea", "interval":
+		return "postgresql." + strings.ToUpper(base) + "()"
+	case "timestamp without time zone", "timestamp with time zone", "time without time zone", "time with time zone":
+		name, _, _ := strings.Cut(base, " ")
+		t := "postgresql." + strings.ToUpper(name) + "(timezone=" + map[bool]string{true: "True", false: "False"}[strings.HasSuffix(base, "with time zone")]
+		if len(args) > 0 {
+			t += ", precision=" + args[0]
+		}
+		return t + ")"
+	}
+	return ""
+}

@@ -40,9 +40,11 @@ e2e: build
 	cd web && pnpm e2e
 
 # Validates the export golden files with the real tools, then recreates the
-# TypeORM and GORM exports with their own migrators on each dialect (needs Docker).
+# TypeORM, GORM and SQLAlchemy exports with their own tools (needs Docker, python3-venv).
 export-check:
 	cd tools/exportcheck && pnpm install --frozen-lockfile && pnpm check
+	test -x tools/sqlacheck/.venv/bin/python || python3 -m venv tools/sqlacheck/.venv
+	tools/sqlacheck/.venv/bin/pip install -q -r tools/sqlacheck/requirements.txt
 	go test -tags integration -count=1 -run TestConformance/Export \
 		./internal/db/postgres/ ./internal/db/mysql/ ./internal/db/sqlite/ -args -exportcheck
 

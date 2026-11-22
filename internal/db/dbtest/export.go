@@ -36,8 +36,9 @@ type Export struct {
 	// TypeORMLimits rewrites the schema into what TypeORM's synchronize can create
 	// on the dialect; each change must be a documented TypeORM limitation.
 	TypeORMLimits func(want, got *db.Schema)
-	// GORMLimits does the same for GORM's AutoMigrate.
-	GORMLimits func(want, got *db.Schema)
+	// GORMLimits and SQLAlchemyLimits do the same for AutoMigrate and create_all.
+	GORMLimits       func(want, got *db.Schema)
+	SQLAlchemyLimits func(want, got *db.Schema)
 }
 
 // ClearCheckNames blanks CHECK names in each schema, for tools that make them up.
@@ -82,6 +83,7 @@ func testExport(t *testing.T, h Harness) {
 	golden(t, "testdata/export.kysely.ts", export.Kysely(m))
 	golden(t, "testdata/export.typeorm.ts", export.TypeORM(m))
 	golden(t, "testdata/export.gorm.go", export.GORM(m))
+	golden(t, "testdata/export.sqlalchemy.py", export.SQLAlchemy(m))
 	golden(t, "testdata/export.dbml", export.DBML(m))
 	golden(t, "testdata/export.mmd", export.Mermaid(m))
 	ddl := export.SQL(m)
@@ -120,6 +122,31 @@ func testExport(t *testing.T, h Harness) {
 		want, got := comparable(keyed(schema), dialect), comparable(again, dialect)
 		if h.Export.TypeORMLimits != nil {
 			h.Export.TypeORMLimits(want, got)
+		}
+		sameSchema(t, want, got)
+	})
+
+	t.Run("SQLAlchemy's create_all recreates the schema", func(t *testing.T) {
+		if !*exportCheck || h.URI == nil {
+			t.Skip("runs under make export-check")
+		}
+		src := filepath.Join(t.TempDir(), "models.py")
+		if err := os.WriteFile(src, []byte(export.SQLAlchemy(m)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		uri := h.URI(t)
+		cmd := exec.Command("../../../tools/sqlacheck/.venv/bin/python", "../../../tools/sqlacheck/check.py", string(p.Kind()), uri, src)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("sqlacheck (make export-check creates its venv): %v\n%s", err, out)
+		}
+		fresh := h.Connect(t, uri)
+		again, err := fresh.IntrospectSchema(context.Background(), fresh.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, got := comparable(schema, dialect), comparable(again, dialect)
+		if h.Export.SQLAlchemyLimits != nil {
+			h.Export.SQLAlchemyLimits(want, got)
 		}
 		sameSchema(t, want, got)
 	})

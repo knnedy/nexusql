@@ -18,6 +18,7 @@ var formats = []Format{
 	{ID: "prisma", Label: "Prisma schema", Description: "Models for schema.prisma", Language: "prisma", Filename: "schema.prisma", render: Prisma},
 	{ID: "drizzle", Label: "Drizzle schema", Description: "drizzle-orm table definitions", Language: "typescript", Filename: "schema.ts", render: Drizzle},
 	{ID: "kysely", Label: "Kysely types", Description: "Database interface for Kysely", Language: "typescript", Filename: "db.ts", render: Kysely},
+	{ID: "sqlalchemy", Label: "SQLAlchemy models", Description: "SQLAlchemy 2.0 declarative classes", Language: "python", Filename: "models.py", render: SQLAlchemy},
 	{ID: "gorm", Label: "GORM models", Description: "Go structs with gorm tags", Language: "go", Filename: "models.go", render: GORM},
 	{ID: "typeorm", Label: "TypeORM entities", Description: "Decorated entity classes for TypeORM", Language: "typescript", Filename: "entities.ts", render: TypeORM},
 	{ID: "dbml", Label: "DBML", Description: "Database Markup Language for dbdiagram.io", Language: "text", Filename: "schema.dbml", render: DBML},

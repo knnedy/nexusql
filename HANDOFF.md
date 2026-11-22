@@ -432,11 +432,27 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   file header lists the CREATE TYPE statements); on MySQL a string default with a quote
   at either end becomes an expression default.
 
+- feat(export): B11 SQLAlchemy (`export.SQLAlchemy`, format `sqlalchemy`, models.py):
+  SQLAlchemy 2.0 declarative (`Mapped[...]`, `mapped_column`), a `Table` for keyless
+  tables, `__table_args__` with UniqueConstraint/ForeignKeyConstraint (names except on
+  SQLite, actions)/Index/CheckConstraint, Identity, server_default=text() with :name colons
+  escaped, sqlite_autoincrement, relationships both ways (foreign_keys, remote_side for
+  self-references, uselist=False for one-to-one), enums as shared Enum(..., name=).
+  `Exporter.SQLAlchemy` per dialect gives the type that renders the native one exactly
+  (MySQL tinyint(1) -> BOOLEAN, timestamps with precision/fsp), else a `Raw`
+  UserDefinedType writes it verbatim; MySQL number defaults go as quoted literals, since
+  SQLAlchemy parenthesises any default with a non-word character (read in its MySQL
+  compiler). Checked by `tools/sqlacheck` (venv in tools/sqlacheck/.venv, made by
+  `make export-check`; SQLAlchemy 2.0.57, psycopg 3.3.8, PyMySQL 1.2.3): import,
+  configure_mappers, create_all on a fresh database, compare. All three dialects
+  recreate the schema with no limits. Not covered by the fixture: colon escaping in
+  text() (no default or check with :word).
+
 ## Next 3 steps
 
-1. B11: SQLAlchemy (needs python3-venv on the dev machine).
-2. STOP and summarize group B.
-3. C13: react-table 9.
+1. STOP and summarize group B (done: B5-B12 plus the TypeORM round trip).
+2. C13: react-table 9.
+3. C14: column filters (typed, validated, parameterized).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
