@@ -18,7 +18,7 @@ model categories {
   id                Int          @id @default(autoincrement())
   parent_id         Int?
   slug              String
-  parent            categories?  @relation("categories_parent", fields: [parent_id], references: [id])
+  parent            categories?  @relation("categories_parent", fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   categories_parent categories[] @relation("categories_parent")
 
   @@unique([parent_id, slug])
@@ -27,14 +27,14 @@ model categories {
 model invites {
   id    Int     @id @default(autoincrement())
   email String?
-  users users?  @relation(fields: [email], references: [email])
+  users users?  @relation(fields: [email], references: [email], onUpdate: NoAction)
 }
 
 model offices {
   id      Int     @id
   country String
   code    String
-  regions regions @relation(fields: [country, code], references: [country, code])
+  regions regions @relation(fields: [country, code], references: [country, code], onDelete: Cascade)
 }
 
 model order_items {
@@ -48,8 +48,8 @@ model order_items {
 model post_tags {
   post_id  Int
   tag_code String
-  tags     tags   @relation(fields: [tag_code], references: [code])
-  post     posts  @relation(fields: [post_id], references: [id])
+  tags     tags   @relation(fields: [tag_code], references: [code], onDelete: NoAction, onUpdate: NoAction)
+  post     posts  @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@id([post_id, tag_code])
 }
@@ -64,8 +64,8 @@ model posts {
   score     Decimal?    @default(1.50)
   ratio     Float?
   stamp     String?     @default(dbgenerated("(datetime('now'))"))
-  editor    users?      @relation("posts_editor", fields: [editor_id], references: [id])
-  author    users       @relation("posts_author", fields: [author_id], references: [id])
+  editor    users?      @relation("posts_editor", fields: [editor_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  author    users       @relation("posts_author", fields: [author_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   post_tags post_tags[]
 }
 

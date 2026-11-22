@@ -34,8 +34,8 @@ func Prisma(m *Model) string {
 			rows = append(rows, prismaField(m, t, f))
 		}
 		for _, r := range t.Out {
-			attr := fmt.Sprintf("@relation(%sfields: [%s], references: [%s])",
-				relName(r), idents(r.FromFields), idents(r.ToFields))
+			attr := fmt.Sprintf("@relation(%sfields: [%s], references: [%s]%s)",
+				relName(r), idents(r.FromFields), idents(r.ToFields), prismaActions(r))
 			rows = append(rows, []string{r.FromIdent, r.To.Ident + optional(r.Optional), attr})
 		}
 		for _, r := range t.In {
@@ -160,6 +160,30 @@ func prismaDefault(m *Model, f *Field, scalar string) string {
 func isInteger(s string) bool {
 	s = strings.TrimPrefix(s, "-")
 	return s != "" && strings.Trim(s, "0123456789") == ""
+}
+
+var prismaAction = map[db.RefAction]string{
+	db.NoAction: "NoAction", db.Restrict: "Restrict", db.Cascade: "Cascade",
+	db.SetNull: "SetNull", db.SetDefault: "SetDefault",
+}
+
+// prismaActions states the actions that differ from Prisma's defaults, as
+// prisma db pull does. Prisma rejects SetNull on a required relation.
+func prismaActions(r *Relation) string {
+	var out string
+	onDelete := db.Restrict
+	if r.Optional {
+		onDelete = db.SetNull
+	}
+	for _, a := range []struct {
+		name          string
+		got, standard db.RefAction
+	}{{"onDelete", r.OnDelete, onDelete}, {"onUpdate", r.OnUpdate, db.Cascade}} {
+		if a.got != a.standard && prismaAction[a.got] != "" && (a.got != db.SetNull || r.Optional) {
+			out += fmt.Sprintf(", %s: %s", a.name, prismaAction[a.got])
+		}
+	}
+	return out
 }
 
 func relName(r *Relation) string {

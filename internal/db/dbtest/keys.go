@@ -2,6 +2,7 @@ package dbtest
 
 import (
 	"context"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -54,6 +55,32 @@ func testKeys(t *testing.T, h Harness) {
 		slices.Sort(got)
 		if want := []string{"a", "b,c", "c"}; !slices.Equal(got, want) {
 			t.Fatalf("unique sets = %v, want %v (primary key and plain indexes left out)", got, want)
+		}
+	})
+
+	t.Run("referential actions are read per foreign key", func(t *testing.T) {
+		for _, stmt := range []string{
+			`CREATE TABLE ra_parent (id INTEGER PRIMARY KEY)`,
+			`CREATE TABLE ra_child (id INTEGER PRIMARY KEY, c INTEGER, d INTEGER, e INTEGER,
+				FOREIGN KEY (c) REFERENCES ra_parent (id) ON DELETE CASCADE ON UPDATE SET NULL,
+				FOREIGN KEY (d) REFERENCES ra_parent (id) ON DELETE SET NULL ON UPDATE RESTRICT,
+				FOREIGN KEY (e) REFERENCES ra_parent (id))`,
+		} {
+			mustExec(t, p, stmt)
+		}
+		s, err := p.IntrospectSchema(context.Background(), p.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := map[string]string{}
+		for _, r := range s.Relations {
+			if r.SourceTable == "ra_child" {
+				got[r.SourceField] = string(r.OnDelete) + "/" + string(r.OnUpdate)
+			}
+		}
+		want := map[string]string{"c": "CASCADE/SET NULL", "d": "SET NULL/RESTRICT", "e": "NO ACTION/NO ACTION"}
+		if !maps.Equal(got, want) {
+			t.Fatalf("actions = %v, want %v", got, want)
 		}
 	})
 

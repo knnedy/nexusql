@@ -22,6 +22,8 @@ const rel = (src: string[], target: string, dst: string[]): Relation => ({
   targetField: dst[0],
   sourceFields: src,
   targetFields: dst,
+  onDelete: "NO ACTION",
+  onUpdate: "NO ACTION",
 });
 
 describe("buildDdl", () => {

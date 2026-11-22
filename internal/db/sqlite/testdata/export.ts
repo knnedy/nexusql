@@ -16,7 +16,7 @@ export const categories = sqliteTable('categories', {
 
 export const invites = sqliteTable('invites', {
   id: integer('id').primaryKey(),
-  email: text('email').references((): AnySQLiteColumn => users.email),
+  email: text('email').references((): AnySQLiteColumn => users.email, { onDelete: 'set null' }),
 });
 
 export const offices = sqliteTable('offices', {
@@ -24,7 +24,7 @@ export const offices = sqliteTable('offices', {
   country: text('country').notNull(),
   code: text('code').notNull(),
 }, (t) => [
-  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }),
+  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }).onDelete('cascade').onUpdate('cascade'),
 ]);
 
 export const order_items = sqliteTable('order items', {
@@ -34,7 +34,7 @@ export const order_items = sqliteTable('order items', {
 });
 
 export const post_tags = sqliteTable('post_tags', {
-  post_id: integer('post_id').notNull().references((): AnySQLiteColumn => posts.id),
+  post_id: integer('post_id').notNull().references((): AnySQLiteColumn => posts.id, { onDelete: 'cascade' }),
   tag_code: text('tag_code').notNull().references((): AnySQLiteColumn => tags.code),
 }, (t) => [
   primaryKey({ columns: [t.post_id, t.tag_code] }),

@@ -31,8 +31,12 @@ SELECT
     k.COLUMN_NAME,
     k.REFERENCED_TABLE_NAME,
     k.REFERENCED_COLUMN_NAME,
-    k.ORDINAL_POSITION
+    k.ORDINAL_POSITION,
+    r.DELETE_RULE,
+    r.UPDATE_RULE
 FROM information_schema.key_column_usage k
+JOIN information_schema.REFERENTIAL_CONSTRAINTS r
+  ON r.CONSTRAINT_SCHEMA = k.TABLE_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME AND r.TABLE_NAME = k.TABLE_NAME
 WHERE k.TABLE_SCHEMA = ?
   AND k.REFERENCED_TABLE_NAME IS NOT NULL
 ORDER BY k.TABLE_NAME, k.CONSTRAINT_NAME, k.ORDINAL_POSITION
@@ -90,6 +94,8 @@ type fkRow struct {
 	refTable       string
 	refColumn      string
 	ordinalPos     int
+	onDelete       string
+	onUpdate       string
 }
 
 // introspectForeignKeys returns single-column relations plus a full
@@ -117,6 +123,8 @@ func (p *provider) introspectForeignKeys(ctx context.Context, schema string) ([]
 			&r.refTable,
 			&r.refColumn,
 			&r.ordinalPos,
+			&r.onDelete,
+			&r.onUpdate,
 		); err != nil {
 			return nil, nil, fmt.Errorf("scan foreign key: %w", err)
 		}
@@ -159,6 +167,8 @@ func (p *provider) introspectForeignKeys(ctx context.Context, schema string) ([]
 			TargetField:    dst[0],
 			SourceFields:   src,
 			TargetFields:   dst,
+			OnDelete:       db.RefAction(group[0].onDelete),
+			OnUpdate:       db.RefAction(group[0].onUpdate),
 		})
 	}
 

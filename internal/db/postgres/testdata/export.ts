@@ -21,7 +21,7 @@ export const categories = pgTable('categories', {
 
 export const invites = pgTable('invites', {
   id: serial('id').primaryKey(),
-  email: varchar('email', { length: 255 }).references((): AnyPgColumn => users.email),
+  email: varchar('email', { length: 255 }).references((): AnyPgColumn => users.email, { onDelete: 'set null' }),
 });
 
 export const offices = pgTable('offices', {
@@ -29,7 +29,7 @@ export const offices = pgTable('offices', {
   country: char('country', { length: 2 }).notNull(),
   code: varchar('code', { length: 10 }).notNull(),
 }, (t) => [
-  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }),
+  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }).onDelete('cascade').onUpdate('cascade'),
 ]);
 
 export const order_items = pgTable('order items', {
@@ -39,7 +39,7 @@ export const order_items = pgTable('order items', {
 });
 
 export const post_tags = pgTable('post_tags', {
-  post_id: bigint('post_id', { mode: 'bigint' }).notNull().references((): AnyPgColumn => posts.id),
+  post_id: bigint('post_id', { mode: 'bigint' }).notNull().references((): AnyPgColumn => posts.id, { onDelete: 'cascade' }),
   tag_code: varchar('tag_code', { length: 20 }).notNull().references((): AnyPgColumn => tags.code),
 }, (t) => [
   primaryKey({ columns: [t.post_id, t.tag_code] }),

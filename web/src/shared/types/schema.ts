@@ -93,7 +93,12 @@ export interface Relation {
   /** Every column pair in key order; sourceField/targetField repeat the first. */
   sourceFields: string[];
   targetFields: string[];
+  onDelete: RefAction;
+  onUpdate: RefAction;
 }
+
+/** What a foreign key does when its referenced row is deleted or its key updated. */
+export type RefAction = "NO ACTION" | "RESTRICT" | "CASCADE" | "SET NULL" | "SET DEFAULT";
 
 export interface EnumType {
   name: string;

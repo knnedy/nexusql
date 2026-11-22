@@ -19,7 +19,7 @@ export const categories = mysqlTable('categories', {
 
 export const invites = mysqlTable('invites', {
   id: int('id').autoincrement().primaryKey(),
-  email: varchar('email', { length: 255 }).references((): AnyMySqlColumn => users.email),
+  email: varchar('email', { length: 255 }).references((): AnyMySqlColumn => users.email, { onDelete: 'set null' }),
 });
 
 export const offices = mysqlTable('offices', {
@@ -27,7 +27,7 @@ export const offices = mysqlTable('offices', {
   country: char('country', { length: 2 }).notNull(),
   code: varchar('code', { length: 10 }).notNull(),
 }, (t) => [
-  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }),
+  foreignKey({ columns: [t.country, t.code], foreignColumns: [regions.country, regions.code] }).onDelete('cascade').onUpdate('cascade'),
 ]);
 
 export const order_items = mysqlTable('order items', {
@@ -37,7 +37,7 @@ export const order_items = mysqlTable('order items', {
 });
 
 export const post_tags = mysqlTable('post_tags', {
-  post_id: bigint('post_id', { mode: 'bigint' }).notNull().references((): AnyMySqlColumn => posts.id),
+  post_id: bigint('post_id', { mode: 'bigint' }).notNull().references((): AnyMySqlColumn => posts.id, { onDelete: 'cascade' }),
   tag_code: varchar('tag_code', { length: 20 }).notNull().references((): AnyMySqlColumn => tags.code),
 }, (t) => [
   primaryKey({ columns: [t.post_id, t.tag_code] }),

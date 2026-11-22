@@ -58,6 +58,8 @@ type Relation struct {
 	OneToOne       bool   // the source columns are From's primary key
 	ReferencesPK   bool
 	ConstraintName string
+	OnDelete       db.RefAction
+	OnUpdate       db.RefAction
 }
 
 // Build prepares schema for rendering, leaving out migration-tool tables.
@@ -114,7 +116,7 @@ func Build(schema *db.Schema, dialect db.Exporter) *Model {
 		if len(src) == 0 {
 			src, dst = []string{r.SourceField}, []string{r.TargetField}
 		}
-		rel := &Relation{From: from, To: to, ConstraintName: r.ConstraintName}
+		rel := &Relation{From: from, To: to, ConstraintName: r.ConstraintName, OnDelete: r.OnDelete, OnUpdate: r.OnUpdate}
 		for i := range src {
 			rel.FromFields = append(rel.FromFields, from.field(src[i]))
 			rel.ToFields = append(rel.ToFields, to.field(dst[i]))

@@ -66,9 +66,23 @@ type Relation struct {
 	TargetField    string `json:"targetField"`
 	// SourceFields and TargetFields are every column pair, in key order;
 	// SourceField and TargetField repeat the first pair.
-	SourceFields []string `json:"sourceFields"`
-	TargetFields []string `json:"targetFields"`
+	SourceFields []string  `json:"sourceFields"`
+	TargetFields []string  `json:"targetFields"`
+	OnDelete     RefAction `json:"onDelete"`
+	OnUpdate     RefAction `json:"onUpdate"`
 }
+
+// RefAction is what a foreign key does when its referenced row is deleted or
+// its key updated, as the SQL keywords.
+type RefAction string
+
+const (
+	NoAction   RefAction = "NO ACTION"
+	Restrict   RefAction = "RESTRICT"
+	Cascade    RefAction = "CASCADE"
+	SetNull    RefAction = "SET NULL"
+	SetDefault RefAction = "SET DEFAULT"
+)
 
 // IsComposite reports whether the foreign key spans several columns.
 func (r Relation) IsComposite() bool { return len(r.SourceFields) > 1 }

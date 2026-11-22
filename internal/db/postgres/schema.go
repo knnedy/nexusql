@@ -43,7 +43,9 @@ SELECT
     src.relname,
     tgt.relname,
     array_agg(sa.attname::text ORDER BY k.ord),
-    array_agg(ta.attname::text ORDER BY k.ord)
+    array_agg(ta.attname::text ORDER BY k.ord),
+    con.confdeltype::text,
+    con.confupdtype::text
 FROM pg_constraint con
 JOIN pg_class src ON src.oid = con.conrelid
 JOIN pg_namespace n ON n.oid = src.relnamespace
@@ -52,7 +54,7 @@ CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS k(src_att,
 JOIN pg_attribute sa ON sa.attrelid = con.conrelid AND sa.attnum = k.src_att
 JOIN pg_attribute ta ON ta.attrelid = con.confrelid AND ta.attnum = k.tgt_att
 WHERE con.contype = 'f' AND n.nspname = $1
-GROUP BY con.oid, con.conname, src.relname, tgt.relname
+GROUP BY con.oid, con.conname, src.relname, tgt.relname, con.confdeltype, con.confupdtype
 ORDER BY con.conname, src.relname
 `
 
@@ -181,9 +183,11 @@ func (p *provider) introspectRelations(ctx context.Context, schema string) ([]db
 
 	for rows.Next() {
 		var r db.Relation
-		if err := rows.Scan(&r.ConstraintName, &r.SourceTable, &r.TargetTable, &r.SourceFields, &r.TargetFields); err != nil {
+		var onDelete, onUpdate string
+		if err := rows.Scan(&r.ConstraintName, &r.SourceTable, &r.TargetTable, &r.SourceFields, &r.TargetFields, &onDelete, &onUpdate); err != nil {
 			return nil, fmt.Errorf("scan relation: %w", err)
 		}
+		r.OnDelete, r.OnUpdate = refAction(onDelete), refAction(onUpdate)
 		r.SourceField, r.TargetField = r.SourceFields[0], r.TargetFields[0]
 		relations = append(relations, r)
 	}
@@ -231,4 +235,11 @@ func (p *provider) introspectEnums(ctx context.Context, schema string) ([]db.Enu
 
 func (p *provider) DefaultSchema() string {
 	return "public"
+}
+
+// refAction maps pg_constraint's one-letter action codes.
+func refAction(code string) db.RefAction {
+	return map[string]db.RefAction{
+		"a": db.NoAction, "r": db.Restrict, "c": db.Cascade, "n": db.SetNull, "d": db.SetDefault,
+	}[code]
 }

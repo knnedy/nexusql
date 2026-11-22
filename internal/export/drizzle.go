@@ -140,8 +140,12 @@ func (z *drizzle) table(b *strings.Builder, t *Table, calls map[*Field]string) {
 			}
 		}
 		z.imports["foreignKey"] = true
-		extra = append(extra, fmt.Sprintf("foreignKey({ columns: [%s], foreignColumns: [%s] })",
-			z.refs("t", r.FromFields), z.refs(z.target(t, r.To), r.ToFields)))
+		fk := fmt.Sprintf("foreignKey({ columns: [%s], foreignColumns: [%s] })",
+			z.refs("t", r.FromFields), z.refs(z.target(t, r.To), r.ToFields))
+		for _, a := range drizzleActions(r) {
+			fk += fmt.Sprintf(".%s('%s')", a[0], a[1])
+		}
+		extra = append(extra, fk)
 	}
 	if len(t.PK) > 1 {
 		z.imports["primaryKey"] = true
@@ -170,7 +174,15 @@ func (z *drizzle) table(b *strings.Builder, t *Table, calls map[*Field]string) {
 		col += z.defaultValue(f)
 		if r := single[f]; r != nil {
 			z.imports[z.d.AnyColumn] = true
-			col += fmt.Sprintf(".references((): %s => %s.%s)", z.d.AnyColumn, z.tables[r.To], r.ToFields[0].Ident)
+			ref := fmt.Sprintf("(): %s => %s.%s", z.d.AnyColumn, z.tables[r.To], r.ToFields[0].Ident)
+			var opts []string
+			for _, a := range drizzleActions(r) {
+				opts = append(opts, fmt.Sprintf("%s: '%s'", a[0], a[1]))
+			}
+			if len(opts) > 0 {
+				ref += ", { " + strings.Join(opts, ", ") + " }"
+			}
+			col += ".references(" + ref + ")"
 		}
 		fmt.Fprintf(b, "  %s: %s,\n", f.Ident, col)
 	}
@@ -260,6 +272,20 @@ func (z *drizzle) defaultValue(f *Field) string {
 	}
 	z.useSQL = true
 	return ".default(sql`" + strings.NewReplacer("\\", "\\\\", "`", "\\`", "${", "\\${").Replace(*f.DefaultValue) + "`)"
+}
+
+// drizzleActions are r's actions other than drizzle's default, no action.
+func drizzleActions(r *Relation) [][2]string {
+	var out [][2]string
+	for _, a := range []struct {
+		name string
+		got  db.RefAction
+	}{{"onDelete", r.OnDelete}, {"onUpdate", r.OnUpdate}} {
+		if a.got != "" && a.got != db.NoAction {
+			out = append(out, [2]string{a.name, strings.ToLower(string(a.got))})
+		}
+	}
+	return out
 }
 
 func enumValues(e *Enum) string {

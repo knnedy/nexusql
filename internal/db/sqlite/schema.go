@@ -82,6 +82,8 @@ type fkRow struct {
 	targetTable string
 	sourceField string
 	targetField string
+	onUpdate    string
+	onDelete    string
 }
 
 // foreignKeyRows runs PRAGMA foreign_key_list once per table; the result is
@@ -111,6 +113,8 @@ func (p *provider) foreignKeyRows(ctx context.Context, tableName string) ([]fkRo
 			targetTable: table,
 			sourceField: from,
 			targetField: to.String,
+			onUpdate:    onUpdate.String,
+			onDelete:    onDelete.String,
 		})
 	}
 	return out, rows.Err()
@@ -235,6 +239,8 @@ func buildRelations(ctx context.Context, p *provider, tableName string, fkRows [
 			TargetField:    dst[0],
 			SourceFields:   src,
 			TargetFields:   dst,
+			OnDelete:       db.RefAction(group[0].onDelete),
+			OnUpdate:       db.RefAction(group[0].onUpdate),
 		})
 	}
 	return relations, nil
