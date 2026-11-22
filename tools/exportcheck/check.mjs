@@ -1,7 +1,9 @@
 // Validates every export golden under internal/db/*/testdata with the real
-// tools: prisma validate for export.prisma, tsc against drizzle-orm for export.ts.
+// tools: prisma validate for export.prisma, tsc against drizzle-orm for export.ts,
+// the @dbml/core parser for export.dbml.
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { Parser } from "@dbml/core";
 import { join, resolve } from "node:path";
 
 const here = import.meta.dirname;
@@ -32,6 +34,19 @@ for (const d of dialects) {
   if (existsSync(prisma)) {
     run(`${d}/export.prisma`, bin("prisma"), ["validate", "--schema", prisma]);
     checked++;
+  }
+  const dbml = join(root, "internal/db", d, "testdata/export.dbml");
+  if (existsSync(dbml)) {
+    checked++;
+    try {
+      const schema = Parser.parse(readFileSync(dbml, "utf8"), "dbmlv2").schemas[0];
+      if (!schema.tables.length || !schema.refs.length) throw new Error("no tables or refs parsed");
+      console.log(`ok    ${d}/export.dbml (${schema.tables.length} tables, ${schema.refs.length} refs)`);
+    } catch (err) {
+      failed++;
+      const diags = err.diags?.map((x) => `  ${x.location?.start?.line}: ${x.message}`).join("\n");
+      console.log(`FAIL  ${d}/export.dbml\n${diags ?? err.message}`);
+    }
   }
   const drizzle = join(root, "internal/db", d, "testdata/export.ts");
   if (existsSync(drizzle)) {

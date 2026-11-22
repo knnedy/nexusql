@@ -343,11 +343,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   `canvas/lib/ddl.ts` (+ its test: wrong types, invented identity, unknown references).
   e2e: inspector DDL tab.
 
+- feat(export): B7 DBML (`export.DBML`, format `dbml`, highlighted as text: Shiki has no
+  DBML grammar). Enums, tables with column settings (pk, increment, not null, unique,
+  default), Indexes (composite pk/unique, named plain indexes), Checks, then Refs with
+  delete/update actions (`-` for one-to-one). Names quoted unless bare and not a DBML
+  keyword; types with spaces quoted. DBML backtick expressions have no escapes, so
+  MySQL's backtick-quoted names in CHECKs/defaults become bare or double-quoted. Numeric
+  string defaults ('-1'::integer) render as numbers. `tools/exportcheck` parses every
+  export.dbml with @dbml/core 11.1.0 (exact; 12.x was under two weeks old).
+
 ## Next 3 steps
 
-1. B7: DBML (@dbml/core check).
-2. B8: Mermaid ER (confirm the parser runs in Node first).
-3. B9: Kysely.
+1. B8: Mermaid ER (confirm the parser runs in Node first).
+2. B9: Kysely.
+3. B10: TypeORM.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

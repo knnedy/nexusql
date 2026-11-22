@@ -198,8 +198,8 @@ func TestExportFormatsAreListedAndRendered(t *testing.T) {
 		}
 		ids = append(ids, f.ID)
 	}
-	if strings.Join(ids, ",") != "sql,prisma,drizzle" {
-		t.Fatalf("formats = %v, want sql,prisma,drizzle in order", ids)
+	if strings.Join(ids, ",") != "sql,prisma,drizzle,dbml" {
+		t.Fatalf("formats = %v, want sql,prisma,drizzle,dbml in order", ids)
 	}
 
 	// Unknown formats are not found, connected or not.
