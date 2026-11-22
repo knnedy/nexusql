@@ -5,7 +5,6 @@ import { X, Copy, Check, Download, FileCode, ImageIcon } from "lucide-react";
 import { codeToHtml } from "shiki";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
-import Image from "next/image";
 import {
   exportFormatsQueryOptions,
   exportQueryOptions,
@@ -163,7 +162,9 @@ export default function ExportPreviewDrawer({
                 </span>
               </div>
             ) : pngDataUrl ? (
-              <Image
+              // An in-memory snapshot of unknown size: nothing for next/image to optimise.
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
                 src={pngDataUrl}
                 alt="Canvas snapshot"
                 className="max-w-full max-h-full rounded-lg border border-node-border/40 shadow-md object-contain"

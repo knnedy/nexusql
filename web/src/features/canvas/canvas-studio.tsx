@@ -16,7 +16,6 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
-  getNodesBounds,
   type NodeTypes,
   type EdgeTypes,
   type OnNodesChange,
@@ -84,7 +83,7 @@ function CanvasInner() {
   const [isGeneratingPng, setIsGeneratingPng] = useState(false);
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
-  const { getViewport, setViewport, getNodes } = useReactFlow();
+  const { getViewport, setViewport, getNodes, getNodesBounds } = useReactFlow();
 
   const { data: schema, isLoading, isError } = useSchema();
 
@@ -207,7 +206,7 @@ function CanvasInner() {
       setViewport(previousViewport, { duration: 0 });
       setIsGeneratingPng(false);
     }
-  }, [getViewport, setViewport, getNodes]);
+  }, [getViewport, setViewport, getNodes, getNodesBounds]);
 
   if (isLoading || !graphReady) {
     return (

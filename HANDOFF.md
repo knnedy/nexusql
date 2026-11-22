@@ -508,12 +508,17 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Provider.FetchRowWhere, unused since FK navigation became an `=` filter (C14). Tests
   that read rows through it now use FetchRows/Rows with an `=` filter.
 
+- fix(canvas): the PNG snapshot preview used next/image on a data: URL with no
+  width/height, which Next rejects outside production ("missing required width"), so the
+  export broke in `make dev` only. A plain <img> shows it (nothing to optimise). The
+  bounds now come from useReactFlow().getNodesBounds, silencing React Flow's sub-flow
+  warning. vitest component test (red on the old code); checked in a real `next dev` +
+  binary run: snapshot renders, no console errors or warnings.
+
 ## Next 3 steps
 
-1. fix(canvas): PNG export fails in dev (next/image error on a data: URL; getNodesBounds
-   warning).
-2. feat(export): official icon per export format in the export drawer.
-3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
+1. feat(export): official icon per export format (sidebar and drawer header).
+2. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
