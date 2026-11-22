@@ -87,7 +87,9 @@ func (s *saWriter) head() string {
 		std = append(std, "from typing import "+strings.Join(typing, ", "))
 	}
 	if len(std) > 0 {
-		b.WriteString("\n" + strings.Join(std, "\n") + "\n")
+		b.WriteString("\n")
+		b.WriteString(strings.Join(std, "\n"))
+		b.WriteString("\n")
 	}
 	b.WriteString("\n")
 	names := make([]string, 0, len(s.sa))
