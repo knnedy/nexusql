@@ -18,6 +18,7 @@ var formats = []Format{
 	{ID: "prisma", Label: "Prisma schema", Description: "Models for schema.prisma", Language: "prisma", Filename: "schema.prisma", render: Prisma},
 	{ID: "drizzle", Label: "Drizzle schema", Description: "drizzle-orm table definitions", Language: "typescript", Filename: "schema.ts", render: Drizzle},
 	{ID: "dbml", Label: "DBML", Description: "Database Markup Language for dbdiagram.io", Language: "text", Filename: "schema.dbml", render: DBML},
+	{ID: "mermaid", Label: "Mermaid ER diagram", Description: "erDiagram for Markdown and docs", Language: "mermaid", Filename: "schema.mmd", render: Mermaid},
 }
 
 // Formats lists every export format.

@@ -1,9 +1,10 @@
 // Validates every export golden under internal/db/*/testdata with the real
 // tools: prisma validate for export.prisma, tsc against drizzle-orm for export.ts,
-// the @dbml/core parser for export.dbml.
+// the @dbml/core parser for export.dbml, mermaid's parser for export.mmd.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { Parser } from "@dbml/core";
+import mermaid from "mermaid";
 import { join, resolve } from "node:path";
 
 const here = import.meta.dirname;
@@ -46,6 +47,18 @@ for (const d of dialects) {
       failed++;
       const diags = err.diags?.map((x) => `  ${x.location?.start?.line}: ${x.message}`).join("\n");
       console.log(`FAIL  ${d}/export.dbml\n${diags ?? err.message}`);
+    }
+  }
+  const mmd = join(root, "internal/db", d, "testdata/export.mmd");
+  if (existsSync(mmd)) {
+    checked++;
+    try {
+      const res = await mermaid.parse(readFileSync(mmd, "utf8"));
+      if (res.diagramType !== "er") throw new Error(`parsed as ${res.diagramType}`);
+      console.log(`ok    ${d}/export.mmd`);
+    } catch (err) {
+      failed++;
+      console.log(`FAIL  ${d}/export.mmd\n${err.message ?? err}`);
     }
   }
   const drizzle = join(root, "internal/db", d, "testdata/export.ts");

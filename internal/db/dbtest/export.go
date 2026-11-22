@@ -48,6 +48,7 @@ func testExport(t *testing.T, h Harness) {
 	golden(t, "testdata/export.prisma", export.Prisma(m))
 	golden(t, "testdata/export.ts", export.Drizzle(m))
 	golden(t, "testdata/export.dbml", export.DBML(m))
+	golden(t, "testdata/export.mmd", export.Mermaid(m))
 	ddl := export.SQL(m)
 	golden(t, "testdata/export.sql", ddl)
 

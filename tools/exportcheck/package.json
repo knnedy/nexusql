@@ -1,7 +1,7 @@
 {
   "name": "nexusql-exportcheck",
   "private": true,
-  "description": "Validates the export golden files with the real Prisma, Drizzle and DBML tools.",
+  "description": "Validates the export golden files with the real Prisma, Drizzle, DBML and Mermaid tools.",
   "type": "module",
   "packageManager": "pnpm@12.18.0",
   "scripts": {
@@ -10,6 +10,7 @@
   "devDependencies": {
     "@dbml/core": "11.1.0",
     "drizzle-orm": "0.45.4",
+    "mermaid": "12.3.0",
     "prisma": "7.10.1",
     "typescript": "5.9.3"
   }

@@ -352,11 +352,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   string defaults ('-1'::integer) render as numbers. `tools/exportcheck` parses every
   export.dbml with @dbml/core 11.1.0 (exact; 12.x was under two weeks old).
 
+- feat(export): B8 Mermaid ER (`export.Mermaid`, format `mermaid`, schema.mmd). Tables
+  with columns and PK/FK/UK, one line per foreign key: `|o` when a key column is
+  nullable, `o|` when the referencing columns are unique, `--` when they are part of its
+  primary key (identifying), `..` otherwise. Rules confirmed against mermaid 12.3.0:
+  attribute names allow no spaces or quotes (made safe, real name kept as the comment),
+  types allow commas but not spaces (underscored), entity names may be quoted.
+  `mermaid.parse` runs in Node without a DOM, so `tools/exportcheck` parses every
+  export.mmd with it (mermaid 12.3.0, exact).
+
 ## Next 3 steps
 
-1. B8: Mermaid ER (confirm the parser runs in Node first).
-2. B9: Kysely.
-3. B10: TypeORM.
+1. B9: Kysely.
+2. B10: TypeORM.
+3. B11: SQLAlchemy; B12: GORM; then STOP and summarize group B.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
