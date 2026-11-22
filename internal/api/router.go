@@ -52,6 +52,8 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 	// Schema
 	r.Get("/schema", h.handleSchema)
 
+	r.Get("/tables/{tableName}/ddl", h.handleTableDDL)
+
 	// Rows
 	r.Get("/rows/{tableName}", h.handleRows)
 	r.Get("/rows/{tableName}/lookup", h.handleRowLookup)

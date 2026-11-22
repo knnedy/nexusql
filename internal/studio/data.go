@@ -250,3 +250,28 @@ func (s *Service) Export(ctx context.Context, format string) (string, error) {
 	}
 	return f.Render(export.Build(schema, dialect)), nil
 }
+
+// TableDDL renders one table's CREATE TABLE, indexes and foreign keys.
+func (s *Service) TableDDL(ctx context.Context, table string) (string, error) {
+	conn, err := s.conn()
+	if err != nil {
+		return "", err
+	}
+	t, err := s.table(ctx, conn, table)
+	if err != nil {
+		return "", err
+	}
+	schema, err := s.schemas.get(ctx, conn, false)
+	if err != nil {
+		return "", err
+	}
+	dialect, err := db.ExporterFor(conn.Kind)
+	if err != nil {
+		return "", invalid(err)
+	}
+	ddl, ok := export.TableSQL(export.Build(schema, dialect), t.Name)
+	if !ok { // migration-tool tables are left out of exports
+		return "", classed{ErrNotFound, fmt.Errorf("no DDL for table %q", t.Name)}
+	}
+	return ddl, nil
+}

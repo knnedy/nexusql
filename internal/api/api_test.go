@@ -225,3 +225,32 @@ func TestExportFormatsAreListedAndRendered(t *testing.T) {
 		t.Fatalf("drizzle export = %+v", out)
 	}
 }
+
+func TestTableDDL(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "ddl.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	call(h, "POST", "/query", `{"sql":"CREATE TABLE owners (id INTEGER PRIMARY KEY); CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER REFERENCES owners (id) ON DELETE CASCADE, name TEXT NOT NULL); CREATE INDEX pets_name ON pets (name)","confirmed":true}`)
+
+	w := call(h, "GET", "/tables/pets/ddl", "")
+	var res struct{ DDL string }
+	if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("ddl: %d %s", w.Code, w.Body)
+	}
+	for _, part := range []string{
+		`CREATE TABLE "pets"`, `"id" INTEGER PRIMARY KEY AUTOINCREMENT`, `"name" TEXT NOT NULL`,
+		`REFERENCES "owners" ("id") ON DELETE CASCADE`, `CREATE INDEX "pets_name" ON "pets" ("name")`,
+	} {
+		if !strings.Contains(res.DDL, part) {
+			t.Errorf("ddl lacks %q:\n%s", part, res.DDL)
+		}
+	}
+	if strings.Contains(res.DDL, `CREATE TABLE "owners"`) {
+		t.Errorf("ddl has another table:\n%s", res.DDL)
+	}
+	if w := call(h, "GET", "/tables/nope/ddl", ""); w.Code != http.StatusBadRequest {
+		t.Fatalf("unknown table: %d %s", w.Code, w.Body)
+	}
+}

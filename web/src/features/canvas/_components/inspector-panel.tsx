@@ -18,18 +18,17 @@ import { codeToHtml } from "shiki";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
 import { normalizeFieldType } from "@/shared/lib/utils";
-import { buildDdl } from "@/features/canvas/lib/ddl";
+import { useQuery } from "@tanstack/react-query";
+import { tableDdlQueryOptions } from "@/shared/hooks/use-export";
 import {
   Field,
   FIELD_TYPE_BADGE_MAP,
   Relation,
   Table,
 } from "@/shared/types/schema";
-import { DatabaseProvider } from "@/shared/types/provider";
 
 interface InspectorPanelProps {
   table: Table | null;
-  provider: DatabaseProvider | null;
   relation: Relation | null;
 }
 
@@ -308,14 +307,15 @@ function IdleState() {
 
 export default function InspectorPanel({
   table,
-  provider,
   relation,
 }: InspectorPanelProps) {
   const [activeTab, setActiveTab] = useState<InspectorTab>("columns");
   const [copied, setCopied] = useState(false);
   const { data: schema } = useSchema();
   const tables = schema?.tables ?? [];
-  const relations = schema?.relations ?? [];
+  const ddl = useQuery(
+    tableDdlQueryOptions(table?.name ?? "", activeTab === "ddl"),
+  );
 
   const pkFields = table?.fields.filter((f) => f.isPrimaryKey) ?? [];
   const fkFields = table?.fields.filter((f) => f.isForeignKey) ?? [];
@@ -345,8 +345,8 @@ export default function InspectorPanel({
   );
 
   const handleCopyDdl = () => {
-    if (!table) return;
-    navigator.clipboard.writeText(buildDdl(table, provider, relations));
+    if (!ddl.data) return;
+    navigator.clipboard.writeText(ddl.data);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -441,7 +441,13 @@ export default function InspectorPanel({
                     )}
                   </button>
                 </div>
-                <DdlBlock code={buildDdl(table, provider, relations)} />
+                {ddl.data ? (
+                  <DdlBlock code={ddl.data} />
+                ) : (
+                  <span className="text-[11px] text-text-tertiary font-mono px-1">
+                    {ddl.error ? ddl.error.message : "Loading…"}
+                  </span>
+                )}
               </div>
             )}
           </div>

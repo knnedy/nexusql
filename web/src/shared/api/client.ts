@@ -187,6 +187,12 @@ export const api = {
     },
   },
 
+  tables: {
+    ddl(table: string): Promise<{ ddl: string }> {
+      return request<{ ddl: string }>(`/api/tables/${encodeURIComponent(table)}/ddl`);
+    },
+  },
+
   export: {
     formats(): Promise<ExportFormatsResponse> {
       return request<ExportFormatsResponse>("/api/export");

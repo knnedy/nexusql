@@ -19,3 +19,11 @@ export const exportQueryOptions = (format: string | null, enabled: boolean) =>
     enabled: enabled && !!format && format !== PNG_EXPORT,
     staleTime: Infinity,
   });
+
+/** One table's DDL, rendered by the server from the introspected schema. */
+export const tableDdlQueryOptions = (table: string, enabled: boolean) =>
+  queryOptions({
+    queryKey: queryKeys.tableDdl(table),
+    queryFn: async () => (await api.tables.ddl(table)).ddl,
+    enabled: enabled && !!table,
+  });

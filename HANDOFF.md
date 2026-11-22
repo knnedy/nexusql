@@ -335,11 +335,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   (only the database name and SQLite's positional FK names may differ). Fixtures gained
   CHECKs with a quoted literal (MySQL escaping round-trips).
 
+- feat(canvas): B6c inspector DDL from the server. `export.TableSQL` (one table's CREATE
+  TABLE, indexes, foreign keys; `sql.go` split into a `sqlWriter`, full export unchanged),
+  studio `TableDDL` (table name validated against the schema; migration tables are
+  ErrNotFound), `GET /api/tables/{table}/ddl`. Inspector uses `tableDdlQueryOptions`
+  (key under schema, so console changes refresh it). Removed the client approximation
+  `canvas/lib/ddl.ts` (+ its test: wrong types, invented identity, unknown references).
+  e2e: inspector DDL tab.
+
 ## Next 3 steps
 
-1. B6c: canvas inspector DDL from the server, remove lib/ddl.ts.
-2. B7: DBML (@dbml/core check).
-3. B8: Mermaid ER (confirm the parser runs in Node first).
+1. B7: DBML (@dbml/core check).
+2. B8: Mermaid ER (confirm the parser runs in Node first).
+3. B9: Kysely.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
@@ -372,6 +380,8 @@ None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
+- Canvas inspector "Indexes" tab still derives indexes on the client (`deriveIndexes`);
+  the schema now carries `unique`, `indexes` and `checks` to show instead.
 - SQL DDL leaves out what is not introspected: MySQL charset/collation and ON UPDATE
   CURRENT_TIMESTAMP, generated columns, comments, views, triggers, non-serial sequences;
   composite primary keys follow column order, not key order; tables are unqualified.

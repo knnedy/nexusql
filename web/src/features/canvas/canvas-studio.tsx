@@ -297,7 +297,6 @@ function CanvasInner() {
           />
           <InspectorPanel
             table={selectedTable?.table ?? null}
-            provider={selectedTable?.provider ?? null}
             relation={selectedRelation}
           />
           <MiniMap

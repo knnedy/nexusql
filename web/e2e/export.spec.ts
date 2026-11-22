@@ -12,3 +12,11 @@ test("lists the server's export formats and renders the chosen one", async ({ pa
   await page.getByRole("button", { name: "Download export" }).click();
   expect((await download).suggestedFilename()).toBe("schema.ts");
 });
+
+test("the inspector shows the server's DDL for the selected table", async ({ page }) => {
+  await connectSqlite(page, "CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");
+  await page.reload();
+  await page.getByText("pets", { exact: true }).first().click();
+  await page.getByRole("button", { name: "DDL", exact: true }).click();
+  await expect(page.getByText(/"id" INTEGER PRIMARY KEY AUTOINCREMENT/)).toBeVisible();
+});

@@ -16,6 +16,8 @@ export const queryKeys = {
   exportFormats: ["export-formats"] as const,
   connection: () => scope(),
   schema: () => [...scope(), "schema"] as const,
+  // Under schema, so whatever refreshes the schema refreshes the DDL too.
+  tableDdl: (table: string) => [...scope(), "schema", "ddl", table] as const,
   rows: () => [...scope(), "rows"] as const,
   tableRows: (table: string) => [...scope(), "rows", table] as const,
   lookups: () => [...scope(), "lookup"] as const,
