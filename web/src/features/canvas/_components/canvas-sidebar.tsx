@@ -13,8 +13,14 @@ import {
   SquareTerminal,
   Boxes,
   Link2,
+  FileCode,
 } from "lucide-react";
 import { SiPrisma, SiDrizzle } from "react-icons/si";
+import { useQuery } from "@tanstack/react-query";
+import {
+  exportFormatsQueryOptions,
+  PNG_EXPORT,
+} from "@/shared/hooks/use-export";
 import { reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { useSchema } from "@/shared/hooks/use-schema";
 import type { Node } from "@xyflow/react";
@@ -26,12 +32,29 @@ interface CanvasSidebarProps {
   open: boolean;
   onClose: () => void;
   onLayoutApply: (nodes: Node<TableNodeData>[]) => void;
-  onSelectExport: (type: "png" | "prisma" | "drizzle" | null) => void;
-  activeExport: "png" | "prisma" | "drizzle" | null;
+  onSelectExport: (type: string | null) => void;
+  activeExport: string | null;
   onOpenMirror?: () => void;
   onOpenSeedGenerator?: () => void;
   onOpenSqlConsole?: () => void;
 }
+
+// Brand marks for known formats; any other format gets the generic file icon.
+const FORMAT_ICONS: Record<string, { icon: React.ReactNode; className: string }> = {
+  prisma: {
+    icon: <SiPrisma size={14} aria-hidden />,
+    className: "bg-indigo-500/5 text-indigo-500 dark:bg-indigo-400/10 dark:text-indigo-400",
+  },
+  drizzle: {
+    icon: <SiDrizzle size={14} aria-hidden />,
+    className: "bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400",
+  },
+};
+
+const DEFAULT_FORMAT_ICON = {
+  icon: <FileCode size={14} aria-hidden />,
+  className: "bg-surface-3 text-text-secondary dark:bg-surface-3/50",
+};
 
 function SectionLabel({ label }: { label: string }) {
   return (
@@ -124,6 +147,7 @@ export default function CanvasSidebar({
   const { resolvedTheme, setTheme } = useTheme();
   const isDark = resolvedTheme === "dark";
   const { data: schema } = useSchema();
+  const { data: formats = [] } = useQuery(exportFormatsQueryOptions());
 
   const provider: DatabaseProvider = studioSession.provider() ?? "postgres";
   const projectName = studioSession.projectName() ?? "";
@@ -233,35 +257,31 @@ export default function CanvasSidebar({
           <div className="flex flex-col gap-0.5">
             <SectionLabel label="Data Exports" />
             <SidebarItem
-              active={activeExport === "png"}
+              active={activeExport === PNG_EXPORT}
               iconWrapperClass="bg-badge-blue-bg/60 text-badge-blue-text dark:bg-badge-blue-bg/20 dark:text-blue-400"
               icon={<ImageDown size={14} aria-hidden />}
               label="Export Canvas View"
               description="Save viewport to PNG format"
               onClick={() =>
-                onSelectExport(activeExport === "png" ? null : "png")
+                onSelectExport(activeExport === PNG_EXPORT ? null : PNG_EXPORT)
               }
             />
-            <SidebarItem
-              active={activeExport === "prisma"}
-              iconWrapperClass="bg-indigo-500/5 text-indigo-500 dark:bg-indigo-400/10 dark:text-indigo-400"
-              icon={<SiPrisma size={14} aria-hidden />}
-              label="Prisma Schema"
-              description="Generate schema.prisma model"
-              onClick={() =>
-                onSelectExport(activeExport === "prisma" ? null : "prisma")
-              }
-            />
-            <SidebarItem
-              active={activeExport === "drizzle"}
-              iconWrapperClass="bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400"
-              icon={<SiDrizzle size={14} aria-hidden />}
-              label="Drizzle Schema"
-              description="Compile executable TypeScript"
-              onClick={() =>
-                onSelectExport(activeExport === "drizzle" ? null : "drizzle")
-              }
-            />
+            {formats.map((f) => {
+              const mark = FORMAT_ICONS[f.id] ?? DEFAULT_FORMAT_ICON;
+              return (
+                <SidebarItem
+                  key={f.id}
+                  active={activeExport === f.id}
+                  iconWrapperClass={mark.className}
+                  icon={mark.icon}
+                  label={f.label}
+                  description={f.description}
+                  onClick={() =>
+                    onSelectExport(activeExport === f.id ? null : f.id)
+                  }
+                />
+              );
+            })}
           </div>
 
           <Divider />

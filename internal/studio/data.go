@@ -224,16 +224,18 @@ func (s *Service) Seed(ctx context.Context, opts seed.Options) (*seed.Result, er
 	return res, nil
 }
 
-// ExportTarget names an ORM schema format.
-type ExportTarget string
+// ExportFormat describes one schema export format.
+type ExportFormat = export.Format
 
-const (
-	ExportPrisma  ExportTarget = "prisma"
-	ExportDrizzle ExportTarget = "drizzle"
-)
+// ExportFormats lists the schema export formats.
+func (s *Service) ExportFormats() []ExportFormat { return export.Formats() }
 
-// Export renders the active connection's schema in the target ORM format.
-func (s *Service) Export(ctx context.Context, target ExportTarget) (string, error) {
+// Export renders the active connection's schema in the format with this id.
+func (s *Service) Export(ctx context.Context, format string) (string, error) {
+	f, ok := export.Lookup(format)
+	if !ok {
+		return "", classed{ErrNotFound, fmt.Errorf("unknown export format %q", format)}
+	}
 	conn, err := s.conn()
 	if err != nil {
 		return "", err
@@ -246,8 +248,5 @@ func (s *Service) Export(ctx context.Context, target ExportTarget) (string, erro
 	if err != nil {
 		return "", invalid(err)
 	}
-	if target == ExportDrizzle {
-		return export.Drizzle(export.Build(schema, dialect)), nil
-	}
-	return export.Prisma(export.Build(schema, dialect)), nil
+	return f.Render(export.Build(schema, dialect)), nil
 }

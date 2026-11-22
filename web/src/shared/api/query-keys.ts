@@ -12,6 +12,8 @@ function scope() {
 /** Query keys; prefixes double as invalidation targets. */
 export const queryKeys = {
   projects: ["projects"] as const,
+  // The format list belongs to the server, not to a connection.
+  exportFormats: ["export-formats"] as const,
   connection: () => scope(),
   schema: () => [...scope(), "schema"] as const,
   rows: () => [...scope(), "rows"] as const,

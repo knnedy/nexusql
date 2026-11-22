@@ -31,6 +31,9 @@ the copies.
   Its output is compared with `internal/db/<dialect>/testdata/export.*` (`go test -update`
   rewrites them), and `tools/exportcheck` validates those files with the real tools, pinned,
   in CI and in `make export-check`.
+- Formats are registered in `export.Formats()` (id, label, highlighting language, filename).
+  `GET /api/export` lists them and `GET /api/export/{format}` renders one; the UI builds its
+  export menu from the list, so a new format needs no UI change.
 
 ## Consequences
 

@@ -181,3 +181,47 @@ func TestSeedReportsSkippedRows(t *testing.T) {
 		t.Fatalf("seed = %s, want 2 inserted, 2 skipped and the reason", w.Body)
 	}
 }
+
+func TestExportFormatsAreListedAndRendered(t *testing.T) {
+	h := newAPI(t)
+	w := call(h, "GET", "/export", "")
+	var list struct {
+		Formats []struct{ ID, Label, Language, Filename string }
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &list); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("list: %d %s", w.Code, w.Body)
+	}
+	var ids []string
+	for _, f := range list.Formats {
+		if f.Label == "" || f.Language == "" || f.Filename == "" {
+			t.Errorf("format %q is missing display fields: %+v", f.ID, f)
+		}
+		ids = append(ids, f.ID)
+	}
+	if strings.Join(ids, ",") != "prisma,drizzle" {
+		t.Fatalf("formats = %v, want prisma,drizzle in order", ids)
+	}
+
+	// Unknown formats are not found, connected or not.
+	if w := call(h, "GET", "/export/nope", ""); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown format before connecting: %d %s", w.Code, w.Body)
+	}
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "x.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/query", `{"sql":"CREATE TABLE t (id INTEGER PRIMARY KEY)","confirmed":true}`); w.Code != http.StatusOK {
+		t.Fatalf("create: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/export/nope", ""); w.Code != http.StatusNotFound {
+		t.Fatalf("unknown format: %d %s", w.Code, w.Body)
+	}
+	w = call(h, "GET", "/export/drizzle", "")
+	var out struct{ Format, Schema string }
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("drizzle: %d %s", w.Code, w.Body)
+	}
+	if out.Format != "drizzle" || !strings.Contains(out.Schema, "sqliteTable('t'") {
+		t.Fatalf("drizzle export = %+v", out)
+	}
+}

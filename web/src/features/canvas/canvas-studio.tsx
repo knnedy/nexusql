@@ -70,9 +70,7 @@ function CanvasInner() {
   >([]);
   const [graphReady, setGraphReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeExport, setActiveExport] = useState<
-    "png" | "prisma" | "drizzle" | null
-  >(null);
+  const [activeExport, setActiveExport] = useState<string | null>(null);
   const [seedOpen, setSeedOpen] = useState(false);
   const [sqlConsoleOpen, setSqlConsoleOpen] = useState(false);
   const [selectedTable, setSelectedTable] = useState<{

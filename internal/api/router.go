@@ -64,8 +64,8 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 	r.Post("/seed", h.handleSeed)
 
 	// Schema export
-	r.Get("/export/prisma", h.handleExportPrisma)
-	r.Get("/export/drizzle", h.handleExportDrizzle)
+	r.Get("/export", h.handleExportFormats)
+	r.Get("/export/{format}", h.handleExport)
 
 	// Projects
 	r.Get("/projects", h.handleListProjects)

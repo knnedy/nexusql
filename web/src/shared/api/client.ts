@@ -1,8 +1,9 @@
 import {
   ConnectRequest,
   ConnectResponse,
+  ExportFormatsResponse,
+  ExportResponse,
   HealthResponse,
-  OrmExportResponse,
 } from "@/shared/types/health";
 import {
   CreateProjectRequest,
@@ -187,12 +188,12 @@ export const api = {
   },
 
   export: {
-    prisma(): Promise<OrmExportResponse> {
-      return request<OrmExportResponse>("/api/export/prisma");
+    formats(): Promise<ExportFormatsResponse> {
+      return request<ExportFormatsResponse>("/api/export");
     },
 
-    drizzle(): Promise<OrmExportResponse> {
-      return request<OrmExportResponse>("/api/export/drizzle");
+    render(format: string): Promise<ExportResponse> {
+      return request<ExportResponse>(`/api/export/${encodeURIComponent(format)}`);
     },
   },
 } as const;

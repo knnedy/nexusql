@@ -3,31 +3,29 @@ package api
 import (
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/knnedy/nexusql/internal/studio"
 )
 
+type exportFormatsResponse struct {
+	Formats []studio.ExportFormat `json:"formats"`
+}
+
 type exportResponse struct {
-	Target string `json:"target"`
+	Format string `json:"format"`
 	Schema string `json:"schema"`
 }
 
-func (h *handler) handleExportPrisma(w http.ResponseWriter, r *http.Request) {
-	h.export(w, r, studio.ExportPrisma)
+func (h *handler) handleExportFormats(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, exportFormatsResponse{Formats: h.studio.ExportFormats()})
 }
 
-func (h *handler) handleExportDrizzle(w http.ResponseWriter, r *http.Request) {
-	h.export(w, r, studio.ExportDrizzle)
-}
-
-func (h *handler) export(w http.ResponseWriter, r *http.Request, target studio.ExportTarget) {
-	out, err := h.studio.Export(r.Context(), target)
+func (h *handler) handleExport(w http.ResponseWriter, r *http.Request) {
+	format := chi.URLParam(r, "format")
+	out, err := h.studio.Export(r.Context(), format)
 	if err != nil {
 		writeServiceError(w, err)
 		return
 	}
-
-	writeJSON(w, http.StatusOK, exportResponse{
-		Target: string(target),
-		Schema: out,
-	})
+	writeJSON(w, http.StatusOK, exportResponse{Format: format, Schema: out})
 }

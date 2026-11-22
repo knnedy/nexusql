@@ -6,10 +6,15 @@ import { codeToHtml } from "shiki";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import Image from "next/image";
-import { exportQueryOptions } from "@/shared/hooks/use-export";
+import {
+  exportFormatsQueryOptions,
+  exportQueryOptions,
+  PNG_EXPORT,
+} from "@/shared/hooks/use-export";
 
 interface ExportPreviewDrawerProps {
-  type: "png" | "prisma" | "drizzle" | null;
+  /** A server format id, or the canvas snapshot. */
+  type: string | null;
   sidebarOpen: boolean;
   onClose: () => void;
   pngDataUrl: string | null;
@@ -22,7 +27,7 @@ function CodeBlock({
   lang,
 }: {
   code: string;
-  lang: "prisma" | "typescript";
+  lang: string;
 }) {
   const [html, setHtml] = useState<string>("");
   const { resolvedTheme } = useTheme();
@@ -30,7 +35,8 @@ function CodeBlock({
   useEffect(() => {
     const theme =
       resolvedTheme === "dark" ? "github-dark-default" : "github-light-default";
-    codeToHtml(code, { lang, theme }).then(setHtml);
+    // An unknown language keeps the plain-text fallback below.
+    codeToHtml(code, { lang, theme }).then(setHtml, () => setHtml(""));
   }, [code, lang, resolvedTheme]);
 
   if (!html) {
@@ -60,9 +66,12 @@ export default function ExportPreviewDrawer({
   const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useQuery(exportQueryOptions(type, sidebarOpen));
+  const { data: formats } = useQuery(exportFormatsQueryOptions());
+  const format = formats?.find((f) => f.id === type);
+  const isPng = type === PNG_EXPORT;
 
   useEffect(() => {
-    if (type === "png" && sidebarOpen) {
+    if (type === PNG_EXPORT && sidebarOpen) {
       onGeneratePng();
     }
   }, [type, sidebarOpen, onGeneratePng]);
@@ -72,14 +81,14 @@ export default function ExportPreviewDrawer({
   const payload = data?.schema ?? "";
 
   const handleCopy = () => {
-    if (type === "png" || !payload) return;
+    if (isPng || !payload) return;
     navigator.clipboard.writeText(payload);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDownload = () => {
-    if (type === "png") {
+    if (isPng) {
       if (!pngDataUrl) return;
       const link = document.createElement("a");
       link.href = pngDataUrl;
@@ -91,7 +100,7 @@ export default function ExportPreviewDrawer({
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `schema.${type === "prisma" ? "prisma" : "ts"}`;
+    link.download = format?.filename ?? `schema.${type}`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -104,20 +113,21 @@ export default function ExportPreviewDrawer({
       style={{ left: "18rem" }}>
       <div className="flex items-center justify-between px-4 py-4 bg-node-header-bg/20 border-b border-node-border/60 dark:border-node-border/30 shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          {type === "png" ? (
+          {isPng ? (
             <ImageIcon size={14} className="text-teal" />
           ) : (
             <FileCode size={14} className="text-blue-400" />
           )}
-          <span className="text-[12px] font-bold text-text-primary capitalize tracking-normal antialiased">
-            {type === "png" ? "Snapshot Preview" : `${type} Code`}
+          <span className="text-[12px] font-bold text-text-primary tracking-normal antialiased">
+            {isPng ? "Snapshot Preview" : (format?.label ?? type)}
           </span>
         </div>
 
         <div className="flex items-center gap-1">
-          {type !== "png" && (
+          {!isPng && (
             <button
               onClick={handleCopy}
+              aria-label="Copy export"
               className="flex items-center justify-center w-7 h-7 rounded-md text-text-tertiary hover:text-text-primary hover:bg-node-border/40 transition-colors border-none bg-transparent cursor-pointer">
               {copied ? (
                 <Check size={13} className="text-teal" />
@@ -128,7 +138,8 @@ export default function ExportPreviewDrawer({
           )}
           <button
             onClick={handleDownload}
-            disabled={type === "png" && (isGeneratingPng || !pngDataUrl)}
+            aria-label="Download export"
+            disabled={isPng && (isGeneratingPng || !pngDataUrl)}
             className="flex items-center justify-center w-7 h-7 rounded-md text-text-tertiary hover:text-text-primary hover:bg-node-border/40 transition-colors border-none bg-transparent cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
             <Download size={13} />
           </button>
@@ -142,7 +153,7 @@ export default function ExportPreviewDrawer({
       </div>
 
       <div className="flex-1 p-4 overflow-y-auto min-h-0 flex flex-col">
-        {type === "png" ? (
+        {isPng ? (
           <div className="flex-1 flex items-center justify-center rounded-xl bg-black/10 dark:bg-black/30 border border-dashed border-node-border/80 p-4 overflow-hidden">
             {isGeneratingPng ? (
               <div className="flex flex-col items-center gap-3">
@@ -168,10 +179,7 @@ export default function ExportPreviewDrawer({
             <div className="w-4 h-4 rounded-full border-2 border-teal border-t-transparent animate-spin" />
           </div>
         ) : (
-          <CodeBlock
-            code={payload}
-            lang={type === "prisma" ? "prisma" : "typescript"}
-          />
+          <CodeBlock code={payload} lang={format?.language ?? "text"} />
         )}
       </div>
     </div>

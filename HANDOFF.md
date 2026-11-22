@@ -310,11 +310,21 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Verified against Postgres 17 and MySQL 8.4 output; servers before MySQL 8.0.16 have no
   CHECK_CONSTRAINTS (error 1109) and report none.
 
+- feat(export): B5 format registry. `export.Formats()`/`Lookup` (id, label, description,
+  language, filename, renderer); studio `ExportFormats()` and `Export(ctx, id)` (unknown id
+  is ErrNotFound, checked before the connection); `GET /api/export` and
+  `GET /api/export/{format}` replace `/api/export/prisma|drizzle` (response field `target`
+  renamed `format`). `api` reaches the type as `studio.ExportFormat` (ADR 0003). Web
+  sidebar and preview drawer are built from the list (brand icon by id, file icon
+  otherwise; unknown highlight language falls back to plain text). First export e2e test.
+  ADR 0012 updated. Group A summarized to the user 2026-11-22; CHECK text for DDL approved.
+
 ## Next 3 steps
 
-1. Group A done: STOP, summarize, wait for the user before group B.
-2. B5: export format registry + /api/export/{format}.
-3. B6: SQL DDL export (round-trip).
+1. B6: SQL DDL export, round-trip tested; first introspect raw CHECK constraint text per
+   table (approved) so DDL keeps them. Replaces canvas lib/ddl.ts.
+2. B7: DBML (@dbml/core check).
+3. B8: Mermaid ER (confirm the parser runs in Node first).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

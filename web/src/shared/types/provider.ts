@@ -1,6 +1,5 @@
 export type DatabaseProvider = "postgres" | "sqlite" | "mysql";
 
-export type OrmTarget = "prisma" | "drizzle";
 
 export interface ProviderMeta {
   id: DatabaseProvider;

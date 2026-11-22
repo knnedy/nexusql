@@ -1,4 +1,4 @@
-import type { DatabaseProvider, OrmTarget } from "@/shared/types/provider";
+import type { DatabaseProvider } from "@/shared/types/provider";
 
 export interface HealthResponse {
   status: "ok";
@@ -16,7 +16,21 @@ export interface ConnectResponse {
   projectId: string;
 }
 
-export interface OrmExportResponse {
-  target: OrmTarget;
+/** A schema export the server offers (GET /api/export). */
+export interface ExportFormat {
+  id: string;
+  label: string;
+  description: string;
+  /** Syntax highlighting language. */
+  language: string;
+  filename: string;
+}
+
+export interface ExportFormatsResponse {
+  formats: ExportFormat[];
+}
+
+export interface ExportResponse {
+  format: string;
   schema: string;
 }
