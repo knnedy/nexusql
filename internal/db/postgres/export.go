@@ -46,12 +46,21 @@ func (exporter) DrizzleColumn(f db.Field, name string) (string, []string) {
 			return call("bigserial", "mode: 'bigint'")
 		case serial:
 			return call("serial")
-		case f.Type == db.FieldTypeBigint || f.Type == db.FieldTypeBigserial:
+		}
+		identity := ".generatedByDefaultAsIdentity()"
+		if f.Identity == db.IdentityAlways {
+			identity = ".generatedAlwaysAsIdentity()"
+		}
+		switch f.Type {
+		case db.FieldTypeSmallint:
+			c, i := call("smallint")
+			return c + identity, i
+		case db.FieldTypeBigint, db.FieldTypeBigserial:
 			c, i := call("bigint", "mode: 'bigint'")
-			return c + ".generatedByDefaultAsIdentity()", i
+			return c + identity, i
 		default:
 			c, i := call("integer")
-			return c + ".generatedByDefaultAsIdentity()", i
+			return c + identity, i
 		}
 	}
 	switch f.Type {

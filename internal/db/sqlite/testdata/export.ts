@@ -15,7 +15,7 @@ export const categories = sqliteTable('categories', {
 ]);
 
 export const invites = sqliteTable('invites', {
-  id: integer('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
   email: text('email').references((): AnySQLiteColumn => users.email, { onDelete: 'set null' }),
 });
 

@@ -10,7 +10,7 @@ import (
 type exporter struct{}
 
 func (exporter) Drizzle() db.DrizzleDialect {
-	return db.DrizzleDialect{Module: "drizzle-orm/sqlite-core", Table: "sqliteTable", AnyColumn: "AnySQLiteColumn"}
+	return db.DrizzleDialect{Module: "drizzle-orm/sqlite-core", Table: "sqliteTable", AnyColumn: "AnySQLiteColumn", AutoIncrementPK: true}
 }
 
 // DrizzleColumn follows storage: dates SQLite stores as text stay text.

@@ -69,7 +69,7 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE regions (country CHAR(2), code VARCHAR(10), PRIMARY KEY (country, code))`,
 				`CREATE TABLE offices (id INT PRIMARY KEY, country CHAR(2) NOT NULL, code VARCHAR(10) NOT NULL,
 					FOREIGN KEY (country, code) REFERENCES regions (country, code) ON DELETE CASCADE ON UPDATE CASCADE)`,
-				`CREATE TABLE invites (id INTEGER PRIMARY KEY, email VARCHAR(255) REFERENCES users (email) ON DELETE SET NULL)`,
+				`CREATE TABLE invites (id INTEGER PRIMARY KEY AUTOINCREMENT, email VARCHAR(255) REFERENCES users (email) ON DELETE SET NULL)`,
 				`CREATE TABLE "order items" (id INTEGER PRIMARY KEY, "unit price" REAL, qty INTEGER NOT NULL)`,
 				`CREATE TABLE audit_log (at TEXT, msg TEXT)`,
 			},
@@ -112,7 +112,11 @@ func TestConformance(t *testing.T) {
 					FOREIGN KEY (pa, pb) REFERENCES parent (a, b))`,
 				`CREATE TABLE rowid_alias (id INTEGER PRIMARY KEY, v TEXT)`,
 				`CREATE TABLE int_key (id INT PRIMARY KEY, v TEXT)`,
+				`CREATE TABLE autoinc (id INTEGER PRIMARY KEY AUTOINCREMENT, v TEXT)`,
+				// The word in a string, a quoted name or a comment is not the keyword.
+				`CREATE TABLE not_autoinc (id INTEGER PRIMARY KEY, "autoincrement" TEXT DEFAULT 'AUTOINCREMENT' /* AUTOINCREMENT */)`,
 			},
+			Monotonic: map[string]bool{"autoinc.id": true, "rowid_alias.id": false, "not_autoinc.id": false},
 			// Only a column declared exactly INTEGER PRIMARY KEY aliases the rowid.
 			Auto: map[string]bool{
 				"rowid_alias.id": true, "int_key.id": false, "child.id": true,

@@ -47,7 +47,19 @@ type Field struct {
 	NativeType string `json:"nativeType"`
 	// Allowed lists the only values a CHECK (column IN (...)) constraint accepts.
 	Allowed []string `json:"allowed,omitempty"`
+	// Identity is set on GENERATED ... AS IDENTITY columns.
+	Identity Identity `json:"identity,omitempty"`
+	// Monotonic: generated keys are never reused, even after deletes (SQLite AUTOINCREMENT).
+	Monotonic bool `json:"monotonic,omitempty"`
 }
+
+// Identity says whether an identity column accepts explicit values.
+type Identity string
+
+const (
+	IdentityAlways    Identity = "ALWAYS"     // explicit values are rejected
+	IdentityByDefault Identity = "BY DEFAULT" // explicit values are kept
+)
 
 type Table struct {
 	Name   string  `json:"name"`

@@ -20,6 +20,9 @@ type Keys struct {
 	Setup []string
 	Auto  map[string]bool
 	PK    map[string]bool // optional extra "table.column" primary-key expectations
+	// Identity and Monotonic are optional "table.column" expectations for those fields.
+	Identity  map[string]db.Identity
+	Monotonic map[string]bool
 }
 
 func testKeys(t *testing.T, h Harness) {
@@ -143,6 +146,13 @@ func testKeys(t *testing.T, h Harness) {
 		}
 	})
 
+	t.Run("identity kind and never-reused keys are reported", func(t *testing.T) {
+		if h.Keys.Identity == nil && h.Keys.Monotonic == nil {
+			t.Skip("dialect has neither")
+		}
+		testGeneration(t, h, sch)
+	})
+
 	t.Run("auto-generated keys are flagged, not faked as defaults", func(t *testing.T) {
 		for name, want := range h.Keys.Auto {
 			tblName, col, _ := cut(name)
@@ -159,6 +169,27 @@ func testKeys(t *testing.T, h Harness) {
 			}
 		}
 	})
+}
+
+func testGeneration(t *testing.T, h Harness, sch *db.Schema) {
+	field := func(name string) db.Field {
+		tblName, col, _ := cut(name)
+		tbl, ok := sch.Table(tblName)
+		if !ok {
+			t.Fatalf("table %s missing", tblName)
+		}
+		return fieldOf(t, tbl, col)
+	}
+	for name, want := range h.Keys.Identity {
+		if got := field(name).Identity; got != want {
+			t.Errorf("%s: Identity = %q, want %q", name, got, want)
+		}
+	}
+	for name, want := range h.Keys.Monotonic {
+		if got := field(name).Monotonic; got != want {
+			t.Errorf("%s: Monotonic = %v, want %v", name, got, want)
+		}
+	}
 }
 
 func cut(s string) (string, string, bool) {

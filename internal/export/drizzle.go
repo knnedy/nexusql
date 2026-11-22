@@ -161,7 +161,9 @@ func (z *drizzle) table(b *strings.Builder, t *Table, calls map[*Field]string) {
 	fmt.Fprintf(b, "\nexport const %s = %s(%s, {\n", z.tables[t], z.d.Table, db.JSString(t.Name))
 	for _, f := range t.Fields {
 		col := z.resolve(calls[f], f)
-		if len(t.PK) == 1 && t.PK[0] == f {
+		if len(t.PK) == 1 && t.PK[0] == f && f.Monotonic && z.d.AutoIncrementPK {
+			col += ".primaryKey({ autoIncrement: true })"
+		} else if len(t.PK) == 1 && t.PK[0] == f {
 			col += ".primaryKey()"
 		} else if !f.Nullable {
 			col += ".notNull()"

@@ -33,6 +33,8 @@ type DrizzleDialect struct {
 	NamedEnums bool   // enums are declared once and shared (pgEnum)
 	DefaultNow bool   // timestamp columns take .defaultNow()
 	BigInt     bool   // bigint columns hold JS bigint values
+	// AutoIncrementPK: primaryKey({ autoIncrement: true }) marks never-reused keys.
+	AutoIncrementPK bool
 }
 
 // DefaultKind classifies a column default for exporters.

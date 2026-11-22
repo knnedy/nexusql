@@ -20,7 +20,7 @@ export const categories = pgTable('categories', {
 ]);
 
 export const invites = pgTable('invites', {
-  id: serial('id').primaryKey(),
+  id: integer('id').generatedByDefaultAsIdentity().primaryKey(),
   email: varchar('email', { length: 255 }).references((): AnyPgColumn => users.email, { onDelete: 'set null' }),
 });
 
@@ -46,7 +46,7 @@ export const post_tags = pgTable('post_tags', {
 ]);
 
 export const posts = pgTable('posts', {
-  id: bigint('id', { mode: 'bigint' }).generatedByDefaultAsIdentity().primaryKey(),
+  id: bigint('id', { mode: 'bigint' }).generatedAlwaysAsIdentity().primaryKey(),
   author_id: integer('author_id').notNull().references((): AnyPgColumn => users.id),
   editor_id: integer('editor_id').references((): AnyPgColumn => users.id),
   title: varchar('title', { length: 200 }).notNull().default('it\'s "new"'),
