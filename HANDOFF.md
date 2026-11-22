@@ -371,11 +371,28 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   numbers). tsc checks it against kysely 0.29.8 and @types/node 22.20.5 (exact).
   README lists all formats.
 
+- feat(export): B10 TypeORM (`export.TypeORM`, format `typeorm`, entities.ts). One class
+  per table: Primary(Generated)Column (identity with generatedIdentity), Column with
+  type/length/precision/scale/unsigned/enum/nullable/unique/default, @Unique/@Index/@Check,
+  ManyToOne/OneToOne with JoinColumn (constraint names except on SQLite) and the inverse
+  OneToMany; `Relation<>` avoids ESM decorator-metadata cycles. `Exporter.TypeORM` gives the
+  hydrated TS type per dialect (probed on sql.js: SQLite numbers for bigint/decimal,
+  datetime as Date; servers strings) and, on SQLite, an affinity-equivalent type when
+  TypeORM rejects the declared one (char -> character). Found with the real tools:
+  - keyless tables are skipped with a comment (TypeORM needs a primary column);
+  - TypeORM 1 has no width/zerofill (dropped);
+  - TypeORM writes string defaults as '${v}' unescaped on all drivers (read in source), so
+    defaults containing a quote are emitted as raw SQL functions.
+  Known gap: a rowid alias without AUTOINCREMENT still maps to PrimaryGeneratedColumn,
+  which TypeORM's synchronize would create with AUTOINCREMENT. Check: tsc with decorators,
+  DataSource.buildMetadatas on pg/mysql2 (no connection), full sync into sql.js for SQLite
+  (typeorm 1.1.2, reflect-metadata 0.2.2, pg 8.23.1, mysql2 3.24.6, sql.js 1.15.2, exact).
+
 ## Next 3 steps
 
-1. B10: TypeORM.
-2. B11: SQLAlchemy.
-3. B12: GORM; then STOP and summarize group B.
+1. B11: SQLAlchemy (venv, configure_mappers, CreateTable).
+2. B12: GORM (schema.Parse); then STOP and summarize group B.
+3. C13: react-table 9.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

@@ -1,10 +1,13 @@
 // Validates every export golden under internal/db/*/testdata with the real
 // tools: prisma validate for export.prisma, tsc against drizzle-orm and kysely
 // for export.ts and export.kysely.ts,
-// the @dbml/core parser for export.dbml, mermaid's parser for export.mmd.
+// the @dbml/core parser for export.dbml, mermaid's parser for export.mmd, and
+// TypeORM's metadata validation (plus a sql.js sync on SQLite) for export.typeorm.ts.
 import { execFileSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { Parser } from "@dbml/core";
+import "reflect-metadata";
+import { DataSource } from "typeorm";
 import mermaid from "mermaid";
 import { join, resolve } from "node:path";
 
@@ -29,7 +32,7 @@ const run = (label, cmd, args) => {
 
 const out = join(here, "out");
 rmSync(out, { recursive: true, force: true });
-mkdirSync(out);
+mkdirSync(join(out, "typeorm"), { recursive: true });
 let checked = 0;
 for (const d of dialects) {
   const prisma = join(root, "internal/db", d, "testdata/export.prisma");
@@ -67,6 +70,11 @@ for (const d of dialects) {
     copyFileSync(drizzle, join(out, `${d}.ts`));
     checked++;
   }
+  const typeorm = join(root, "internal/db", d, "testdata/export.typeorm.ts");
+  if (existsSync(typeorm)) {
+    copyFileSync(typeorm, join(out, "typeorm", `${d}.ts`));
+    checked++;
+  }
   const kysely = join(root, "internal/db", d, "testdata/export.kysely.ts");
   if (existsSync(kysely)) {
     copyFileSync(kysely, join(out, `${d}.kysely.ts`));
@@ -75,5 +83,28 @@ for (const d of dialects) {
 }
 // The copies sit next to node_modules so drizzle-orm resolves.
 run("export.ts, export.kysely.ts (tsc)", bin("tsc"), ["-p", "tsconfig.json"]);
+run("export.typeorm.ts (tsc, decorators)", bin("tsc"), ["-p", "tsconfig.typeorm.json"]);
+
+// Builds and validates the entity metadata on each dialect's driver without
+// connecting; SQLite also creates the schema in sql.js.
+const drivers = { postgres: "postgres", mysql: "mysql", sqlite: "sqljs" };
+for (const d of dialects) {
+  const js = join(out, "typeorm/js", `${d}.js`);
+  if (!existsSync(js)) continue;
+  const entities = Object.values(await import(js)).filter((v) => typeof v === "function");
+  // mysql wants a database name even though nothing connects.
+  const ds = new DataSource({ type: drivers[d], entities, synchronize: d === "sqlite", ...(d === "mysql" && { database: "check" }) });
+  try {
+    if (d === "sqlite") await ds.initialize();
+    else await ds.buildMetadatas();
+    const relations = ds.entityMetadatas.reduce((n, e) => n + e.foreignKeys.length, 0);
+    console.log(`ok    ${d}/export.typeorm.ts (${ds.entityMetadatas.length} entities, ${relations} foreign keys)`);
+  } catch (err) {
+    failed++;
+    console.log(`FAIL  ${d}/export.typeorm.ts\n${err.message}`);
+  } finally {
+    if (ds.isInitialized) await ds.destroy();
+  }
+}
 if (checked === 0) throw new Error("no export golden files found");
 process.exit(failed ? 1 : 0);

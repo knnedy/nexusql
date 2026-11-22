@@ -26,6 +26,8 @@ type Exporter interface {
 	// for a non-enum field: a primitive or a helper (Int8, Numeric, Timestamp,
 	// Json); "" means unknown.
 	KyselyType(f Field) string
+	// TypeORM is how TypeORM sees a non-enum field on this dialect.
+	TypeORM(f Field) TypeORMColumn
 	// SQL describes how the dialect writes DDL.
 	SQL() SQLDialect
 	// SQLColumnType is the column's DDL type with any generation clause (serial,
@@ -55,6 +57,12 @@ type DrizzleDialect struct {
 	BigInt     bool   // bigint columns hold JS bigint values
 	// AutoIncrementPK: primaryKey({ autoIncrement: true }) marks never-reused keys.
 	AutoIncrementPK bool
+}
+
+// TypeORMColumn is a field as TypeORM types it.
+type TypeORMColumn struct {
+	TS   string // the TypeScript type TypeORM hydrates it to; "" means unknown
+	Type string // a column type TypeORM accepts in place of the native one; "" keeps it
 }
 
 // DefaultKind classifies a column default for exporters.

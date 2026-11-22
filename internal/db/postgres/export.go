@@ -228,3 +228,24 @@ func (exporter) KyselyType(f db.Field) string {
 	}
 	return ""
 }
+
+// TypeORMType: TypeORM leaves node-postgres' strings for int8 and numeric and
+// its Date for timestamps; date columns stay "YYYY-MM-DD" strings.
+func (exporter) TypeORM(f db.Field) db.TypeORMColumn { return db.TypeORMColumn{TS: typeormTS(f)} }
+
+func typeormTS(f db.Field) string {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial, db.FieldTypeReal, db.FieldTypeDoublePrecision:
+		return "number"
+	case db.FieldTypeBigint, db.FieldTypeBigserial, db.FieldTypeNumeric, db.FieldTypeDate,
+		db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeUUID, db.FieldTypeTime:
+		return "string"
+	case db.FieldTypeBoolean:
+		return "boolean"
+	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
+		return "Date"
+	case db.FieldTypeBytea:
+		return "Buffer"
+	}
+	return ""
+}

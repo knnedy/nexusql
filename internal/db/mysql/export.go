@@ -198,3 +198,23 @@ func (exporter) KyselyType(f db.Field) string {
 	}
 	return ""
 }
+
+// TypeORMType: TypeORM turns on mysql2's bigNumberStrings, so bigint and
+// decimal are strings; tinyint(1) stays a number, dates are strings.
+func (exporter) TypeORM(f db.Field) db.TypeORMColumn { return db.TypeORMColumn{TS: typeormTS(f)} }
+
+func typeormTS(f db.Field) string {
+	switch f.Type {
+	case db.FieldTypeSmallint, db.FieldTypeInteger, db.FieldTypeSerial, db.FieldTypeReal,
+		db.FieldTypeDoublePrecision, db.FieldTypeBoolean:
+		return "number"
+	case db.FieldTypeBigint, db.FieldTypeBigserial, db.FieldTypeNumeric, db.FieldTypeDate,
+		db.FieldTypeText, db.FieldTypeVarchar, db.FieldTypeChar, db.FieldTypeUUID, db.FieldTypeTime:
+		return "string"
+	case db.FieldTypeTimestamp, db.FieldTypeTimestamptz:
+		return "Date"
+	case db.FieldTypeBytea:
+		return "Buffer"
+	}
+	return ""
+}
