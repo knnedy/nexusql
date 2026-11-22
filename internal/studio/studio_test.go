@@ -3,11 +3,14 @@ package studio_test
 import (
 	"context"
 	"errors"
+	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/knnedy/nexusql/internal/db"
 	_ "github.com/knnedy/nexusql/internal/db/postgres"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
@@ -133,8 +136,8 @@ func TestRowsSortValidation(t *testing.T) {
 		t.Errorf("unknown table: err = %v, want ErrInvalid", err)
 	}
 	page, err := s.Rows(ctx, studio.RowsQuery{Table: "users", Limit: 10, SortCol: "email"})
-	if err != nil || page.Total != 2 {
-		t.Fatalf("valid sort: total=%d err=%v, want 2 rows", page.Total, err)
+	if err != nil || int64(len(page.Rows)) != 2 {
+		t.Fatalf("valid sort: total=%d err=%v, want 2 rows", int64(len(page.Rows)), err)
 	}
 }
 
@@ -186,8 +189,8 @@ func TestRowsFilterValidation(t *testing.T) {
 		}, 1},
 	} {
 		page, err := rows(c.filters...)
-		if err != nil || page.Total != c.want {
-			t.Errorf("%s: total=%d err=%v, want %d", name, page.Total, err, c.want)
+		if err != nil || int64(len(page.Rows)) != c.want {
+			t.Errorf("%s: total=%d err=%v, want %d", name, int64(len(page.Rows)), err, c.want)
 		}
 	}
 }
@@ -202,8 +205,8 @@ func TestQuery(t *testing.T) {
 			t.Fatalf("got %+v err=%v, want RequiresConfirmation", res, err)
 		}
 		page, _ := s.Rows(ctx, studio.RowsQuery{Table: "users", Limit: 10})
-		if page.Total != 2 {
-			t.Fatalf("rows after unconfirmed DELETE = %d, want 2", page.Total)
+		if int64(len(page.Rows)) != 2 {
+			t.Fatalf("rows after unconfirmed DELETE = %d, want 2", int64(len(page.Rows)))
 		}
 	})
 
@@ -220,8 +223,8 @@ func TestQuery(t *testing.T) {
 			}
 		}
 		page, _ := s.Rows(ctx, studio.RowsQuery{Table: "users", Limit: 10})
-		if page.Total != 2 {
-			t.Fatalf("rows after unconfirmed DELETEs = %d, want 2", page.Total)
+		if int64(len(page.Rows)) != 2 {
+			t.Fatalf("rows after unconfirmed DELETEs = %d, want 2", int64(len(page.Rows)))
 		}
 	})
 
@@ -382,7 +385,7 @@ func TestReadOnly(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		return page.Total
+		return int64(len(page.Rows))
 	}
 
 	t.Run("writes go to the database unconfirmed and are refused there", func(t *testing.T) {
@@ -418,6 +421,87 @@ func TestReadOnly(t *testing.T) {
 		}
 		if on, _ := s.ReadOnly(); on {
 			t.Fatal("read-only carried over to a new connection")
+		}
+	})
+}
+
+func TestRowsPaging(t *testing.T) {
+	s := connected(t)
+	ctx := context.Background()
+	if _, err := s.Query(ctx, `CREATE TABLE n (id INTEGER PRIMARY KEY, code TEXT NOT NULL, note TEXT, fl REAL NOT NULL);
+		INSERT INTO n (code, note, fl) VALUES ('e', 'x', 1), ('d', NULL, 2), ('c', 'x', 3), ('b', NULL, 4), ('a', 'x', 5);
+		CREATE TABLE nokey (v INTEGER); INSERT INTO nokey VALUES (1), (2), (3)`, true); err != nil {
+		t.Fatal(err)
+	}
+	ids := func(p studio.RowsPage) (out []string) {
+		for _, r := range p.Rows {
+			out = append(out, fmt.Sprint(r["id"]))
+		}
+		return out
+	}
+
+	t.Run("walks every page by cursor", func(t *testing.T) {
+		q := studio.RowsQuery{Table: "n", Limit: 2}
+		var seen []string
+		for range 5 {
+			page, err := s.Rows(ctx, q)
+			if err != nil {
+				t.Fatal(err)
+			}
+			seen = append(seen, ids(page)...)
+			if !page.HasMore {
+				if page.Cursor != nil {
+					t.Errorf("last page has cursor %v", page.Cursor)
+				}
+				break
+			}
+			q.After = page.Cursor
+		}
+		if !slices.Equal(seen, []string{"1", "2", "3", "4", "5"}) {
+			t.Fatalf("pages gave %v", seen)
+		}
+	})
+
+	for name, c := range map[string]struct {
+		q    studio.RowsQuery
+		want []string // cursor; nil when keyset does not apply
+	}{
+		"by primary key":            {studio.RowsQuery{Table: "n", Limit: 2}, []string{"2"}},
+		"by a NOT NULL text column": {studio.RowsQuery{Table: "n", Limit: 2, SortCol: "code"}, []string{"b", "4"}},
+		"not by a nullable column":  {studio.RowsQuery{Table: "n", Limit: 2, SortCol: "note", SortDir: db.SortDesc}, nil},
+		"not by a float column":     {studio.RowsQuery{Table: "n", Limit: 2, SortCol: "fl"}, nil},
+		"not without a primary key": {studio.RowsQuery{Table: "nokey", Limit: 2}, nil},
+	} {
+		page, err := s.Rows(ctx, c.q)
+		if err != nil || !page.HasMore || !slices.Equal(page.Cursor, c.want) {
+			t.Errorf("%s: cursor %v, more %v, err %v; want %v", name, page.Cursor, page.HasMore, err, c.want)
+		}
+	}
+
+	t.Run("a cursor the order cannot use falls back to the offset", func(t *testing.T) {
+		page, err := s.Rows(ctx, studio.RowsQuery{Table: "nokey", Limit: 2, Offset: 2, After: []string{"9"}})
+		if err != nil || len(page.Rows) != 1 || page.HasMore {
+			t.Fatalf("rows %v more %v err %v; want the last row", page.Rows, page.HasMore, err)
+		}
+	})
+
+	for name, after := range map[string][]string{
+		"too many values": {"1", "2"},
+		"not an integer":  {"one"},
+	} {
+		if _, err := s.Rows(ctx, studio.RowsQuery{Table: "n", Limit: 2, After: after}); !errors.Is(err, studio.ErrInvalid) {
+			t.Errorf("cursor %s: err = %v, want ErrInvalid", name, err)
+		}
+	}
+
+	t.Run("count applies search and filters", func(t *testing.T) {
+		n, err := s.Count(ctx, studio.CountQuery{Table: "n", Search: "x",
+			Filters: []studio.RowFilter{{Column: "code", Op: "ne", Values: []string{"a"}}}})
+		if err != nil || n != 2 {
+			t.Fatalf("count = %d, %v; want 2", n, err)
+		}
+		if _, err := s.Count(ctx, studio.CountQuery{Table: "n", Filters: []studio.RowFilter{{Column: "zz", Op: "isNull"}}}); !errors.Is(err, studio.ErrInvalid) {
+			t.Fatalf("unknown filter column: err = %v, want ErrInvalid", err)
 		}
 	})
 }

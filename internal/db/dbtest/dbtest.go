@@ -39,6 +39,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Introspection", func(t *testing.T) { testIntrospection(t, h) })
 	t.Run("Rows", func(t *testing.T) { testRows(t, h) })
 	t.Run("Filters", func(t *testing.T) { testFilters(t, h) })
+	t.Run("Paging", func(t *testing.T) { testPaging(t, h) })
 	t.Run("Update", func(t *testing.T) { testUpdate(t, h) })
 	t.Run("Query", func(t *testing.T) { testQuery(t, h) })
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })
@@ -115,7 +116,12 @@ func page(t *testing.T, p db.Provider, table string, limit, offset int, sortCol 
 		f := fieldOf(t, tbl, sortCol)
 		req.Sort = &f
 	}
-	return p.FetchRows(context.Background(), req)
+	cols, rows, err := p.FetchRows(context.Background(), req)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	total, err := p.CountRows(context.Background(), req)
+	return cols, rows, total, err
 }
 
 // lookup runs FetchRowWhere on named identifiers.

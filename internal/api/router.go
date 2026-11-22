@@ -56,6 +56,7 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 
 	// Rows
 	r.Get("/rows/{tableName}", h.handleRows)
+	r.Get("/rows/{tableName}/count", h.handleRowCount)
 	r.Get("/rows/{tableName}/lookup", h.handleRowLookup)
 	r.Patch("/rows/{tableName}", h.handleUpdateRow)
 

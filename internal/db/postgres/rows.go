@@ -12,45 +12,47 @@ import (
 	"github.com/knnedy/nexusql/internal/db"
 )
 
-func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, int64, error) {
-	table := p.QuoteTable(req.Table)
-
-	whereClause, whereArgs, err := db.Where{
+// where is this dialect's WHERE builder for rows of t.
+func (p *provider) where(t db.Table) db.Where {
+	return db.Where{
 		Quote:      p.QuoteIdentifier,
 		Param:      func(n int) string { return fmt.Sprintf("$%d", n) },
 		ILike:      func(col, param string) string { return col + "::text ILIKE " + param },
 		Arg:        func(_ db.Field, v string) any { return v },
 		Searchable: searchable,
-	}.Clause(req)
-	if err != nil {
-		return nil, nil, 0, err
 	}
+}
 
+func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, error) {
+	w := p.where(req.Table)
+	clause, args, err := w.Clause(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	offset := req.Offset
+	if len(req.After) > 0 {
+		offset = 0
+	}
+	query := "SELECT * FROM " + p.QuoteTable(req.Table) + clause + w.Order(req) +
+		" LIMIT " + w.Param(len(args)+1) + " OFFSET " + w.Param(len(args)+2)
+	rows, err := p.pool.Query(ctx, query, append(args, req.Limit, offset)...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("query rows: %w", err)
+	}
+	return collect(rows)
+}
+
+func (p *provider) CountRows(ctx context.Context, req db.RowsRequest) (int64, error) {
+	req.After = nil // the count covers every page
+	clause, args, err := p.where(req.Table).Clause(req)
+	if err != nil {
+		return 0, err
+	}
 	var total int64
-	if err := p.pool.QueryRow(ctx, "SELECT COUNT(*) FROM "+table+whereClause, whereArgs...).Scan(&total); err != nil {
-		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
+	if err := p.pool.QueryRow(ctx, "SELECT COUNT(*) FROM "+p.QuoteTable(req.Table)+clause, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count rows: %w", err)
 	}
-
-	query := "SELECT * FROM " + table + whereClause
-	if req.Sort != nil {
-		dir := "ASC"
-		if req.SortDir == db.SortDesc {
-			dir = "DESC"
-		}
-		query += fmt.Sprintf(" ORDER BY %s %s", p.QuoteIdentifier(req.Sort.Name), dir)
-	}
-	query += fmt.Sprintf(" LIMIT $%d OFFSET $%d", len(whereArgs)+1, len(whereArgs)+2)
-
-	dataArgs := append(append([]any{}, whereArgs...), req.Limit, req.Offset)
-	rows, err := p.pool.Query(ctx, query, dataArgs...)
-	if err != nil {
-		return nil, nil, 0, fmt.Errorf("query rows: %w", err)
-	}
-	columns, result, err := collect(rows)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-	return columns, result, total, nil
+	return total, nil
 }
 
 // searchable reports whether search matches against f (text-like columns).

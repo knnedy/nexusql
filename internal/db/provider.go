@@ -87,6 +87,9 @@ type RowsRequest struct {
 	SortDir SortDir
 	Search  string   // case-insensitive match on the table's text columns
 	Filters []Filter // all must hold, as well as Search
+	// After holds the previous page's last values of OrderFields, as text; when
+	// set, the page continues after them (keyset) and Offset is ignored.
+	After []string
 }
 
 // FilterOp compares a column with a filter's values.
@@ -121,7 +124,9 @@ type Provider interface {
 
 	// Row methods take introspected tables and fields only; callers resolve
 	// client input against the schema first, so providers never see raw names.
-	FetchRows(ctx context.Context, req RowsRequest) (columns []string, rows []map[string]any, total int64, err error)
+	FetchRows(ctx context.Context, req RowsRequest) (columns []string, rows []map[string]any, err error)
+	// CountRows counts the rows matching req's search and filters.
+	CountRows(ctx context.Context, req RowsRequest) (int64, error)
 	FetchRowWhere(ctx context.Context, t Table, f Field, value string) ([]string, []map[string]any, error)
 	// UpdateRow sets target on the row matching every key column; a nil value
 	// writes NULL. It returns ErrRowNotFound when no row matches.

@@ -7,7 +7,7 @@ interface TableListProps {
   tables: { name: string; fields: { name: string }[] }[];
   selectedTable: string | null;
   onSelectTable: (name: string) => void;
-  rowCount: number;
+  rowCount: number | undefined; // undefined while counting
 }
 
 export default function TableList({
@@ -36,7 +36,7 @@ export default function TableList({
           </div>
         </div>
         <span className="text-[9.5px] font-mono text-text-tertiary leading-none mt-2 block">
-          {selectedTable ? `${rowCount.toLocaleString()} rows` : "—"}
+          {selectedTable ? `${rowCount?.toLocaleString() ?? "…"} rows` : "—"}
         </span>
       </div>
 

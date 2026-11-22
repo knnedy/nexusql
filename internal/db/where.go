@@ -78,8 +78,71 @@ func (w Where) Clause(req RowsRequest) (string, []any, error) {
 		}
 	}
 
+	if len(req.After) > 0 {
+		cond, err := w.after(req, param)
+		if err != nil {
+			return "", nil, err
+		}
+		conds = append(conds, cond)
+	}
+
 	if len(conds) == 0 {
 		return "", nil, nil
 	}
 	return " WHERE " + strings.Join(conds, " AND "), args, nil
+}
+
+// OrderFields is the full page order: the sort column, then every primary-key
+// column not already in it, so ties never reorder between pages.
+func (r RowsRequest) OrderFields() []Field {
+	var out []Field
+	if r.Sort != nil {
+		out = append(out, *r.Sort)
+	}
+	for _, f := range r.Table.Fields {
+		if f.IsPrimaryKey && (r.Sort == nil || f.Name != r.Sort.Name) {
+			out = append(out, f)
+		}
+	}
+	return out
+}
+
+// Order renders req's ORDER BY; every column takes the sort direction.
+func (w Where) Order(req RowsRequest) string {
+	fields := req.OrderFields()
+	if len(fields) == 0 {
+		return ""
+	}
+	dir := " ASC"
+	if req.SortDir == SortDesc {
+		dir = " DESC"
+	}
+	cols := make([]string, len(fields))
+	for i, f := range fields {
+		cols[i] = w.Quote(f.Name) + dir
+	}
+	return " ORDER BY " + strings.Join(cols, ", ")
+}
+
+// after renders the keyset condition for req.After, expanded so no dialect
+// needs row values: a > ? OR (a = ? AND b > ?) ..., with < when descending.
+func (w Where) after(req RowsRequest, param func(any) string) (string, error) {
+	fields := req.OrderFields()
+	if len(fields) != len(req.After) {
+		return "", fmt.Errorf("cursor has %d values for %d order columns", len(req.After), len(fields))
+	}
+	op := " > "
+	if req.SortDir == SortDesc {
+		op = " < "
+	}
+	anyOf := make([]string, len(fields))
+	for i, f := range fields {
+		var all []string
+		for j := range i {
+			all = append(all, w.Quote(fields[j].Name)+" = "+param(w.Arg(fields[j], req.After[j])))
+		}
+		all = append(all, w.Quote(f.Name)+op+param(w.Arg(f, req.After[i])))
+		anyOf[i] = "(" + strings.Join(all, " AND ") + ")"
+	}
+	return "(" + strings.Join(anyOf, " OR ") + ")", nil
 }

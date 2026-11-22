@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -135,12 +136,57 @@ func TestRowsFilterParam(t *testing.T) {
 		{`[{"column":"nope","op":"eq","values":["b"]}]`, http.StatusBadRequest, 0},
 		{`[{"column":"v","op":"lt","values":["b"]}]`, http.StatusBadRequest, 0},
 	} {
-		w := call(h, "GET", "/rows/t?filters="+url.QueryEscape(c.filters), "")
+		w := call(h, "GET", "/rows/t/count?filters="+url.QueryEscape(c.filters), "")
 		var res struct{ Total int64 }
 		_ = json.Unmarshal(w.Body.Bytes(), &res)
 		if w.Code != c.want || (c.want == http.StatusOK && res.Total != c.total) {
 			t.Errorf("%s: %d %s, want %d with total %d", c.filters, w.Code, w.Body, c.want, c.total)
 		}
+	}
+}
+
+func TestRowsPagingParams(t *testing.T) {
+	h := newAPI(t)
+	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	q := `{"sql":"CREATE TABLE t (id INTEGER PRIMARY KEY, v TEXT); INSERT INTO t (v) VALUES ('a'), ('b'), ('c')","confirmed":true}`
+	if w := call(h, "POST", "/query", q); w.Code != http.StatusOK {
+		t.Fatalf("query: %d %s", w.Code, w.Body)
+	}
+	type page struct {
+		Rows    []map[string]any
+		HasMore bool
+		Cursor  []string
+	}
+	get := func(path string) (int, page) {
+		w := call(h, "GET", path, "")
+		var p page
+		_ = json.Unmarshal(w.Body.Bytes(), &p)
+		return w.Code, p
+	}
+
+	code, p := get("/rows/t?pageSize=2")
+	if code != http.StatusOK || len(p.Rows) != 2 || !p.HasMore || !slices.Equal(p.Cursor, []string{"2"}) {
+		t.Fatalf("first page: %d %+v", code, p)
+	}
+	code, p = get("/rows/t?pageSize=2&after=" + url.QueryEscape(`["2"]`))
+	if code != http.StatusOK || len(p.Rows) != 1 || p.HasMore || p.Cursor != nil {
+		t.Fatalf("after cursor: %d %+v", code, p)
+	}
+	if code, _ := get("/rows/t?after=" + url.QueryEscape(`["2"`)); code != http.StatusBadRequest {
+		t.Errorf("malformed cursor: %d, want 400", code)
+	}
+	if code, _ := get("/rows/t?after=" + url.QueryEscape(`["x"]`)); code != http.StatusBadRequest {
+		t.Errorf("non-integer cursor: %d, want 400", code)
+	}
+	w := call(h, "GET", "/rows/t/count?search=b", "")
+	if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != `{"total":1}` {
+		t.Errorf("count: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "GET", "/rows/ghost/count", ""); w.Code != http.StatusBadRequest {
+		t.Errorf("count of unknown table: %d, want 400", w.Code)
 	}
 }
 

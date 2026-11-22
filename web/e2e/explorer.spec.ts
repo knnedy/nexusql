@@ -138,6 +138,32 @@ test("following a foreign key filters the target table", async ({ page }) => {
   await expect(page.getByText("Ann", { exact: true })).toBeHidden();
 });
 
+test("pages forward by cursor and back, and a reload falls back to the offset", async ({ page }) => {
+  await connectSqlite(page, `CREATE TABLE big (id INTEGER PRIMARY KEY, label TEXT NOT NULL);
+    WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 60)
+    INSERT INTO big (label) SELECT 'row ' || i FROM n`);
+  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("button", { name: /big/ }).click();
+  await expect(page.getByText("1–50 of 60")).toBeVisible();
+  await expect(page.getByText("row 1", { exact: true })).toBeVisible();
+
+  const next = page.waitForRequest((r) => r.url().includes("/api/rows/big?"));
+  await page.getByRole("button", { name: "Next page" }).click();
+  expect(new URL((await next).url()).searchParams.get("after")).toBe('["50"]');
+  await expect(page.getByText("row 51", { exact: true })).toBeVisible();
+  await expect(page.getByText("51–60 of 60")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Next page" })).toBeDisabled();
+
+  const reloaded = page.waitForRequest((r) => r.url().includes("/api/rows/big?"));
+  await page.reload();
+  expect(new URL((await reloaded).url()).searchParams.get("after")).toBeNull();
+  await expect(page.getByText("row 51", { exact: true })).toBeVisible();
+
+  await page.getByRole("button", { name: "Previous page" }).click();
+  await expect(page.getByText("row 1", { exact: true })).toBeVisible();
+  await expect(page.getByText("1–50 of 60")).toBeVisible();
+});
+
 test("a read-only connection makes the grid read-only", async ({ page }) => {
   await connectSqlite(page, SETUP);
   await page.request.put("/api/connection/read-only", { data: { readOnly: true } });

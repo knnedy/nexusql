@@ -49,8 +49,8 @@ func testDialect(t *testing.T, uri, slowSQL string) {
 			t.Fatalf("sorted rows = %v, want alpha first", page.Rows)
 		}
 		page, err = s.Rows(ctx, studio.RowsQuery{Table: "items", Limit: 10, Search: "BET"})
-		if err != nil || page.Total != 1 {
-			t.Fatalf("search: total %d err %v, want 1", page.Total, err)
+		if err != nil || len(page.Rows) != 1 {
+			t.Fatalf("search: total %d err %v, want 1", len(page.Rows), err)
 		}
 	})
 

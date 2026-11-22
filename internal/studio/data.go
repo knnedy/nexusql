@@ -33,13 +33,39 @@ type RowsQuery struct {
 	SortDir db.SortDir
 	Search  string
 	Filters []RowFilter
+	After   []string // a previous page's Cursor; replaces Offset when the order allows it
 }
 
 // RowsPage is one page of table data.
 type RowsPage struct {
 	Columns []string
 	Rows    []map[string]any
-	Total   int64
+	HasMore bool
+	Cursor  []string // continues after this page; nil when keyset paging does not apply
+}
+
+// CountQuery counts the rows a RowsQuery with the same search and filters pages through.
+type CountQuery struct {
+	Table   string
+	Search  string
+	Filters []RowFilter
+}
+
+// rowsRequest resolves client names against the schema into a provider request.
+func (s *Service) rowsRequest(ctx context.Context, conn *db.Connection, table, search string, in []RowFilter) (db.RowsRequest, error) {
+	t, err := s.table(ctx, conn, table)
+	if err != nil {
+		return db.RowsRequest{}, err
+	}
+	sch, err := s.schemas.get(ctx, conn, false)
+	if err != nil {
+		return db.RowsRequest{}, err
+	}
+	filters, err := resolveFilters(sch, t, in)
+	if err != nil {
+		return db.RowsRequest{}, err
+	}
+	return db.RowsRequest{Table: t, Search: search, Filters: filters}, nil
 }
 
 // Rows fetches a page of rows; table and sort column must exist in the schema.
@@ -48,34 +74,59 @@ func (s *Service) Rows(ctx context.Context, q RowsQuery) (RowsPage, error) {
 	if err != nil {
 		return RowsPage{}, err
 	}
-	t, err := s.table(ctx, conn, q.Table)
+	req, err := s.rowsRequest(ctx, conn, q.Table, q.Search, q.Filters)
 	if err != nil {
 		return RowsPage{}, err
 	}
-	sch, err := s.schemas.get(ctx, conn, false)
-	if err != nil {
-		return RowsPage{}, err
-	}
-	filters, err := resolveFilters(sch, t, q.Filters)
-	if err != nil {
-		return RowsPage{}, err
-	}
-	req := db.RowsRequest{Table: t, Limit: q.Limit, Offset: q.Offset, SortDir: q.SortDir, Search: q.Search, Filters: filters}
+	req.Limit, req.Offset, req.SortDir = q.Limit+1, q.Offset, q.SortDir // one extra row tells HasMore
 	if q.SortCol != "" {
-		f, err := field(t, q.SortCol)
+		f, err := field(req.Table, q.SortCol)
 		if err != nil {
 			return RowsPage{}, err
 		}
 		req.Sort = &f
 	}
+	keyset := keysetOrder(req)
+	if len(q.After) > 0 && keyset {
+		if err := checkCursor(req, q.After); err != nil {
+			return RowsPage{}, err
+		}
+		req.After = q.After
+	}
 
 	qctx, cancel := s.bounded(ctx)
 	defer cancel()
-	cols, rows, total, err := conn.Impl.FetchRows(qctx, req)
+	cols, rows, err := conn.Impl.FetchRows(qctx, req)
 	if err != nil {
 		return RowsPage{}, s.classify(qctx, err, func(e error) error { return e })
 	}
-	return RowsPage{Columns: cols, Rows: rows, Total: total}, nil
+	page := RowsPage{Columns: cols, Rows: rows}
+	if len(rows) > q.Limit {
+		page.Rows, page.HasMore = rows[:q.Limit], true
+		if keyset {
+			page.Cursor = cursorOf(req, page.Rows[q.Limit-1])
+		}
+	}
+	return page, nil
+}
+
+// Count counts the rows matching a query's search and filters.
+func (s *Service) Count(ctx context.Context, q CountQuery) (int64, error) {
+	conn, err := s.conn()
+	if err != nil {
+		return 0, err
+	}
+	req, err := s.rowsRequest(ctx, conn, q.Table, q.Search, q.Filters)
+	if err != nil {
+		return 0, err
+	}
+	qctx, cancel := s.bounded(ctx)
+	defer cancel()
+	n, err := conn.Impl.CountRows(qctx, req)
+	if err != nil {
+		return 0, s.classify(qctx, err, func(e error) error { return e })
+	}
+	return n, nil
 }
 
 // LookupRows returns up to 100 rows of table where field equals value.

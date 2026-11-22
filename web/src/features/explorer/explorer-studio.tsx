@@ -6,7 +6,9 @@ import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useSchema } from "@/shared/hooks/use-schema";
 import {
   useTableRows,
+  useTableRowCount,
   tableRowsQueryOptions,
+  tableRowCountQueryOptions,
   DEFAULT_PAGE_SIZE,
 } from "@/shared/hooks/use-table-rows";
 import { useUpdateRow } from "@/features/explorer/hooks/use-update-row";
@@ -35,7 +37,8 @@ const PAGE_SIZE_OPTIONS = [25, 50, 100, 250];
 interface PaginationProps {
   page: number;
   pageSize: number;
-  total: number;
+  total: number | undefined; // undefined while counting
+  hasMore: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
 }
@@ -44,12 +47,13 @@ function Pagination({
   page,
   pageSize,
   total,
+  hasMore,
   onPageChange,
   onPageSizeChange,
 }: PaginationProps) {
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const totalPages = total === undefined ? null : Math.max(1, Math.ceil(total / pageSize));
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
-  const to = Math.min(page * pageSize, total);
+  const to = total === undefined ? page * pageSize : Math.min(page * pageSize, total);
 
   return (
     <div className="flex items-center justify-between px-4 py-2.5 border-t border-node-border/60 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 shrink-0">
@@ -74,24 +78,26 @@ function Pagination({
 
       <div className="flex items-center gap-3">
         <span className="text-[11px] text-text-tertiary font-mono tabular-nums">
-          {from}–{to} of {total.toLocaleString()}
+          {from}–{to} of {total?.toLocaleString() ?? "…"}
         </span>
 
         <div className="flex items-center gap-1">
           <button
             onClick={() => onPageChange(page - 1)}
             disabled={page <= 1}
+            aria-label="Previous page"
             className="flex items-center justify-center w-7 h-7 rounded-md border border-node-border/60 dark:border-node-border/40 bg-transparent text-text-secondary hover:text-text-primary hover:bg-node-border/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronLeft size={13} aria-hidden />
           </button>
 
           <span className="text-[11px] font-mono text-text-secondary tabular-nums px-2">
-            {page} / {totalPages}
+            {page} / {totalPages ?? "…"}
           </span>
 
           <button
             onClick={() => onPageChange(page + 1)}
-            disabled={page >= totalPages}
+            disabled={!hasMore}
+            aria-label="Next page"
             className="flex items-center justify-center w-7 h-7 rounded-md border border-node-border/60 dark:border-node-border/40 bg-transparent text-text-secondary hover:text-text-primary hover:bg-node-border/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
             <ChevronRight size={13} aria-hidden />
           </button>
@@ -171,6 +177,14 @@ function ExplorerInner() {
     filtersKey,
   );
 
+  const countResult = useTableRowCount(
+    selectedTable ?? "",
+    !!selectedTable,
+    debouncedSearch,
+    filtersKey,
+  );
+  const total = countResult.data?.total;
+
   const rowsData = tableRowsResult.data;
   const { isLoading, isError, isFetching } = tableRowsResult;
 
@@ -224,6 +238,9 @@ function ExplorerInner() {
         debouncedSearch,
         filtersKey,
       ).queryKey,
+    });
+    qc.invalidateQueries({
+      queryKey: tableRowCountQueryOptions(selectedTable, true, debouncedSearch, filtersKey).queryKey,
     });
   }
 
@@ -367,7 +384,7 @@ function ExplorerInner() {
           tables={tables}
           selectedTable={selectedTable}
           onSelectTable={handleSelectTable}
-          rowCount={rowsData?.total ?? 0}
+          rowCount={total}
         />
 
         <div className="relative flex flex-col flex-1 overflow-hidden">
@@ -401,7 +418,8 @@ function ExplorerInner() {
               <Pagination
                 page={page}
                 pageSize={pageSize}
-                total={rowsData?.total ?? 0}
+                total={total}
+                hasMore={rowsData?.hasMore ?? false}
                 onPageChange={handlePageChange}
                 onPageSizeChange={setPageSize}
               />

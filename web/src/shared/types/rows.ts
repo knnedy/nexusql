@@ -2,7 +2,10 @@ export interface RowsResponse {
   tableName: string;
   columns: string[];
   rows: Record<string, unknown>[];
-  total: number;
+  /** More rows follow this page. */
+  hasMore: boolean;
+  /** Send back as `after` for the next page; null when the order cannot use one. */
+  cursor: string[] | null;
   page: number;
   pageSize: number;
   sortCol: string;

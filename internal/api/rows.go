@@ -14,7 +14,8 @@ type rowsResponse struct {
 	TableName string           `json:"tableName"`
 	Columns   []string         `json:"columns"`
 	Rows      []map[string]any `json:"rows"`
-	Total     int64            `json:"total"`
+	HasMore   bool             `json:"hasMore"`
+	Cursor    []string         `json:"cursor"` // send back as after= for the next page
 	Page      int              `json:"page"`
 	PageSize  int              `json:"pageSize"`
 	SortCol   string           `json:"sortCol"`
@@ -71,15 +72,15 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		sortDir = db.SortDesc
 	}
 
-	var filters []studio.RowFilter
-	if raw := r.URL.Query().Get("filters"); raw != "" {
-		var in []rowFilter
-		if err := json.Unmarshal([]byte(raw), &in); err != nil {
-			writeError(w, http.StatusBadRequest, "filters must be a JSON array of {column, op, values}")
+	filters, ok := parseFilters(w, r)
+	if !ok {
+		return
+	}
+	var after []string
+	if raw := r.URL.Query().Get("after"); raw != "" {
+		if err := json.Unmarshal([]byte(raw), &after); err != nil {
+			writeError(w, http.StatusBadRequest, "after must be a JSON array of strings")
 			return
-		}
-		for _, f := range in {
-			filters = append(filters, studio.RowFilter{Column: f.Column, Op: f.Op, Values: f.Values})
 		}
 	}
 
@@ -91,6 +92,7 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		SortDir: sortDir,
 		Search:  r.URL.Query().Get("search"),
 		Filters: filters,
+		After:   after,
 	}
 
 	res, err := h.studio.Rows(r.Context(), q)
@@ -103,13 +105,50 @@ func (h *handler) handleRows(w http.ResponseWriter, r *http.Request) {
 		TableName: tableName,
 		Columns:   res.Columns,
 		Rows:      res.Rows,
-		Total:     res.Total,
+		HasMore:   res.HasMore,
+		Cursor:    res.Cursor,
 		Page:      page,
 		PageSize:  pageSize,
 		SortCol:   q.SortCol,
 		SortDir:   string(sortDir),
 		Search:    q.Search,
 	})
+}
+
+// parseFilters reads the filters query parameter, writing a 400 when it is malformed.
+func parseFilters(w http.ResponseWriter, r *http.Request) ([]studio.RowFilter, bool) {
+	raw := r.URL.Query().Get("filters")
+	if raw == "" {
+		return nil, true
+	}
+	var in []rowFilter
+	if err := json.Unmarshal([]byte(raw), &in); err != nil {
+		writeError(w, http.StatusBadRequest, "filters must be a JSON array of {column, op, values}")
+		return nil, false
+	}
+	out := make([]studio.RowFilter, len(in))
+	for i, f := range in {
+		out[i] = studio.RowFilter{Column: f.Column, Op: f.Op, Values: f.Values}
+	}
+	return out, true
+}
+
+// handleRowCount counts the rows the same search and filters page through.
+func (h *handler) handleRowCount(w http.ResponseWriter, r *http.Request) {
+	filters, ok := parseFilters(w, r)
+	if !ok {
+		return
+	}
+	n, err := h.studio.Count(r.Context(), studio.CountQuery{
+		Table:   chi.URLParam(r, "tableName"),
+		Search:  r.URL.Query().Get("search"),
+		Filters: filters,
+	})
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]int64{"total": n})
 }
 
 func (h *handler) handleRowLookup(w http.ResponseWriter, r *http.Request) {

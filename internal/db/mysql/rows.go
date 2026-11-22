@@ -10,49 +10,49 @@ import (
 	"github.com/knnedy/nexusql/internal/db"
 )
 
-func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, int64, error) {
-	table := p.QuoteTable(req.Table)
-
-	whereClause, whereArgs, err := db.Where{
+// where is this dialect's WHERE builder for rows of t.
+func (p *provider) where(t db.Table) db.Where {
+	return db.Where{
 		Quote: quoteIdent,
 		Param: func(int) string { return "?" },
 		// LOWER() on both sides: case-insensitive whatever the column collation.
 		ILike:      func(col, param string) string { return "LOWER(" + col + ") LIKE LOWER(" + param + ")" },
 		Arg:        func(f db.Field, v string) any { return editArg(f, &v) },
-		Searchable: func(f db.Field) bool { return searchable(req.Table, f) },
-	}.Clause(req)
+		Searchable: func(f db.Field) bool { return searchable(t, f) },
+	}
+}
+
+func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string, []map[string]any, error) {
+	w := p.where(req.Table)
+	clause, args, err := w.Clause(req)
 	if err != nil {
-		return nil, nil, 0, err
+		return nil, nil, err
 	}
-
-	var total int64
-	if err := p.conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+table+whereClause, whereArgs...).Scan(&total); err != nil {
-		return nil, nil, 0, fmt.Errorf("count rows: %w", err)
+	offset := req.Offset
+	if len(req.After) > 0 {
+		offset = 0
 	}
-
-	query := "SELECT * FROM " + table + whereClause
-	if req.Sort != nil {
-		dir := "ASC"
-		if req.SortDir == db.SortDesc {
-			dir = "DESC"
-		}
-		query += fmt.Sprintf(" ORDER BY %s %s", quoteIdent(req.Sort.Name), dir)
-	}
-	query += " LIMIT ? OFFSET ?"
-
-	// copy so the count query's args are never aliased
-	dataArgs := append(append([]any{}, whereArgs...), req.Limit, req.Offset)
-	rows, err := p.conn.QueryContext(ctx, query, dataArgs...)
+	query := "SELECT * FROM " + p.QuoteTable(req.Table) + clause + w.Order(req) +
+		" LIMIT " + w.Param(len(args)+1) + " OFFSET " + w.Param(len(args)+2)
+	rows, err := p.conn.QueryContext(ctx, query, append(args, req.Limit, offset)...)
 	if err != nil {
-		return nil, nil, 0, fmt.Errorf("query rows: %w", err)
+		return nil, nil, fmt.Errorf("query rows: %w", err)
 	}
 	defer rows.Close()
+	return scanRows(rows)
+}
 
-	columns, result, err := scanRows(rows)
+func (p *provider) CountRows(ctx context.Context, req db.RowsRequest) (int64, error) {
+	req.After = nil // the count covers every page
+	clause, args, err := p.where(req.Table).Clause(req)
 	if err != nil {
-		return nil, nil, 0, err
+		return 0, err
 	}
-	return columns, result, total, nil
+	var total int64
+	if err := p.conn.QueryRowContext(ctx, "SELECT COUNT(*) FROM "+p.QuoteTable(req.Table)+clause, args...).Scan(&total); err != nil {
+		return 0, fmt.Errorf("count rows: %w", err)
+	}
+	return total, nil
 }
 
 // searchable reports whether search matches against f: text-like columns and

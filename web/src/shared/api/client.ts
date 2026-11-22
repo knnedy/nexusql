@@ -87,6 +87,7 @@ export const api = {
     sortDir: "asc" | "desc" = "asc",
     search = "",
     filters = "",
+    after: string[] | null = null,
   ): Promise<RowsResponse> {
     const params = new URLSearchParams({
       page: String(page),
@@ -102,8 +103,20 @@ export const api = {
     if (filters) {
       params.set("filters", filters); // JSON, as serializeFilters writes it
     }
+    if (after) {
+      params.set("after", JSON.stringify(after));
+    }
     return request<RowsResponse>(
       `/api/rows/${encodeURIComponent(tableName)}?${params.toString()}`,
+    );
+  },
+
+  rowCount(tableName: string, search = "", filters = ""): Promise<{ total: number }> {
+    const params = new URLSearchParams();
+    if (search) params.set("search", search);
+    if (filters) params.set("filters", filters);
+    return request<{ total: number }>(
+      `/api/rows/${encodeURIComponent(tableName)}/count?${params.toString()}`,
     );
   },
 

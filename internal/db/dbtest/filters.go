@@ -77,7 +77,11 @@ func testFilters(t *testing.T, h Harness) {
 			for _, cd := range c.conds {
 				req.Filters = append(req.Filters, db.Filter{Field: fieldOf(t, tbl, cd.col), Op: cd.op, Values: cd.values})
 			}
-			_, rows, total, err := p.FetchRows(context.Background(), req)
+			_, rows, err := p.FetchRows(context.Background(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			total, err := p.CountRows(context.Background(), req)
 			if err != nil {
 				t.Fatal(err)
 			}

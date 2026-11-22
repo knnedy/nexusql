@@ -8,7 +8,7 @@ commit.
 ## Current stage
 
 Stage 3 (approved 2026-11-22), on `feat/stage-3`. Groups A and B done and summarized; C
-in progress (C13 done). STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+done (C13-C15), awaiting its summary. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -486,12 +486,28 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Open question for the group C stop: GET /api/rows/{t}/lookup and
   `Provider.FetchRowWhere` now have no caller; removing them is a structural cut.
 
+- feat(explorer): C15 keyset paging, count in its own request. Every page order now ends
+  with the primary key (same direction), fixing rows that tie on the sort column
+  repeating or vanishing between pages (seen on SQLite). `RowsRequest.After` continues
+  after the previous page's last (sort, pk...) values, expanded as a > ? OR (a = ? AND
+  b > ?) so no dialect needs row values; Offset is ignored then. studio allows keyset
+  only with a primary key, NOT NULL order columns, and types whose text compares exactly
+  (integers, text, uuid, date); otherwise OFFSET (now deterministic). A malformed cursor
+  is ErrInvalid; one the order cannot use is ignored. Rows fetches Limit+1 for HasMore
+  and returns a Cursor only when another page follows. `Provider.FetchRows` no longer
+  counts; `CountRows` and GET /api/rows/{t}/count (search + filters) do. Web: the cursor
+  for page p is the cached page p-1's (TanStack cache), so a reload onto page 5 uses
+  OFFSET; the count query is keyed without page/sort, so paging never recounts; Next
+  follows hasMore. Tests: conformance on all three dialects (ties, cursors asc/desc,
+  composite key, count), studio (cursor walk, eligibility, bad cursors, count), API,
+  Playwright (cursor sent, reload offset, back). Mutation-checked at each seam.
+
 ## Next 3 steps
 
-1. C15: keyset paging when sorted by a key (offset with PK tiebreak otherwise), count in
-   its own request; then STOP and summarize group C.
-2. Group C stop: summarize C13-C15 and ask about removing the unused lookup endpoint.
-3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
+1. Group C stop: summarize C13-C15; ask about removing the unused lookup endpoint
+   (GET /api/rows/{t}/lookup, Provider.FetchRowWhere).
+2. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
+3. D17: large schemas + the Mermaid size warning in the export drawer.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
