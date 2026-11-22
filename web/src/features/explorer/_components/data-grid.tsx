@@ -1,9 +1,12 @@
 "use client";
 
 import {
-  useReactTable,
-  getCoreRowModel,
+  columnResizingFeature,
+  columnSizingFeature,
+  columnVisibilityFeature,
   flexRender,
+  tableFeatures,
+  useTable,
   type ColumnDef,
   type Row,
 } from "@tanstack/react-table";
@@ -65,6 +68,15 @@ interface DataGridProps {
   /** Why rows cannot be edited (e.g. a read-only connection); null when they can. */
   readOnlyReason: string | null;
 }
+
+// sizing must be registered before resizing, which builds on it
+const features = tableFeatures({
+  columnVisibilityFeature,
+  columnSizingFeature,
+  columnResizingFeature,
+});
+type GridRow = Record<string, unknown>;
+type GridColumn = ColumnDef<typeof features, GridRow>;
 
 const NULL_OPTION = "\u0000null"; // a value no enum or boolean option can have
 const BOOLEAN_OPTIONS = ["true", "false"];
@@ -337,7 +349,7 @@ function ColumnHeader({
   );
 }
 
-const ROW_NUMBER_COLUMN: ColumnDef<Record<string, unknown>> = {
+const ROW_NUMBER_COLUMN: GridColumn = {
   id: "__row_number__",
   header: () => (
     <span className="text-[10px] font-mono text-text-secondary select-none">
@@ -408,10 +420,10 @@ export default function DataGrid({
       ? null
       : "This table has no primary key, so its rows cannot be edited.");
 
-  const tableColumns = useMemo<ColumnDef<Record<string, unknown>>[]>(
+  const tableColumns = useMemo<GridColumn[]>(
     () => [
       ROW_NUMBER_COLUMN,
-      ...columns.map((col): ColumnDef<Record<string, unknown>> => {
+      ...columns.map((col): GridColumn => {
         const field = fieldMap.get(col);
         const enumType = field ? enumMap.get(field.type) : undefined;
         const canonical = field ? normalizeFieldType(field.type, provider) : null;
@@ -445,7 +457,7 @@ export default function DataGrid({
               );
             }
 
-            const row = info.row as Row<Record<string, unknown>>;
+            const row: Row<typeof features, GridRow> = info.row;
             const isEditing =
               editingCell?.rowId === row.id && editingCell?.columnId === col;
 
@@ -509,10 +521,10 @@ export default function DataGrid({
     ],
   );
 
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data: rows,
     columns: tableColumns,
-    getCoreRowModel: getCoreRowModel(),
     columnResizeMode: "onChange",
     enableColumnResizing: true,
     state: {

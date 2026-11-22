@@ -2,12 +2,13 @@
 
 Working log for the staged refactor. Stages 1–2 were on `refactor/architecture`, merged
 (fast-forward) into main at `5a18329` and pushed 2026-11-21. Stage 3 is on `feat/stage-3`
-(local, not pushed). Updated with every commit.
+(pushed to origin 2026-11-22 at `2e4f677`, tracking; main untouched). Updated with every
+commit.
 
 ## Current stage
 
-Stage 3 (approved 2026-11-22), on `feat/stage-3`. STOP and summarize after each letter
-group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+Stage 3 (approved 2026-11-22), on `feat/stage-3`. Groups A and B done and summarized; C
+in progress (C13 done). STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -454,17 +455,32 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 - docs(readme): what test-integration, e2e and export-check need beyond Go/Node/pnpm
   (Docker, Playwright Chromium, cgo compiler, python3-venv); none of it ships.
 
+- feat(explorer): C13 @tanstack/react-table 9.3.1 (exact). `useTable` with explicit
+  features registered once at module scope (visibility, sizing, then resizing, which needs
+  sizing); `getCoreRowModel` gone; `ColumnDef`/`Row` take the feature type; no casts. The
+  grid uses no row models (sorting/paging are server-side), so nothing else moved.
+  Playwright gains hide-a-column and drag-to-resize tests (both fail with visibility
+  state dropped or resizing off). All 10 e2e tests pass.
+
 ## Next 3 steps
 
-1. STOP and summarize group B (done: B5-B12 plus the TypeORM round trip).
-2. C13: react-table 9.
-3. C14: column filters (typed, validated, parameterized).
+1. C14: column filters (typed per column type, identifiers validated, values as
+   parameters, WHERE built per dialect behind the provider interface).
+2. C15: keyset paging when sorted by a key (offset with PK tiebreak otherwise), count in
+   its own request; then STOP and summarize group C.
+3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
 Renderers on the step 17 export model, each with goldens per dialect and a real tool check:
 SQL DDL, Mermaid ER, DBML, and ORMs/builders across languages: Kysely (kept at the user's
 request), TypeORM, SQLAlchemy, GORM. See plan group B above.
+
+Considered and deferred (user, 2026-11-22: "no group G for now"): Java/JPA, PHP/Laravel
+(migration + Eloquent models), Rust (Diesel/SeaORM/SQLx), .NET EF Core. Each needs a new
+toolchain in the export check, and the SQL DDL export already feeds their usual paths
+(Flyway/Liquibase take SQL files; Laravel loads database/schema/*.sql); Rust and EF Core
+tools generate from a live database themselves. Revisit only on user demand, JPA first.
 
 ## Half-done files
 

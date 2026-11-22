@@ -53,6 +53,35 @@ test("a rejected edit stays with the database's reason", async ({ page }) => {
   expect(await sql(page, "SELECT age FROM pets WHERE id = 1")).toEqual([{ age: 3 }]);
 });
 
+function header(page: Page, column: string) {
+  return page.locator("th", { has: page.getByText(column, { exact: true }) });
+}
+
+test("hiding a column removes it from the grid", async ({ page }) => {
+  await connectSqlite(page, SETUP);
+  await openPets(page);
+  await expect(header(page, "nick")).toHaveCount(1);
+  await page.getByRole("button", { name: "Columns" }).click();
+  await page.getByRole("button", { name: "nick", exact: true }).click();
+  await page.getByRole("button", { name: /Columns/ }).click(); // close the menu
+  await expect(header(page, "nick")).toHaveCount(0);
+  await expect(page.getByText("rexy", { exact: true })).toBeHidden();
+  await expect(page.getByText("Rex", { exact: true })).toBeVisible();
+});
+
+test("dragging a header edge resizes its column", async ({ page }) => {
+  await connectSqlite(page, SETUP);
+  await openPets(page);
+  const th = header(page, "name");
+  const before = (await th.boundingBox())!;
+  const handle = (await th.locator(".cursor-col-resize").boundingBox())!;
+  await page.mouse.move(handle.x + handle.width / 2, handle.y + handle.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(handle.x + handle.width / 2 + 100, handle.y + handle.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => (await th.boundingBox())!.width).toBeGreaterThan(before.width + 90);
+});
+
 test("a read-only connection makes the grid read-only", async ({ page }) => {
   await connectSqlite(page, SETUP);
   await page.request.put("/api/connection/read-only", { data: { readOnly: true } });
