@@ -88,6 +88,13 @@ export interface Table {
   unique?: string[][];
   /** Plain (non-unique) column indexes by name; partial and expression ones are left out. */
   indexes?: Index[];
+  /** CHECK constraints as the database prints them; name is "" for unnamed SQLite ones. */
+  checks?: Check[];
+}
+
+export interface Check {
+  name: string;
+  expr: string;
 }
 
 export interface Index {

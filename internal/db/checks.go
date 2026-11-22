@@ -8,8 +8,9 @@ import (
 
 // Token is one lexical token of a SQL expression.
 type Token struct {
-	Kind byte // 'w' word, 'i' quoted identifier, 's' string, else the punctuation itself
-	Text string
+	Kind     byte // 'w' word, 'i' quoted identifier, 's' string, else the punctuation itself
+	Text     string
+	Pos, End int // byte offsets of the token in the source
 }
 
 // IsWord reports whether t is the keyword w, ignoring case.
@@ -85,24 +86,24 @@ func Tokenize(s string, syn sqlscan.Syntax) []Token {
 			if c == '\'' {
 				kind = 's'
 			}
-			out, i = append(out, Token{kind, text}), next
+			out, i = append(out, Token{kind, text, i, next}), next
 		case c == '[' && syn.Brackets:
 			j := strings.IndexByte(s[i:], ']')
 			if j < 0 {
 				j = len(s) - i - 1
 			}
-			out, i = append(out, Token{'i', s[i+1 : i+j]}), i+j+1
+			out, i = append(out, Token{'i', s[i+1 : i+j], i, i + j + 1}), i+j+1
 		case c == '_' || c >= 0x80 || (c|0x20 >= 'a' && c|0x20 <= 'z') || (c >= '0' && c <= '9'):
 			j := i + 1
 			for j < len(s) && (s[j] == '_' || s[j] == '$' || s[j] >= 0x80 ||
 				(s[j]|0x20 >= 'a' && s[j]|0x20 <= 'z') || (s[j] >= '0' && s[j] <= '9')) {
 				j++
 			}
-			out, i = append(out, Token{'w', s[i:j]}), j
+			out, i = append(out, Token{'w', s[i:j], i, j}), j
 		case c == ' ' || c == '\t' || c == '\n' || c == '\r':
 			i++
 		default:
-			out, i = append(out, Token{c, string(c)}), i+1
+			out, i = append(out, Token{c, string(c), i, i + 1}), i+1
 		}
 	}
 	return out

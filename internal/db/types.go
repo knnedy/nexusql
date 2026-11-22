@@ -71,6 +71,14 @@ type Table struct {
 	// Indexes are the plain (non-unique) column indexes, by name; partial and
 	// expression indexes are left out.
 	Indexes []Index `json:"indexes,omitempty"`
+	// Checks are the table's CHECK constraints as the database prints them.
+	Checks []Check `json:"checks,omitempty"`
+}
+
+// Check is a CHECK constraint; Name is "" when SQLite's is unnamed.
+type Check struct {
+	Name string `json:"name"`
+	Expr string `json:"expr"` // the dialect's SQL between CHECK's parentheses
 }
 
 type Relation struct {

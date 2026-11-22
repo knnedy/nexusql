@@ -12,7 +12,7 @@ import (
 
 // CHECK constraint names are unique per schema, so the join by name is exact.
 const queryChecks = `
-SELECT tc.TABLE_NAME, cc.CHECK_CLAUSE
+SELECT tc.TABLE_NAME, cc.CONSTRAINT_NAME, cc.CHECK_CLAUSE
 FROM information_schema.CHECK_CONSTRAINTS cc
 JOIN information_schema.TABLE_CONSTRAINTS tc
   ON tc.CONSTRAINT_SCHEMA = cc.CONSTRAINT_SCHEMA AND tc.CONSTRAINT_NAME = cc.CONSTRAINT_NAME
@@ -32,17 +32,24 @@ func (p *provider) introspectChecks(ctx context.Context, schema string, tables [
 		return err
 	}
 	defer rows.Close()
+	byName := map[string]*db.Table{}
+	for i := range tables {
+		byName[tables[i].Name] = &tables[i]
+	}
 	for rows.Next() {
-		var table, clause string
-		if err := rows.Scan(&table, &clause); err != nil {
+		var table, name, clause string
+		if err := rows.Scan(&table, &name, &clause); err != nil {
 			return err
 		}
+		t := byName[table]
+		if t == nil {
+			continue
+		}
+		t.Checks = append(t.Checks, db.Check{Name: name, Expr: unescapeClause(clause)})
 		col, vals := allowedFromClause(clause)
-		for i := range tables {
-			for j := range tables[i].Fields {
-				if f := &tables[i].Fields[j]; vals != nil && tables[i].Name == table && strings.EqualFold(f.Name, col) {
-					f.Allowed = vals
-				}
+		for j := range t.Fields {
+			if vals != nil && strings.EqualFold(t.Fields[j].Name, col) {
+				t.Fields[j].Allowed = vals
 			}
 		}
 	}
@@ -52,11 +59,8 @@ func (p *provider) introspectChecks(ctx context.Context, schema string, tables [
 // allowedFromClause reads a CHECK_CLAUSE listing string values. MySQL 8.4
 // stores it with quotes backslash-escaped and adds charset introducers.
 func allowedFromClause(clause string) (string, []string) {
-	if strings.Contains(clause, `\'`) && !hasBareQuote(clause) {
-		clause = strings.NewReplacer(`\\`, `\`, `\'`, `'`).Replace(clause)
-	}
 	var t []db.Token
-	toks := db.Tokenize(clause, sqlscan.MySQL)
+	toks := db.Tokenize(unescapeClause(clause), sqlscan.MySQL)
 	for i, tk := range toks {
 		if tk.Kind == 'w' && strings.HasPrefix(tk.Text, "_") && i+1 < len(toks) && toks[i+1].Kind == 's' {
 			continue // _utf8mb4'x' is the string 'x'
@@ -68,6 +72,15 @@ func allowedFromClause(clause string) (string, []string) {
 		return "", nil
 	}
 	return col, vals
+}
+
+// unescapeClause undoes the backslash escaping MySQL 8.4 stores CHECK_CLAUSE
+// with; a clause with a bare quote is not escaped and is kept.
+func unescapeClause(clause string) string {
+	if strings.Contains(clause, `\'`) && !hasBareQuote(clause) {
+		return strings.NewReplacer(`\\`, `\`, `\'`, `'`).Replace(clause)
+	}
+	return clause
 }
 
 // hasBareQuote reports a quote not preceded by a backslash: the clause is not escaped.

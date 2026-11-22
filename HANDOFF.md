@@ -319,10 +319,16 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   otherwise; unknown highlight language falls back to plain text). First export e2e test.
   ADR 0012 updated. Group A summarized to the user 2026-11-22; CHECK text for DDL approved.
 
+- feat(db): B6a `Table.Checks` (`db.Check{Name, Expr}`), every CHECK constraint with the
+  database's own expression text: Postgres `pg_get_expr(conbin)` (same query now also
+  feeds Allowed), MySQL CHECK_CLAUSE un-escaped (`unescapeClause`), SQLite the source text
+  between CHECK's parentheses (`db.Token` gained Pos/End offsets), named when written
+  `CONSTRAINT name CHECK`. Input for the B6b DDL.
+
 ## Next 3 steps
 
-1. B6: SQL DDL export, round-trip tested; first introspect raw CHECK constraint text per
-   table (approved) so DDL keeps them. Replaces canvas lib/ddl.ts.
+1. B6b: SQL DDL export renderer, round-trip tested per dialect (fresh DB, introspect,
+   compare); B6c: canvas inspector DDL from the server, remove lib/ddl.ts.
 2. B7: DBML (@dbml/core check).
 3. B8: Mermaid ER (confirm the parser runs in Node first).
 
@@ -361,6 +367,6 @@ None.
   them out; index sort order (DESC) and collations are not kept either.
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
   writes and show a count (ADR 0010).
-- Other CHECK constraints (ranges, multi-column, `IN (...) OR x IS NULL`) are not
-  introspected: the seeder retries then skips such rows, and the B6 DDL will not recreate
-  them unless general CHECK text is introspected first (decide in B6).
+- CHECK constraints other than single-column string lists (ranges, multi-column,
+  `IN (...) OR x IS NULL`) only reach `Table.Checks`, not `Field.Allowed`: the seeder
+  retries then skips rows they reject.

@@ -8,14 +8,16 @@ import (
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
-// Single-column CHECK constraints, as pg_get_constraintdef prints them.
+// CHECK constraints with their expression; column is set when the check
+// names a single column, whose allowed values are then read from it.
 const queryChecks = `
-SELECT t.relname, a.attname, pg_get_constraintdef(con.oid)
+SELECT t.relname, con.conname, pg_get_expr(con.conbin, con.conrelid), pg_get_constraintdef(con.oid),
+    CASE WHEN cardinality(con.conkey) = 1 THEN a.attname::text END
 FROM pg_constraint con
 JOIN pg_class t ON t.oid = con.conrelid
 JOIN pg_namespace n ON n.oid = t.relnamespace
-JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = con.conkey[1]
-WHERE con.contype = 'c' AND n.nspname = $1 AND cardinality(con.conkey) = 1
+LEFT JOIN pg_attribute a ON a.attrelid = con.conrelid AND a.attnum = con.conkey[1]
+WHERE con.contype = 'c' AND n.nspname = $1
 ORDER BY t.relname, con.conname
 `
 
@@ -25,17 +27,28 @@ func (p *provider) introspectChecks(ctx context.Context, schema string, tables [
 		return err
 	}
 	defer rows.Close()
+	byName := map[string]*db.Table{}
+	for i := range tables {
+		byName[tables[i].Name] = &tables[i]
+	}
 	for rows.Next() {
-		var table, col, def string
-		if err := rows.Scan(&table, &col, &def); err != nil {
+		var table, name, expr, def string
+		var col *string
+		if err := rows.Scan(&table, &name, &expr, &def, &col); err != nil {
 			return err
 		}
-		vals := allowedFromDefinition(def, col)
-		for i := range tables {
-			for j := range tables[i].Fields {
-				if f := &tables[i].Fields[j]; vals != nil && tables[i].Name == table && f.Name == col {
-					f.Allowed = vals
-				}
+		t := byName[table]
+		if t == nil {
+			continue
+		}
+		t.Checks = append(t.Checks, db.Check{Name: name, Expr: expr})
+		if col == nil {
+			continue
+		}
+		vals := allowedFromDefinition(def, *col)
+		for j := range t.Fields {
+			if vals != nil && t.Fields[j].Name == *col {
+				t.Fields[j].Allowed = vals
 			}
 		}
 	}

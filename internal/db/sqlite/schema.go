@@ -33,7 +33,7 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 			return nil, fmt.Errorf("introspect foreign keys for %s: %w", name, err)
 		}
 
-		fields, err := p.introspectColumns(ctx, name, fkRows)
+		fields, tableChecks, err := p.introspectColumns(ctx, name, fkRows)
 		if err != nil {
 			return nil, fmt.Errorf("introspect columns for %s: %w", name, err)
 		}
@@ -41,7 +41,7 @@ func (p *provider) IntrospectSchema(ctx context.Context, schema string) (*db.Sch
 		if err != nil {
 			return nil, fmt.Errorf("introspect indexes for %s: %w", name, err)
 		}
-		tables = append(tables, db.Table{Name: name, Schema: "", Fields: fields, Unique: unique, Indexes: indexes})
+		tables = append(tables, db.Table{Name: name, Schema: "", Fields: fields, Unique: unique, Indexes: indexes, Checks: tableChecks})
 
 		rels, err := buildRelations(ctx, p, name, fkRows)
 		if err != nil {
@@ -121,10 +121,11 @@ func (p *provider) foreignKeyRows(ctx context.Context, tableName string) ([]fkRo
 	return out, rows.Err()
 }
 
-func (p *provider) introspectColumns(ctx context.Context, tableName string, fkRows []fkRow) ([]db.Field, error) {
+// introspectColumns returns the table's columns and its CHECK constraints.
+func (p *provider) introspectColumns(ctx context.Context, tableName string, fkRows []fkRow) ([]db.Field, []db.Check, error) {
 	cols, err := p.tableInfo(ctx, tableName)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	fkCols := map[string]bool{}
 	for _, fk := range fkRows {
@@ -134,9 +135,9 @@ func (p *provider) introspectColumns(ctx context.Context, tableName string, fkRo
 	var createSQL sql.NullString
 	if err := p.conn.QueryRowContext(ctx,
 		"SELECT sql FROM sqlite_master WHERE type = 'table' AND name = ?", tableName).Scan(&createSQL); err != nil {
-		return nil, fmt.Errorf("read table definition: %w", err)
+		return nil, nil, fmt.Errorf("read table definition: %w", err)
 	}
-	allowed := allowedValues(createSQL.String)
+	tableChecks, allowed := checks(createSQL.String)
 	// AUTOINCREMENT is only valid on the rowid alias; sqlite_sequence lists the table only after an insert.
 	stmts := sqlscan.Split(createSQL.String, sqlscan.SQLite)
 	autoincrement := len(stmts) == 1 && stmts[0].Has("AUTOINCREMENT")
@@ -171,7 +172,7 @@ func (p *provider) introspectColumns(ctx context.Context, tableName string, fkRo
 			NativeType:    c.declType,
 		})
 	}
-	return fields, nil
+	return fields, tableChecks, nil
 }
 
 // column is one row of PRAGMA table_info.
