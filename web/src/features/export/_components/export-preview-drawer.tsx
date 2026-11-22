@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Copy, Check, Download, FileCode, ImageIcon } from "lucide-react";
+import { X, Copy, Check, Download, ImageIcon } from "lucide-react";
 import { codeToHtml } from "shiki";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
@@ -10,6 +10,8 @@ import {
   exportQueryOptions,
   PNG_EXPORT,
 } from "@/shared/hooks/use-export";
+import { studioSession } from "@/shared/lib/session-storage";
+import { FormatIcon, formatTint } from "./format-icon";
 
 interface ExportPreviewDrawerProps {
   /** A server format id, or the canvas snapshot. */
@@ -68,6 +70,7 @@ export default function ExportPreviewDrawer({
   const { data: formats } = useQuery(exportFormatsQueryOptions());
   const format = formats?.find((f) => f.id === type);
   const isPng = type === PNG_EXPORT;
+  const provider = studioSession.provider() ?? "postgres";
 
   useEffect(() => {
     if (type === PNG_EXPORT && sidebarOpen) {
@@ -115,7 +118,9 @@ export default function ExportPreviewDrawer({
           {isPng ? (
             <ImageIcon size={14} className="text-teal" />
           ) : (
-            <FileCode size={14} className="text-blue-400" />
+            <span className={`flex items-center justify-center w-6 h-6 rounded-md ${formatTint(type, provider)}`}>
+              <FormatIcon id={type} provider={provider} size={13} />
+            </span>
           )}
           <span className="text-[12px] font-bold text-text-primary tracking-normal antialiased">
             {isPng ? "Snapshot Preview" : (format?.label ?? type)}

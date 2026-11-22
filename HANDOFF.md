@@ -515,10 +515,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   warning. vitest component test (red on the old code); checked in a real `next dev` +
   binary run: snapshot renders, no console errors or warnings.
 
+- feat(export): each export format shows its brand mark (sidebar and drawer header) from
+  one FormatIcon. Simple Icons (react-icons/si) for Prisma, Drizzle, TypeORM, SQLAlchemy,
+  Mermaid; SQL DDL takes the connected database's logo. Kysely (kysely-org/kysely, MIT)
+  and DBML (holistics/dbml, Apache-2.0) redrawn one-colour from their repos' SVGs. GORM
+  has no icon of its own (only an unlicensed wordmark favicon), so Go's logo stands in
+  (user choice). vitest: every server format has a mark; screenshots checked both themes.
+- chore: gitignore web/AGENTS.md, which `next dev` 16.4 writes on every run (user choice).
+
 ## Next 3 steps
 
-1. feat(export): official icon per export format (sidebar and drawer header).
-2. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).
+1. D16: @xyflow/react 13 + react-flow-smart-edge 5 together.
+2. D17: large schemas (visible-only render, ELK in a worker, no smart edges above a
+   threshold) + the Mermaid size warning in the export drawer; then STOP for group D.
+3. E18: CALL/FETCH show their rows.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

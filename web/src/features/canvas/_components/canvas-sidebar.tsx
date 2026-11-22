@@ -13,9 +13,7 @@ import {
   SquareTerminal,
   Boxes,
   Link2,
-  FileCode,
 } from "lucide-react";
-import { SiPrisma, SiDrizzle } from "react-icons/si";
 import { useQuery } from "@tanstack/react-query";
 import {
   exportFormatsQueryOptions,
@@ -27,6 +25,7 @@ import type { Node } from "@xyflow/react";
 import { TableNodeData } from "@/features/canvas/types";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { studioSession } from "@/shared/lib/session-storage";
+import { FormatIcon, formatTint } from "@/features/export";
 
 interface CanvasSidebarProps {
   open: boolean;
@@ -40,22 +39,6 @@ interface CanvasSidebarProps {
 }
 
 // Brand marks for known formats; any other format gets the generic file icon.
-const FORMAT_ICONS: Record<string, { icon: React.ReactNode; className: string }> = {
-  prisma: {
-    icon: <SiPrisma size={14} aria-hidden />,
-    className: "bg-indigo-500/5 text-indigo-500 dark:bg-indigo-400/10 dark:text-indigo-400",
-  },
-  drizzle: {
-    icon: <SiDrizzle size={14} aria-hidden />,
-    className: "bg-lime-500/10 text-lime-600 dark:bg-lime-400/10 dark:text-lime-400",
-  },
-};
-
-const DEFAULT_FORMAT_ICON = {
-  icon: <FileCode size={14} aria-hidden />,
-  className: "bg-surface-3 text-text-secondary dark:bg-surface-3/50",
-};
-
 function SectionLabel({ label }: { label: string }) {
   return (
     <p className="text-[0.75rem] font-bold uppercase tracking-[0.08em] text-text-tertiary px-2.5 mb-1.5 antialiased">
@@ -267,13 +250,12 @@ export default function CanvasSidebar({
               }
             />
             {formats.map((f) => {
-              const mark = FORMAT_ICONS[f.id] ?? DEFAULT_FORMAT_ICON;
               return (
                 <SidebarItem
                   key={f.id}
                   active={activeExport === f.id}
-                  iconWrapperClass={mark.className}
-                  icon={mark.icon}
+                  iconWrapperClass={formatTint(f.id, provider)}
+                  icon={<FormatIcon id={f.id} provider={provider} />}
                   label={f.label}
                   description={f.description}
                   onClick={() =>
