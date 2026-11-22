@@ -1,7 +1,8 @@
 import ELK, {
+  type ELK as ElkApi,
   type ElkNode,
   type ElkExtendedEdge,
-} from "elkjs/lib/elk.bundled.js";
+} from "elkjs/lib/elk-api.js";
 import type { Edge, Node } from "@xyflow/react";
 import { SchemaResponse } from "@/shared/types/schema";
 import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
@@ -25,7 +26,20 @@ const ELK_LAYOUT_OPTIONS = {
   "elk.portConstraints": "FIXED_SIDE",
 };
 
-const elk = new ELK();
+let elk: Promise<ElkApi> | null = null;
+
+// Layout runs in a worker so large schemas do not freeze the page; tests have no Worker.
+function getElk(): Promise<ElkApi> {
+  elk ??=
+    typeof Worker === "undefined"
+      ? import("elkjs/lib/elk.bundled.js").then((m) => new m.default())
+      : Promise.resolve(
+          new ELK({
+            workerFactory: () => new Worker(new URL("./elk.worker.ts", import.meta.url)),
+          }),
+        );
+  return elk;
+}
 
 function buildPorts(
   fields: SchemaResponse["tables"][number]["fields"],
@@ -112,7 +126,7 @@ export async function buildCanvasGraph(
 ): Promise<{ nodes: Node<TableNodeData>[]; edges: Edge<RelationEdgeData>[] }> {
   try {
     const { elkGraph, rfEdges } = buildElkGraph(schema);
-    const layouted = await elk.layout(elkGraph);
+    const layouted = await (await getElk()).layout(elkGraph);
 
     // Build a port position lookup from ELK's output
     const portPositions = new Map<string, { x: number; y: number }>();

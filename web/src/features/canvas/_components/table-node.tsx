@@ -115,14 +115,14 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
   return (
     <div
       className={[
-        "rounded-xl overflow-hidden backdrop-blur-sm transition-all duration-50",
+        "rounded-xl overflow-hidden transition-[box-shadow,scale] duration-50",
         selected
           ? "shadow-[0_0_0_2px_var(--coral)] scale-[1.01]"
           : "shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] border border-node-border/80 dark:border-node-border/40",
       ].join(" ")}
       style={{ width: NODE_WIDTH }}>
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-node-header-bg/90 backdrop-blur-md border-b-[0.5px] border-node-border/80 dark:border-node-border/40">
+      <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-node-header-bg border-b-[0.5px] border-node-border/80 dark:border-node-border/40">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-2 h-2 rounded-full bg-coral shrink-0 shadow-sm shadow-coral/40" />
           <span className="text-[13px] font-bold text-text-primary truncate tracking-tight antialiased">
@@ -133,7 +133,7 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
       </div>
 
       {/* Fields */}
-      <div className="bg-node-bg/95 backdrop-blur-md pb-1">
+      <div className="bg-node-bg pb-1">
         {table.fields.map((field) => (
           <FieldRow key={field.name} field={field} tableId={table.name} />
         ))}

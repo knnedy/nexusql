@@ -546,10 +546,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   defaults) and points to the canvas PNG or DBML. Counts -- and .. relationship lines.
   vitest at the drawer seam; five mutants all killed.
 
+- D17b perf(canvas): ELK runs in a Web Worker (elk-api + lib/elk.worker.ts; no Worker,
+  as in vitest, falls back to the lazy in-thread bundle); onlyRenderVisibleElements;
+  table nodes drop their three backdrop blurs (backgrounds were 90-95% opaque already)
+  and transition-all. Measured on generated SQLite schemas (scratch Playwright perf spec,
+  CDP metrics + trace; headless rAF timing proved meaningless here, so frame rate is
+  not measured): longest main-thread block at 400 tables 4-5 s -> 0.6-1.0 s, at 150
+  1.4-4 s -> 0.3 s; pan main-thread per step at 400 tables ~81 -> ~45 ms; paint +
+  composite per pan step ~15-25% lower without the blurs. Remaining pan cost is edges.
+
 ## Next 3 steps
 
-1. D17b: large schemas (visible-only render, ELK in a worker).
-2. D18: readable layout for many tables (see plan); then STOP for group D.
+1. D18: readable layout for many tables (see plan). Start with the vitest layout
+   metric (overlaps, edges through tables, crossings, time) and record today's baseline.
+2. STOP: group D summary to the user.
 3. E19: CALL/FETCH show their rows.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)

@@ -287,6 +287,7 @@ function CanvasInner() {
           // v12's 0.38 padding: numbers are pixels since v13, so give the same share
           fitViewOptions={{ padding: "14%", includeHiddenNodes: false }}
           forceColorMode={resolvedTheme === "light" ? "light" : "dark"} // follow the app theme, not the OS
+          onlyRenderVisibleElements
           minZoom={0.2}
           maxZoom={2}
           proOptions={{ hideAttribution: true }}>
