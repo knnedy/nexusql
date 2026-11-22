@@ -21,7 +21,7 @@ func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string,
 			if searchable(req.Table, f) {
 				// LOWER() on both sides: case-insensitive whatever the column collation.
 				conditions = append(conditions, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", quoteIdent(f.Name)))
-				searchArgs = append(searchArgs, "%"+req.Search+"%")
+				searchArgs = append(searchArgs, db.LikeContains(req.Search))
 			}
 		}
 		if len(conditions) > 0 {

@@ -21,7 +21,7 @@ func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string,
 		var conditions []string
 		for _, f := range req.Table.Fields {
 			if searchable(f) {
-				searchArgs = append(searchArgs, "%"+req.Search+"%")
+				searchArgs = append(searchArgs, db.LikeContains(req.Search))
 				conditions = append(conditions, fmt.Sprintf("%s::text ILIKE $%d", p.QuoteIdentifier(f.Name), len(searchArgs)))
 			}
 		}

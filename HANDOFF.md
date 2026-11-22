@@ -462,10 +462,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Playwright gains hide-a-column and drag-to-resize tests (both fail with visibility
   state dropped or resizing off). All 10 e2e tests pass.
 
+- fix(explorer): search escapes LIKE wildcards (`\`, `%`, `_`) on every dialect; before,
+  searching `50%` or `a_b` matched unrelated rows. `db.LikeContains` builds the pattern
+  with backslash as escape (Postgres/MySQL default, high confidence); SQLite has no
+  default escape, so it adds `ESCAPE '\'` (high confidence). Conformance test on all
+  three dialects; mutation-checked (unescaped backslash, missing ESCAPE). C14's
+  `contains` / `starts with` reuse the escaping.
+
 ## Next 3 steps
 
-1. C14: column filters (typed per column type, identifiers validated, values as
-   parameters, WHERE built per dialect behind the provider interface).
+1. C14: column filters (user 2026-11-23: toolbar "Filters" popover + removable chips;
+   typed core set: =, !=, is null, is not null on all; <, <=, >, >= on numbers/dates;
+   contains, starts with on text, case-insensitive; is one of on enum/boolean; AND with
+   search; server rejects an operator that does not fit the type; values as parameters,
+   WHERE built per dialect behind the provider interface).
 2. C15: keyset paging when sorted by a key (offset with PK tiebreak otherwise), count in
    its own request; then STOP and summarize group C.
 3. D16: @xyflow/react 13 + react-flow-smart-edge 5 together (after the group C stop).

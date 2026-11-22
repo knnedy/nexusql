@@ -56,6 +56,22 @@ func testRows(t *testing.T, h Harness) {
 		}
 	})
 
+	t.Run("search treats LIKE wildcards literally", func(t *testing.T) {
+		if err := update(t, p, "users", "id", "3", "name", `C:\50%_off`); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() { _ = update(t, p, "users", "id", "3", "name", "Cy") })
+		for search, want := range map[string]int64{"50%_": 1, "_": 1, "%": 1, `\`: 1, `\%`: 0, "5_%": 0} {
+			_, _, total, err := page(t, p, "users", 10, 0, "", db.SortAsc, search)
+			if err != nil {
+				t.Fatalf("search %q: %v", search, err)
+			}
+			if total != want {
+				t.Errorf("search %q matched %d rows, want %d", search, total, want)
+			}
+		}
+	})
+
 	t.Run("returns NULL as nil", func(t *testing.T) {
 		_, rows, err := lookup(t, p, "users", "email", "bob@example.com")
 		if err != nil {

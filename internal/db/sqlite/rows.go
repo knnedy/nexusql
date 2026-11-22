@@ -20,8 +20,8 @@ func (p *provider) FetchRows(ctx context.Context, req db.RowsRequest) ([]string,
 		for _, f := range req.Table.Fields {
 			if searchable(req.Table, f) {
 				// SQLite has no ILIKE; LOWER() on both sides is the ASCII equivalent.
-				conditions = append(conditions, fmt.Sprintf("LOWER(%s) LIKE LOWER(?)", quoteIdent(f.Name)))
-				searchArgs = append(searchArgs, "%"+req.Search+"%")
+				conditions = append(conditions, fmt.Sprintf(`LOWER(%s) LIKE LOWER(?) ESCAPE '\'`, quoteIdent(f.Name)))
+				searchArgs = append(searchArgs, db.LikeContains(req.Search))
 			}
 		}
 		if len(conditions) > 0 {
