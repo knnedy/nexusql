@@ -14,6 +14,7 @@ type Format struct {
 func (f Format) Render(m *Model) string { return f.render(m) }
 
 var formats = []Format{
+	{ID: "sql", Label: "SQL DDL", Description: "CREATE statements for this database", Language: "sql", Filename: "schema.sql", render: SQL},
 	{ID: "prisma", Label: "Prisma schema", Description: "Models for schema.prisma", Language: "prisma", Filename: "schema.prisma", render: Prisma},
 	{ID: "drizzle", Label: "Drizzle schema", Description: "drizzle-orm table definitions", Language: "typescript", Filename: "schema.ts", render: Drizzle},
 }

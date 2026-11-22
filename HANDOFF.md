@@ -325,10 +325,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   between CHECK's parentheses (`db.Token` gained Pos/End offsets), named when written
   `CONSTRAINT name CHECK`. Input for the B6b DDL.
 
+- feat(export): B6b SQL DDL (`export.SQL`, format `sql`, listed first). Enum types (PG),
+  CREATE TABLE with column type clause from `Exporter.SQLColumnType` (PG serial/identity,
+  MySQL AUTO_INCREMENT, SQLite declared type), NOT NULL, DEFAULT, inline single PK
+  (+ AUTOINCREMENT), composite PK, the schema's own unique sets (`Table.DeclaredUnique`,
+  not the ones added for Prisma), CHECKs, indexes, then foreign keys: inline on SQLite,
+  ALTER TABLE ADD CONSTRAINT elsewhere (order and cycles never matter). Round-trip
+  conformance test: run the DDL on a fresh database, introspect, compare whole schemas
+  (only the database name and SQLite's positional FK names may differ). Fixtures gained
+  CHECKs with a quoted literal (MySQL escaping round-trips).
+
 ## Next 3 steps
 
-1. B6b: SQL DDL export renderer, round-trip tested per dialect (fresh DB, introspect,
-   compare); B6c: canvas inspector DDL from the server, remove lib/ddl.ts.
+1. B6c: canvas inspector DDL from the server, remove lib/ddl.ts.
 2. B7: DBML (@dbml/core check).
 3. B8: Mermaid ER (confirm the parser runs in Node first).
 
@@ -363,6 +372,9 @@ None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
+- SQL DDL leaves out what is not introspected: MySQL charset/collation and ON UPDATE
+  CURRENT_TIMESTAMP, generated columns, comments, views, triggers, non-serial sequences;
+  composite primary keys follow column order, not key order; tables are unqualified.
 - Partial and expression indexes are not introspected, so exports (and the B6 DDL) leave
   them out; index sort order (DESC) and collations are not kept either.
 - Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as

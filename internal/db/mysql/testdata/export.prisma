@@ -48,9 +48,10 @@ model offices {
 }
 
 model order_items {
-  id         Int    @id @default(autoincrement())
-  unit_price Float? @map("unit price") @db.Float
+  id         Int     @id @default(autoincrement())
+  unit_price Float?  @map("unit price") @db.Float
   qty        Int
+  note       String? @db.VarChar(20)
 
   @@map("order items")
 }

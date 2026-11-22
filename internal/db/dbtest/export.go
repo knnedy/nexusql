@@ -2,13 +2,19 @@ package dbtest
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/export"
+	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
 var updateGolden = flag.Bool("update", false, "rewrite export golden files in testdata/")
@@ -41,6 +47,67 @@ func testExport(t *testing.T, h Harness) {
 	m := export.Build(schema, dialect)
 	golden(t, "testdata/export.prisma", export.Prisma(m))
 	golden(t, "testdata/export.ts", export.Drizzle(m))
+	ddl := export.SQL(m)
+	golden(t, "testdata/export.sql", ddl)
+
+	t.Run("the SQL export recreates the schema", func(t *testing.T) {
+		fresh := h.Open(t)
+		for _, s := range sqlscan.Split(ddl, fresh.Syntax()) {
+			mustExec(t, fresh, s.Text)
+		}
+		again, err := fresh.IntrospectSchema(context.Background(), fresh.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, got := comparable(schema, dialect), comparable(again, dialect)
+		if !reflect.DeepEqual(want, got) {
+			w, _ := json.MarshalIndent(want, "", "  ")
+			g, _ := json.MarshalIndent(got, "", "  ")
+			t.Fatalf("schema after running the export differs\n%s", lineDiff(string(w), string(g)))
+		}
+	})
+}
+
+// comparable drops what a recreated schema may legitimately change: the
+// database it is in, and SQLite's foreign key names, made up from position.
+func comparable(s *db.Schema, dialect db.Exporter) *db.Schema {
+	c := *s
+	c.Tables = slices.Clone(s.Tables)
+	for i := range c.Tables {
+		c.Tables[i].Schema = ""
+	}
+	c.Relations = slices.Clone(s.Relations)
+	if dialect.SQL().InlineForeignKeys {
+		for i := range c.Relations {
+			c.Relations[i].ConstraintName = ""
+		}
+	}
+	slices.SortFunc(c.Relations, func(a, b db.Relation) int {
+		return strings.Compare(a.SourceTable+"."+strings.Join(a.SourceFields, ","), b.SourceTable+"."+strings.Join(b.SourceFields, ","))
+	})
+	return &c
+}
+
+// lineDiff lists the lines of want and got that differ, by position.
+func lineDiff(want, got string) string {
+	w, g := strings.Split(want, "\n"), strings.Split(got, "\n")
+	var out []string
+	for i := range max(len(w), len(g)) {
+		var a, b string
+		if i < len(w) {
+			a = w[i]
+		}
+		if i < len(g) {
+			b = g[i]
+		}
+		if a != b {
+			out = append(out, fmt.Sprintf("line %d:\n  want %s\n  got  %s", i+1, a, b))
+		}
+		if len(out) == 12 {
+			break
+		}
+	}
+	return strings.Join(out, "\n")
 }
 
 func golden(t *testing.T, path, got string) {

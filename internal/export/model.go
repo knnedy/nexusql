@@ -30,14 +30,17 @@ type EnumValue struct {
 }
 
 type Table struct {
-	Name      string // database name
-	Ident     string
-	Fields    []*Field
-	PK        []*Field // in column order
-	Out, In   []*Relation
-	Unique    [][]*Field // unique column sets other than the primary key
-	Indexes   []Index
-	identUsed map[string]bool
+	Name    string // database name
+	Ident   string
+	Fields  []*Field
+	PK      []*Field // in column order
+	Out, In []*Relation
+	Unique  [][]*Field // unique column sets other than the primary key
+	// DeclaredUnique are the schema's own sets; Unique adds those keys reference.
+	DeclaredUnique [][]*Field
+	Indexes        []Index
+	Checks         []db.Check
+	identUsed      map[string]bool
 }
 
 type Field struct {
@@ -102,8 +105,10 @@ func Build(schema *db.Schema, dialect db.Exporter) *Model {
 			}
 			if !slices.Contains(set, nil) && !sameSet(set, tb.PK) && !tb.hasUnique(set) {
 				tb.Unique = append(tb.Unique, set)
+				tb.DeclaredUnique = append(tb.DeclaredUnique, set)
 			}
 		}
+		tb.Checks = t.Checks
 		for _, ix := range t.Indexes {
 			var fs []*Field
 			for _, c := range ix.Columns {

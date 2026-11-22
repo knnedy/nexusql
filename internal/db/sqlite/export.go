@@ -81,3 +81,9 @@ func (exporter) Default(f db.Field) db.Default {
 	}
 	return db.ParseDefault(*f.DefaultValue)
 }
+
+func (exporter) SQL() db.SQLDialect { return db.SQLDialect{Quote: '"', InlineForeignKeys: true} }
+
+// SQLColumnType keeps the declared type: it sets the column's affinity, and
+// INTEGER PRIMARY KEY makes the rowid alias.
+func (exporter) SQLColumnType(f db.Field) (string, bool) { return f.NativeType, true }

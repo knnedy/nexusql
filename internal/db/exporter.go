@@ -22,6 +22,22 @@ type Exporter interface {
 	PrismaType(f Field) (scalar, native string)
 	// Default classifies the field's default expression.
 	Default(f Field) Default
+	// SQL describes how the dialect writes DDL.
+	SQL() SQLDialect
+	// SQLColumnType is the column's DDL type with any generation clause (serial,
+	// identity, AUTO_INCREMENT); keepDefault is false when that clause replaces the default.
+	SQLColumnType(f Field) (typ string, keepDefault bool)
+}
+
+// SQLDialect describes one dialect's DDL.
+type SQLDialect struct {
+	Quote byte // identifier quote: '"' or '`'
+	// InlineForeignKeys: foreign keys go in CREATE TABLE (SQLite cannot add them
+	// later); otherwise they are added by ALTER TABLE once every table exists.
+	InlineForeignKeys bool
+	EnumTypes         bool // enums are CREATE TYPE ... AS ENUM
+	// PKNotNull: primary key columns are NOT NULL without saying so.
+	PKNotNull bool
 }
 
 // DrizzleDialect describes one drizzle-orm dialect module.

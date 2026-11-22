@@ -36,6 +36,7 @@ export const order_items = pgTable('order items', {
   id: serial('id').primaryKey(),
   unit_price: real('unit price'),
   qty: integer('qty').notNull(),
+  note: varchar('note', { length: 20 }),
 });
 
 export const post_tags = pgTable('post_tags', {
