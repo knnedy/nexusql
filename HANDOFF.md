@@ -541,9 +541,14 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   Dropped @tisoap/react-flow-smart-edge (no code imported it). Screenshots v12 vs v13
   match in both themes with the OS set opposite to the app.
 
+- D17a feat(export): the Mermaid drawer warns when the diagram passes Mermaid's default
+  limits (maxTextSize 50,000 chars, maxEdges 500; high confidence these are Mermaid's
+  defaults) and points to the canvas PNG or DBML. Counts -- and .. relationship lines.
+  vitest at the drawer seam; five mutants all killed.
+
 ## Next 3 steps
 
-1. D17: large schemas (visible-only render, ELK in a worker) + Mermaid size warning.
+1. D17b: large schemas (visible-only render, ELK in a worker).
 2. D18: readable layout for many tables (see plan); then STOP for group D.
 3. E19: CALL/FETCH show their rows.
 

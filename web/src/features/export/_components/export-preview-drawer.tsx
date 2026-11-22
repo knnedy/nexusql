@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { X, Copy, Check, Download, ImageIcon } from "lucide-react";
+import { X, Copy, Check, Download, ImageIcon, AlertTriangle } from "lucide-react";
 import { codeToHtml } from "shiki";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
@@ -12,6 +12,20 @@ import {
 } from "@/shared/hooks/use-export";
 import { studioSession } from "@/shared/lib/session-storage";
 import { FormatIcon, formatTint } from "./format-icon";
+
+// Mermaid's default maxTextSize and maxEdges: past either, renderers refuse the diagram.
+const MERMAID_MAX_TEXT = 50_000;
+const MERMAID_MAX_EDGES = 500;
+const MERMAID_RELATION = /^\s*\S+ \S*(?:--|\.\.)\S* \S+ : /;
+
+function mermaidTooLarge(text: string): boolean {
+  if (text.length > MERMAID_MAX_TEXT) return true;
+  let edges = 0;
+  for (const line of text.split("\n")) {
+    if (MERMAID_RELATION.test(line) && ++edges > MERMAID_MAX_EDGES) return true;
+  }
+  return false;
+}
 
 interface ExportPreviewDrawerProps {
   /** A server format id, or the canvas snapshot. */
@@ -185,7 +199,21 @@ export default function ExportPreviewDrawer({
             <div className="w-4 h-4 rounded-full border-2 border-teal border-t-transparent animate-spin" />
           </div>
         ) : (
-          <CodeBlock code={payload} lang={format?.language ?? "text"} />
+          <>
+            {type === "mermaid" && mermaidTooLarge(payload) && (
+              <div
+                role="note"
+                className="flex items-start gap-2.5 mx-4 mt-4 px-3 py-2.5 rounded-lg bg-coral/10 dark:bg-coral/15 border border-coral/20">
+                <AlertTriangle size={14} className="text-coral shrink-0 mt-px" aria-hidden />
+                <span className="text-[11.5px] leading-relaxed text-coral">
+                  This diagram is too large for most Mermaid renderers (over {MERMAID_MAX_EDGES}{" "}
+                  relationships or {MERMAID_MAX_TEXT.toLocaleString("en")} characters). Export the
+                  canvas as PNG, or use DBML, instead.
+                </span>
+              </div>
+            )}
+            <CodeBlock code={payload} lang={format?.language ?? "text"} />
+          </>
         )}
       </div>
     </div>
