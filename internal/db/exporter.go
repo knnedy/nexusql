@@ -63,6 +63,8 @@ type DrizzleDialect struct {
 type TypeORMColumn struct {
 	TS   string // the TypeScript type TypeORM hydrates it to; "" means unknown
 	Type string // a column type TypeORM accepts in place of the native one; "" keeps it
+	// Default is the SQL to hand TypeORM for an expression default; "" uses DefaultValue.
+	Default string
 }
 
 // DefaultKind classifies a column default for exporters.

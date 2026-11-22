@@ -5,6 +5,7 @@ package postgres_test
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,15 @@ import (
 
 func TestConformance(t *testing.T) {
 	dbtest.Run(t, dbtest.Harness{
+		URI: func(t *testing.T) string { return dbtest.PostgresDB(t) },
+		Connect: func(t *testing.T, uri string) db.Provider {
+			p, err := postgres.Connect(context.Background(), uri)
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			t.Cleanup(p.Close)
+			return p
+		},
 		Open: func(t *testing.T) db.Provider {
 			p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
 			if err != nil {
@@ -49,6 +59,19 @@ func TestConformance(t *testing.T) {
 			},
 		},
 		Export: dbtest.Export{
+			// TypeORM writes CURRENT_TIMESTAMP as now() and casts numeric defaults to
+			// the column type; both mean the same.
+			TypeORMLimits: func(want, _ *db.Schema) {
+				dbtest.EachField(want, func(t *db.Table, f *db.Field) {
+					switch {
+					case f.DefaultValue != nil && *f.DefaultValue == "CURRENT_TIMESTAMP":
+						*f.DefaultValue = "now()"
+					case f.DefaultValue != nil && f.NativeType == "smallint":
+						v := strings.Replace(*f.DefaultValue, "::integer", "::smallint", 1)
+						f.DefaultValue = &v
+					}
+				})
+			},
 			Setup: []string{
 				`CREATE TYPE task_status AS ENUM ('todo', 'in progress', 'done')`,
 				`CREATE TABLE users (id SERIAL PRIMARY KEY, email VARCHAR(255) NOT NULL UNIQUE, name TEXT,

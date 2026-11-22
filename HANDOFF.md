@@ -383,18 +383,34 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   - TypeORM 1 has no width/zerofill (dropped);
   - TypeORM writes string defaults as '${v}' unescaped on all drivers (read in source), so
     defaults containing a quote are emitted as raw SQL functions.
-  Known gap: a rowid alias without AUTOINCREMENT still maps to PrimaryGeneratedColumn,
-  which TypeORM's synchronize would create with AUTOINCREMENT. Check: tsc with decorators,
+  Check: tsc with decorators,
   DataSource.buildMetadatas on pg/mysql2 (no connection), full sync into sql.js for SQLite
   (typeorm 1.1.2, reflect-metadata 0.2.2, pg 8.23.1, mysql2 3.24.6, sql.js 1.15.2, exact).
 
 - refactor(export): SQL, DBML and Kysely writers append to their strings.Builder piece by
   piece instead of concatenating first (user's change; goldens unchanged).
 
+- fix(export): TypeORM round trip. `make export-check` now also runs
+  `TestConformance/Export` with `-exportcheck`: `tools/exportcheck/typeorm-sync.mjs`
+  compiles the entities and runs TypeORM's synchronize on a fresh database (Postgres and
+  MySQL containers, SQLite file via sql.js), which is introspected and compared with the
+  original (keyless tables dropped). Harness gained `URI`/`Connect`; `lineDiff` is now an
+  LCS diff. Fixed: MySQL tinyint(1) exports as TypeORM boolean (hydrates booleans);
+  defaults a JS number would reformat (1.50) are raw SQL; SQLite expression defaults go
+  without the outer parentheses (TypeORM writes DEFAULT (x)). Postgres recreates exactly
+  bar spelling. Each harness's `Export.TypeORMLimits` lists what TypeORM cannot create,
+  all confirmed in TypeORM 1.1.2's source:
+  - MySQL: no CHECK constraints ("MySql does not support check constraints"); booleans
+    as tinyint without (1) (no display widths, length rejected on boolean/tinyint).
+  - SQLite: AUTOINCREMENT on every generated key; int key becomes INTEGER (rowid);
+    key columns NOT NULL; lower-case types; char written as character; CHECK names.
+  - Postgres: CURRENT_TIMESTAMP spelled now(), smallint default cast.
+  CI export job now sets up Go.
+
 ## Next 3 steps
 
-1. B11: SQLAlchemy (venv, configure_mappers, CreateTable).
-2. B12: GORM (schema.Parse); then STOP and summarize group B.
+1. B12: GORM (schema.Parse) (user asked GORM before SQLAlchemy).
+2. B11: SQLAlchemy (needs python3-venv on the dev machine); then STOP, summarize group B.
 3. C13: react-table 9.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)

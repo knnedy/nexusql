@@ -114,6 +114,9 @@ var typeormTypes = map[string]bool{"int": true, "integer": true, "tinyint": true
 // TypeORM maps a declared type TypeORM rejects to one with the same affinity.
 func (exporter) TypeORM(f db.Field) db.TypeORMColumn {
 	c := db.TypeORMColumn{TS: typeormTS(f)}
+	if d := f.DefaultValue; d != nil && !sqliteLiteral.MatchString(strings.TrimSpace(*d)) {
+		c.Default = strings.TrimSuffix(strings.TrimPrefix(*d, "("), ")") // TypeORM writes DEFAULT (x)
+	}
 	base, args := db.TypeArgs(f.NativeType)
 	if typeormTypes[base] {
 		return c

@@ -201,7 +201,14 @@ func (exporter) KyselyType(f db.Field) string {
 
 // TypeORMType: TypeORM turns on mysql2's bigNumberStrings, so bigint and
 // decimal are strings; tinyint(1) stays a number, dates are strings.
-func (exporter) TypeORM(f db.Field) db.TypeORMColumn { return db.TypeORMColumn{TS: typeormTS(f)} }
+// TypeORM maps tinyint(1) to boolean, which hydrates booleans (it creates a
+// plain tinyint: TypeORM 1 has no display widths).
+func (exporter) TypeORM(f db.Field) db.TypeORMColumn {
+	if base, args := db.TypeArgs(f.NativeType); base == "tinyint" && len(args) == 1 && args[0] == "1" {
+		return db.TypeORMColumn{TS: "boolean", Type: "boolean"}
+	}
+	return db.TypeORMColumn{TS: typeormTS(f)}
+}
 
 func typeormTS(f db.Field) string {
 	switch f.Type {

@@ -103,13 +103,13 @@ export class Posts {
   @Column({ type: 'blob', nullable: true })
   body!: Buffer | null;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: 1.50 })
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, default: () => '1.50' })
   score!: number | null;
 
   @Column({ type: 'real', nullable: true })
   ratio!: number | null;
 
-  @Column({ type: 'text', nullable: true, default: () => '(datetime(\'now\'))' })
+  @Column({ type: 'text', nullable: true, default: () => 'datetime(\'now\')' })
   stamp!: string | null;
 
   @ManyToOne(() => Users, (t) => t.posts_editor)

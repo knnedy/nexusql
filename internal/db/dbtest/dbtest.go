@@ -27,6 +27,9 @@ type Harness struct {
 	Columns Columns
 	// Export is the schema whose exports are compared with testdata/.
 	Export Export
+	// URI names a fresh, empty database for outside tools; Connect opens one.
+	URI     func(t *testing.T) string
+	Connect func(t *testing.T, uri string) db.Provider
 }
 
 // Run executes every conformance test against the harness.

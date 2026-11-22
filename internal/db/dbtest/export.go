@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"slices"
@@ -17,7 +18,10 @@ import (
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
 
-var updateGolden = flag.Bool("update", false, "rewrite export golden files in testdata/")
+var (
+	updateGolden = flag.Bool("update", false, "rewrite export golden files in testdata/")
+	exportCheck  = flag.Bool("exportcheck", false, "also run exports through their tools (make export-check)")
+)
 
 // Export is a schema exercising every exported shape: two keys into one
 // table, a self-reference, text and composite primary keys, a join table, a
@@ -26,6 +30,18 @@ var updateGolden = flag.Bool("update", false, "rewrite export golden files in te
 // compared with testdata/export.*, which tools/exportcheck validates.
 type Export struct {
 	Setup []string
+	// TypeORMLimits rewrites the schema into what TypeORM's synchronize can create
+	// on the dialect; each change must be a documented TypeORM limitation.
+	TypeORMLimits func(want, got *db.Schema)
+}
+
+// EachField calls fn on every field of want, for TypeORMLimits.
+func EachField(s *db.Schema, fn func(t *db.Table, f *db.Field)) {
+	for i := range s.Tables {
+		for j := range s.Tables[i].Fields {
+			fn(&s.Tables[i], &s.Tables[i].Fields[j])
+		}
+	}
 }
 
 func testExport(t *testing.T, h Harness) {
@@ -63,20 +79,58 @@ func testExport(t *testing.T, h Harness) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		want, got := comparable(schema, dialect), comparable(again, dialect)
-		if !reflect.DeepEqual(want, got) {
-			w, _ := json.MarshalIndent(want, "", "  ")
-			g, _ := json.MarshalIndent(got, "", "  ")
-			t.Fatalf("schema after running the export differs\n%s", lineDiff(string(w), string(g)))
-		}
+		sameSchema(t, comparable(schema, dialect), comparable(again, dialect))
 	})
+
+	t.Run("TypeORM's synchronize recreates the schema", func(t *testing.T) {
+		if !*exportCheck || h.URI == nil {
+			t.Skip("runs under make export-check")
+		}
+		src := filepath.Join(t.TempDir(), "entities.ts")
+		if err := os.WriteFile(src, []byte(export.TypeORM(m)), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		uri := h.URI(t)
+		cmd := exec.Command("node", "../../../tools/exportcheck/typeorm-sync.mjs", string(p.Kind()), uri, src)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("typeorm-sync: %v\n%s", err, out)
+		}
+		fresh := h.Connect(t, uri)
+		again, err := fresh.IntrospectSchema(context.Background(), fresh.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, got := comparable(keyed(schema), dialect), comparable(again, dialect)
+		if h.Export.TypeORMLimits != nil {
+			h.Export.TypeORMLimits(want, got)
+		}
+		sameSchema(t, want, got)
+	})
+}
+
+func sameSchema(t *testing.T, want, got *db.Schema) {
+	t.Helper()
+	if !reflect.DeepEqual(want, got) {
+		w, _ := json.MarshalIndent(want, "", "  ")
+		g, _ := json.MarshalIndent(got, "", "  ")
+		t.Fatalf("recreated schema differs\n%s", lineDiff(string(w), string(g)))
+	}
+}
+
+// keyed drops tables without a primary key, which TypeORM cannot map.
+func keyed(s *db.Schema) *db.Schema {
+	c := *s
+	c.Tables = slices.DeleteFunc(deepTables(s.Tables), func(t db.Table) bool {
+		return !slices.ContainsFunc(t.Fields, func(f db.Field) bool { return f.IsPrimaryKey })
+	})
+	return &c
 }
 
 // comparable drops what a recreated schema may legitimately change: the
 // database it is in, and SQLite's foreign key names, made up from position.
 func comparable(s *db.Schema, dialect db.Exporter) *db.Schema {
 	c := *s
-	c.Tables = slices.Clone(s.Tables)
+	c.Tables = deepTables(s.Tables)
 	for i := range c.Tables {
 		c.Tables[i].Schema = ""
 	}
@@ -92,23 +146,54 @@ func comparable(s *db.Schema, dialect db.Exporter) *db.Schema {
 	return &c
 }
 
-// lineDiff lists the lines of want and got that differ, by position.
+// deepTables copies tables so a TypeORMLimits rewrite leaves the original alone.
+func deepTables(ts []db.Table) []db.Table {
+	out := slices.Clone(ts)
+	for i := range out {
+		out[i].Fields = slices.Clone(out[i].Fields)
+		out[i].Checks = slices.Clone(out[i].Checks)
+	}
+	return out
+}
+
+// lineDiff lists the lines only want (-) or only got (+) has, by longest
+// common subsequence, each with the nearest preceding "name" for context.
 func lineDiff(want, got string) string {
 	w, g := strings.Split(want, "\n"), strings.Split(got, "\n")
+	lcs := make([][]int, len(w)+1)
+	for i := range lcs {
+		lcs[i] = make([]int, len(g)+1)
+	}
+	for i := len(w) - 1; i >= 0; i-- {
+		for j := len(g) - 1; j >= 0; j-- {
+			if w[i] == g[j] {
+				lcs[i][j] = lcs[i+1][j+1] + 1
+			} else {
+				lcs[i][j] = max(lcs[i+1][j], lcs[i][j+1])
+			}
+		}
+	}
 	var out []string
-	for i := range max(len(w), len(g)) {
-		var a, b string
-		if i < len(w) {
-			a = w[i]
+	name := ""
+	note := func(sign, line string) {
+		if len(out) < 150 {
+			out = append(out, fmt.Sprintf("%s %-40s (near %s)", sign, strings.TrimSpace(line), name))
 		}
-		if i < len(g) {
-			b = g[i]
-		}
-		if a != b {
-			out = append(out, fmt.Sprintf("line %d:\n  want %s\n  got  %s", i+1, a, b))
-		}
-		if len(out) == 12 {
-			break
+	}
+	i, j := 0, 0
+	for i < len(w) || j < len(g) {
+		switch {
+		case i < len(w) && j < len(g) && w[i] == g[j]:
+			if s := strings.TrimSpace(w[i]); strings.HasPrefix(s, `"name"`) {
+				name = s
+			}
+			i, j = i+1, j+1
+		case j < len(g) && (i == len(w) || lcs[i][j+1] >= lcs[i+1][j]):
+			note("+", g[j])
+			j++
+		default:
+			note("-", w[i])
+			i++
 		}
 	}
 	return strings.Join(out, "\n")

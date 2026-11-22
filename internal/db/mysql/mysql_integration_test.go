@@ -13,6 +13,15 @@ import (
 
 func TestConformance(t *testing.T) {
 	dbtest.Run(t, dbtest.Harness{
+		URI: func(t *testing.T) string { return dbtest.MySQLDB(t) },
+		Connect: func(t *testing.T, uri string) db.Provider {
+			p, err := mysql.Connect(context.Background(), uri)
+			if err != nil {
+				t.Fatalf("connect: %v", err)
+			}
+			t.Cleanup(p.Close)
+			return p
+		},
 		Open: func(t *testing.T) db.Provider {
 			p, err := mysql.Connect(context.Background(), dbtest.MySQLDB(t))
 			if err != nil {
@@ -52,6 +61,18 @@ func TestConformance(t *testing.T) {
 			},
 		},
 		Export: dbtest.Export{
+			// TypeORM refuses CHECKs on MySQL ("MySql does not support check constraints",
+			// enforced since 8.0.16) and creates booleans as tinyint without the (1).
+			TypeORMLimits: func(want, _ *db.Schema) {
+				for i := range want.Tables {
+					want.Tables[i].Checks = nil
+				}
+				dbtest.EachField(want, func(_ *db.Table, f *db.Field) {
+					if f.NativeType == "tinyint(1)" {
+						f.NativeType, f.Type = "tinyint", db.FieldTypeSmallint
+					}
+				})
+			},
 			Setup: []string{
 				`CREATE TABLE users (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255) NOT NULL UNIQUE, name TEXT,
 					created_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3), joined TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,

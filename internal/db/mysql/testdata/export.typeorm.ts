@@ -175,8 +175,8 @@ export class Users {
   @Column({ type: 'timestamp', nullable: true, default: () => 'CURRENT_TIMESTAMP' })
   joined!: Date | null;
 
-  @Column({ type: 'tinyint', default: 1 })
-  active!: number;
+  @Column({ type: 'boolean', default: true })
+  active!: boolean;
 
   @Column({ type: 'json', nullable: true })
   settings!: unknown;
