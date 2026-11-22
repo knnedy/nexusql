@@ -37,10 +37,12 @@ Table "order items" {
   "unit price" real
   qty integer [not null]
   "note" "character varying(20)"
+  tag "character varying(20)" [default: 'at :noon']
 
   Checks {
     `((note)::text <> 'it''s'::text)` [name: 'note_set']
     `(qty > 0)` [name: 'order items_qty_check']
+    `((tag)::text <> ':x'::text)` [name: 'tag_set']
   }
 }
 

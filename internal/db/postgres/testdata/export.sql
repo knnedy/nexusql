@@ -30,8 +30,10 @@ CREATE TABLE "order items" (
   "unit price" real,
   "qty" integer NOT NULL,
   "note" character varying(20),
+  "tag" character varying(20) DEFAULT 'at :noon'::character varying,
   CONSTRAINT "note_set" CHECK (((note)::text <> 'it''s'::text)),
-  CONSTRAINT "order items_qty_check" CHECK ((qty > 0))
+  CONSTRAINT "order items_qty_check" CHECK ((qty > 0)),
+  CONSTRAINT "tag_set" CHECK (((tag)::text <> ':x'::text))
 );
 
 CREATE TABLE "post_tags" (

@@ -31,6 +31,7 @@ export const order_items = sqliteTable('order items', {
   id: integer('id').primaryKey(),
   unit_price: real('unit price'),
   qty: integer('qty').notNull(),
+  tag: text('tag').default('at :noon'),
 });
 
 export const post_tags = sqliteTable('post_tags', {

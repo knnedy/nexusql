@@ -52,8 +52,9 @@ func (Offices) TableName() string { return "offices" }
 type OrderItems struct {
 	ID        int32    `gorm:"column:id;type:integer;primaryKey;autoIncrement;not null;check:note_set,((note)::text <> 'it''s'::text)"`
 	UnitPrice *float32 `gorm:"column:unit price;type:real;check:(qty > 0)"`
-	Qty       int32    `gorm:"column:qty;type:integer;not null"`
+	Qty       int32    `gorm:"column:qty;type:integer;not null;check:tag_set,((tag)::text <> ':x'::text)"`
 	Note      *string  `gorm:"column:note;type:character varying(20)"`
+	Tag       *string  `gorm:"column:tag;type:character varying(20);default:('at :noon'::character varying)"`
 }
 
 func (OrderItems) TableName() string { return "order items" }

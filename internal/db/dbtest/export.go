@@ -29,7 +29,8 @@ var (
 // Export is a schema exercising every exported shape: two keys into one
 // table, a self-reference, text and composite primary keys, a join table, a
 // composite foreign key, a key referencing a unique column, a table without
-// a key, a name that is not an identifier, enums and defaults. The output is
+// a key, a name that is not an identifier, enums and defaults (one with a
+// colon text() would read as a parameter). The output is
 // compared with testdata/export.*, which tools/exportcheck validates.
 type Export struct {
 	Setup []string

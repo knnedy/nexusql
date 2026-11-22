@@ -105,7 +105,7 @@ func TestConformance(t *testing.T) {
 					FOREIGN KEY (country, code) REFERENCES regions (country, code) ON DELETE CASCADE ON UPDATE CASCADE)`,
 				`CREATE TABLE invites (id INT AUTO_INCREMENT PRIMARY KEY, email VARCHAR(255),
 					FOREIGN KEY (email) REFERENCES users (email) ON DELETE SET NULL)`,
-				"CREATE TABLE `order items` (id INT AUTO_INCREMENT PRIMARY KEY, `unit price` FLOAT, qty INT NOT NULL CHECK (qty > 0), note VARCHAR(20), CONSTRAINT note_set CHECK (note <> 'it''s'))",
+				"CREATE TABLE `order items` (id INT AUTO_INCREMENT PRIMARY KEY, `unit price` FLOAT, qty INT NOT NULL CHECK (qty > 0), note VARCHAR(20), tag VARCHAR(20) DEFAULT 'at :noon', CONSTRAINT note_set CHECK (note <> 'it''s'), CONSTRAINT tag_set CHECK (tag <> ':x'))",
 				`CREATE TABLE audit_log (at DATETIME, msg TEXT)`,
 			},
 		},

@@ -86,12 +86,14 @@ class OrderItems(Base):
     __table_args__ = (
         CheckConstraint(text('(`note` <> _utf8mb4\'it\\\'s\')'), name='note_set'),
         CheckConstraint(text('(`qty` > 0)'), name='order items_chk_1'),
+        CheckConstraint(text('(`tag` <> _utf8mb4\'\\:x\')'), name='tag_set'),
     )
 
     id: Mapped[int] = mapped_column(mysql.INTEGER(), primary_key=True, nullable=False)
     unit_price: Mapped[Optional[float]] = mapped_column('unit price', mysql.FLOAT())
     qty: Mapped[int] = mapped_column(mysql.INTEGER())
     note: Mapped[Optional[str]] = mapped_column(VARCHAR(20))
+    tag: Mapped[Optional[str]] = mapped_column(VARCHAR(20), server_default=text('\'at \\:noon\''))
 
 
 class PostTags(Base):

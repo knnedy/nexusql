@@ -30,6 +30,11 @@ Table "order items" {
   id INTEGER [pk, increment]
   "unit price" REAL
   qty INTEGER [not null]
+  tag VARCHAR(20) [default: 'at :noon']
+
+  Checks {
+    `tag <> ':x'` [name: 'tag_set']
+  }
 }
 
 Table post_tags {

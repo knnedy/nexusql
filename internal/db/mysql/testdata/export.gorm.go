@@ -49,8 +49,9 @@ func (Offices) TableName() string { return "offices" }
 type OrderItems struct {
 	ID        int32    "gorm:\"column:id;type:int ;primaryKey;autoIncrement;not null;check:note_set,(`note` <> _utf8mb4'it\\\\'s')\""
 	UnitPrice *float32 "gorm:\"column:unit price;type:float ;check:(`qty` > 0)\""
-	Qty       int32    `gorm:"column:qty;type:int ;not null"`
+	Qty       int32    "gorm:\"column:qty;type:int ;not null;check:tag_set,(`tag` <> _utf8mb4':x')\""
 	Note      *string  `gorm:"column:note;type:varchar(20)"`
+	Tag       *string  `gorm:"column:tag;type:varchar(20);default:at :noon"`
 }
 
 func (OrderItems) TableName() string { return "order items" }

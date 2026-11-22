@@ -26,6 +26,7 @@ export interface OrderItems {
   id: Generated<number>;
   'unit price': number | null;
   qty: number;
+  tag: Generated<string | null>;
 }
 
 export interface PostTags {

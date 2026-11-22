@@ -56,6 +56,7 @@ export class Offices {
 @Entity({ name: 'order items' })
 @Check('note_set', '((note)::text <> \'it\'\'s\'::text)')
 @Check('order items_qty_check', '(qty > 0)')
+@Check('tag_set', '((tag)::text <> \':x\'::text)')
 export class OrderItems {
   @PrimaryGeneratedColumn('increment', { type: 'integer' })
   id!: number;
@@ -68,6 +69,9 @@ export class OrderItems {
 
   @Column({ type: 'character varying', length: 20, nullable: true })
   note!: string | null;
+
+  @Column({ type: 'character varying', length: 20, nullable: true, default: 'at :noon' })
+  tag!: string | null;
 }
 
 @Entity({ name: 'post_tags' })

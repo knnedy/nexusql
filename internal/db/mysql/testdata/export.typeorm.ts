@@ -58,6 +58,7 @@ export class Offices {
 @Entity({ name: 'order items' })
 @Check('note_set', '(`note` <> _utf8mb4\'it\\\'s\')')
 @Check('order items_chk_1', '(`qty` > 0)')
+@Check('tag_set', '(`tag` <> _utf8mb4\':x\')')
 export class OrderItems {
   @PrimaryGeneratedColumn('increment', { type: 'int' })
   id!: number;
@@ -70,6 +71,9 @@ export class OrderItems {
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   note!: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, default: 'at :noon' })
+  tag!: string | null;
 }
 
 @Entity({ name: 'post_tags' })

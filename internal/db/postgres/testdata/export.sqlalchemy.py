@@ -89,12 +89,14 @@ class OrderItems(Base):
     __table_args__ = (
         CheckConstraint(text('((note)::text <> \'it\'\'s\'::text)'), name='note_set'),
         CheckConstraint(text('(qty > 0)'), name='order items_qty_check'),
+        CheckConstraint(text('((tag)::text <> \'\\:x\'::text)'), name='tag_set'),
     )
 
     id: Mapped[int] = mapped_column(INTEGER(), primary_key=True, nullable=False)
     unit_price: Mapped[Optional[float]] = mapped_column('unit price', REAL())
     qty: Mapped[int] = mapped_column(INTEGER())
     note: Mapped[Optional[str]] = mapped_column(VARCHAR(20))
+    tag: Mapped[Optional[str]] = mapped_column(VARCHAR(20), server_default=text('\'at \\:noon\'::character varying'))
 
 
 class PostTags(Base):

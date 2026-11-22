@@ -445,8 +445,11 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   compiler). Checked by `tools/sqlacheck` (venv in tools/sqlacheck/.venv, made by
   `make export-check`; SQLAlchemy 2.0.57, psycopg 3.3.8, PyMySQL 1.2.3): import,
   configure_mappers, create_all on a fresh database, compare. All three dialects
-  recreate the schema with no limits. Not covered by the fixture: colon escaping in
-  text() (no default or check with :word).
+  recreate the schema with no limits.
+
+- test(export): the export fixture's `order items` gains `tag DEFAULT 'at :noon'` and
+  `CHECK (tag <> ':x')` on every dialect, so all goldens cover a colon text() reads as a
+  parameter. Without escaping, SQLAlchemy silently writes 'at NULL' (mutation-checked).
 
 ## Next 3 steps
 

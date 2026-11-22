@@ -29,7 +29,9 @@ CREATE TABLE "offices" (
 CREATE TABLE "order items" (
   "id" INTEGER PRIMARY KEY,
   "unit price" REAL,
-  "qty" INTEGER NOT NULL
+  "qty" INTEGER NOT NULL,
+  "tag" VARCHAR(20) DEFAULT 'at :noon',
+  CONSTRAINT "tag_set" CHECK (tag <> ':x')
 );
 
 CREATE TABLE "post_tags" (

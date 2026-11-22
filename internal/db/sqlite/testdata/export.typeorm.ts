@@ -52,6 +52,7 @@ export class Offices {
 }
 
 @Entity({ name: 'order items' })
+@Check('tag_set', 'tag <> \':x\'')
 export class OrderItems {
   @PrimaryGeneratedColumn('increment', { type: 'integer' })
   id!: number;
@@ -61,6 +62,9 @@ export class OrderItems {
 
   @Column({ type: 'integer' })
   qty!: number;
+
+  @Column({ type: 'varchar', length: 20, nullable: true, default: 'at :noon' })
+  tag!: string | null;
 }
 
 @Entity({ name: 'post_tags' })

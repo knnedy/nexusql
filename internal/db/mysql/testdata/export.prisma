@@ -52,6 +52,7 @@ model order_items {
   unit_price Float?  @map("unit price") @db.Float
   qty        Int
   note       String? @db.VarChar(20)
+  tag        String? @default("at :noon") @db.VarChar(20)
 
   @@map("order items")
 }

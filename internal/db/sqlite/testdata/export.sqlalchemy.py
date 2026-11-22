@@ -90,10 +90,14 @@ class Offices(Base):
 
 class OrderItems(Base):
     __tablename__ = 'order items'
+    __table_args__ = (
+        CheckConstraint(text('tag <> \'\\:x\''), name='tag_set'),
+    )
 
     id: Mapped[int] = mapped_column(INTEGER(), primary_key=True, nullable=False)
     unit_price: Mapped[Optional[float]] = mapped_column('unit price', REAL())
     qty: Mapped[int] = mapped_column(INTEGER())
+    tag: Mapped[Optional[str]] = mapped_column(VARCHAR(20), server_default=text('\'at \\:noon\''))
 
 
 class PostTags(Base):

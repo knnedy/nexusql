@@ -101,7 +101,7 @@ func TestConformance(t *testing.T) {
 				`CREATE TABLE offices (id INT PRIMARY KEY, country CHAR(2) NOT NULL, code VARCHAR(10) NOT NULL,
 					FOREIGN KEY (country, code) REFERENCES regions (country, code) ON DELETE CASCADE ON UPDATE CASCADE)`,
 				`CREATE TABLE invites (id INTEGER PRIMARY KEY AUTOINCREMENT, email VARCHAR(255) REFERENCES users (email) ON DELETE SET NULL)`,
-				`CREATE TABLE "order items" (id INTEGER PRIMARY KEY, "unit price" REAL, qty INTEGER NOT NULL)`,
+				`CREATE TABLE "order items" (id INTEGER PRIMARY KEY, "unit price" REAL, qty INTEGER NOT NULL, tag VARCHAR(20) DEFAULT 'at :noon', CONSTRAINT tag_set CHECK (tag <> ':x'))`,
 				`CREATE TABLE audit_log (at TEXT, msg TEXT)`,
 			},
 		},

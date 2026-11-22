@@ -38,6 +38,7 @@ export const order_items = mysqlTable('order items', {
   unit_price: float('unit price'),
   qty: int('qty').notNull(),
   note: varchar('note', { length: 20 }),
+  tag: varchar('tag', { length: 20 }).default('at :noon'),
 });
 
 export const post_tags = mysqlTable('post_tags', {

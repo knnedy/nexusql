@@ -40,6 +40,7 @@ export interface OrderItems {
   'unit price': number | null;
   qty: number;
   note: string | null;
+  tag: Generated<string | null>;
 }
 
 export interface PostTags {

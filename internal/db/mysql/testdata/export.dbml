@@ -45,10 +45,12 @@ Table "order items" {
   "unit price" float
   qty int [not null]
   "note" varchar(20)
+  tag varchar(20) [default: 'at :noon']
 
   Checks {
     `(note <> _utf8mb4'it\'s')` [name: 'note_set']
     `(qty > 0)` [name: 'order items_chk_1']
+    `(tag <> _utf8mb4':x')` [name: 'tag_set']
   }
 }
 

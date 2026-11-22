@@ -38,9 +38,10 @@ model offices {
 }
 
 model order_items {
-  id         Int    @id @default(autoincrement())
-  unit_price Float? @map("unit price")
+  id         Int     @id @default(autoincrement())
+  unit_price Float?  @map("unit price")
   qty        Int
+  tag        String? @default("at :noon")
 
   @@map("order items")
 }

@@ -28,8 +28,10 @@ CREATE TABLE `order items` (
   `unit price` float,
   `qty` int NOT NULL,
   `note` varchar(20),
+  `tag` varchar(20) DEFAULT 'at :noon',
   CONSTRAINT `note_set` CHECK ((`note` <> _utf8mb4'it\'s')),
-  CONSTRAINT `order items_chk_1` CHECK ((`qty` > 0))
+  CONSTRAINT `order items_chk_1` CHECK ((`qty` > 0)),
+  CONSTRAINT `tag_set` CHECK ((`tag` <> _utf8mb4':x'))
 );
 
 CREATE TABLE `post_tags` (
