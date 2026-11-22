@@ -21,3 +21,5 @@ web/out
 # Env
 .env
 .env.local
+# written by next dev for AI coding agents; re-created on every run
+web/AGENTS.md
