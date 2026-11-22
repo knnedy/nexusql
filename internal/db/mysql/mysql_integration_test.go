@@ -63,6 +63,16 @@ func TestConformance(t *testing.T) {
 		Export: dbtest.Export{
 			// TypeORM refuses CHECKs on MySQL ("MySql does not support check constraints",
 			// enforced since 8.0.16) and creates booleans as tinyint without the (1).
+			// GORM trims quotes at either end of a string default, so such defaults go
+			// as expressions.
+			GORMLimits: func(want, _ *db.Schema) {
+				dbtest.EachField(want, func(t *db.Table, f *db.Field) {
+					if t.Name == "posts" && f.Name == "title" {
+						v := `(_utf8mb4\'it\\\'s "new"\')`
+						f.DefaultValue = &v
+					}
+				})
+			},
 			TypeORMLimits: func(want, _ *db.Schema) {
 				for i := range want.Tables {
 					want.Tables[i].Checks = nil

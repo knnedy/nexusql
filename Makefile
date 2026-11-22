@@ -40,7 +40,7 @@ e2e: build
 	cd web && pnpm e2e
 
 # Validates the export golden files with the real tools, then recreates the
-# TypeORM export with TypeORM's synchronize on each dialect (needs Docker).
+# TypeORM and GORM exports with their own migrators on each dialect (needs Docker).
 export-check:
 	cd tools/exportcheck && pnpm install --frozen-lockfile && pnpm check
 	go test -tags integration -count=1 -run TestConformance/Export \

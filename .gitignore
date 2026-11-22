@@ -13,6 +13,7 @@ tmp/
 web/node_modules
 tools/exportcheck/node_modules
 tools/exportcheck/out
+tools/gormcheck/out
 web/.next
 web/out
 

@@ -18,13 +18,17 @@ checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and
   (round-trip: run on a fresh DB, introspect, compare; replaces canvas lib/ddl.ts);
   7 DBML (@dbml/core); 8 Mermaid ER (parser in Node, medium confidence); 9 Kysely
   (Database interface, tsc; user: keep it, too popular to drop); 10 TypeORM (tsc);
-  11 SQLAlchemy 2.0 (venv, configure_mappers, CreateTable); 12 GORM (schema.Parse).
+  11 SQLAlchemy 2.0 (venv, configure_mappers, CreateTable); 12 GORM (compiled, AutoMigrate
+  round trip). Order changed by the user: TypeORM round trip, then 12, then 11.
   JPA/EF Core later (JDK/.NET in CI); Django has inspectdb; Rails/Laravel models list no
   columns.
 - C. Explorer: 13 react-table 9; 14 column filters (typed, validated, parameterized);
   15 keyset paging when sorted by a key, count in its own request.
 - D. Canvas: 16 xyflow 13 + smart-edge 5; 17 large schemas (visible-only render, ELK in a
-  worker, no smart edges above a threshold).
+  worker, no smart edges above a threshold). Also in 17: the export drawer warns when a
+  Mermaid diagram exceeds mermaid's limits (50,000 characters or 500 relationships, per
+  mermaid 12.3.0's maxTextSize/maxEdges), since GitHub and other viewers then show an
+  error; it suggests the canvas PNG or DBML instead.
 - E. 18 CALL/FETCH show rows; 19 explicit "create new SQLite database", else mode=rw.
 - F. 20 eslint 10 if eslint-config-next supports it, else record why.
 
@@ -407,10 +411,31 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   - Postgres: CURRENT_TIMESTAMP spelled now(), smallint default cast.
   CI export job now sets up Go.
 
+- feat(export): B12 GORM (`export.GORM`, format `gorm`, models.go, gofmt'd via go/format).
+  One struct per table with column tags (column, verbatim type, primaryKey, autoIncrement,
+  not null, default, unique/uniqueIndex/index with priority, one check per field since
+  GORM keeps one), belongs-to pointers and has-many slices, TableName methods, enums as
+  string types with constants, and `Models()` in parents-first order for AutoMigrate.
+  Checked by `tools/gormcheck` (own module: gorm v1.31.2, driver/postgres v1.6.3,
+  driver/mysql v1.6.0, driver/sqlite v1.6.0 cgo; never in the root module or binary):
+  the export test writes out/<dialect>/ and runs AutoMigrate on a fresh database, then
+  compares. All three dialects recreate the schema. `Exporter.GORM` per dialect: PG and
+  SQLite defaults in parentheses (GORM trims and requotes others), PG identity via the
+  driver's `generated:identity [always]` (autoIncrement means serial; a type would be
+  copied onto foreign keys), SQLite AUTOINCREMENT as the full column type, MySQL literal
+  defaults as values (parentheses make expression defaults). Found with the round trip:
+  GORM tries has-one before belongs-to, so a belongs-to whose key fields are named like
+  the target's fields is left out (comment points to the has-many side); type names GORM
+  treats as its own (int, time, ...) get a trailing space; tags with backticks use an
+  interpreted string literal. GORM limits: foreign key names are GORM's own; CHECK names
+  other than [\w-]+ become chk_<table>_<field>; Postgres enum types must exist first (the
+  file header lists the CREATE TYPE statements); on MySQL a string default with a quote
+  at either end becomes an expression default.
+
 ## Next 3 steps
 
-1. B12: GORM (schema.Parse) (user asked GORM before SQLAlchemy).
-2. B11: SQLAlchemy (needs python3-venv on the dev machine); then STOP, summarize group B.
+1. B11: SQLAlchemy (needs python3-venv on the dev machine).
+2. STOP and summarize group B.
 3. C13: react-table 9.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)

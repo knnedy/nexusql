@@ -167,3 +167,13 @@ func typeormTS(f db.Field) string {
 	}
 	return "string"
 }
+
+// GORM: SQLite drops one layer of parentheses from a stored default; AUTOINCREMENT
+// needs the whole column constraint, which stops GORM adding its own PRIMARY KEY.
+func (exporter) GORM(f db.Field) db.GORMColumn {
+	c := db.GORMParenDefault(f)
+	if f.Monotonic {
+		c.Type = "INTEGER PRIMARY KEY AUTOINCREMENT"
+	}
+	return c
+}

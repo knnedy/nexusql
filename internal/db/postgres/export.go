@@ -249,3 +249,16 @@ func typeormTS(f db.Field) string {
 	}
 	return ""
 }
+
+// GORM: Postgres stores ('todo') as 'todo', so every default goes in parentheses;
+// identity uses the driver's generated tag, as autoIncrement means serial.
+func (exporter) GORM(f db.Field) db.GORMColumn {
+	c := db.GORMParenDefault(f)
+	switch f.Identity {
+	case db.IdentityByDefault:
+		c.Settings = []string{"generated:identity"}
+	case db.IdentityAlways:
+		c.Settings = []string{"generated:identity always"}
+	}
+	return c
+}

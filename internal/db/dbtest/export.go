@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -17,6 +18,8 @@ import (
 	"github.com/knnedy/nexusql/internal/export"
 	"github.com/knnedy/nexusql/internal/sqlscan"
 )
+
+var gormCheckName = regexp.MustCompile(`^[\w-]+$`)
 
 var (
 	updateGolden = flag.Bool("update", false, "rewrite export golden files in testdata/")
@@ -33,6 +36,19 @@ type Export struct {
 	// TypeORMLimits rewrites the schema into what TypeORM's synchronize can create
 	// on the dialect; each change must be a documented TypeORM limitation.
 	TypeORMLimits func(want, got *db.Schema)
+	// GORMLimits does the same for GORM's AutoMigrate.
+	GORMLimits func(want, got *db.Schema)
+}
+
+// ClearCheckNames blanks CHECK names in each schema, for tools that make them up.
+func ClearCheckNames(schemas ...*db.Schema) {
+	for _, s := range schemas {
+		for i := range s.Tables {
+			for j := range s.Tables[i].Checks {
+				s.Tables[i].Checks[j].Name = ""
+			}
+		}
+	}
 }
 
 // EachField calls fn on every field of want, for TypeORMLimits.
@@ -65,6 +81,7 @@ func testExport(t *testing.T, h Harness) {
 	golden(t, "testdata/export.ts", export.Drizzle(m))
 	golden(t, "testdata/export.kysely.ts", export.Kysely(m))
 	golden(t, "testdata/export.typeorm.ts", export.TypeORM(m))
+	golden(t, "testdata/export.gorm.go", export.GORM(m))
 	golden(t, "testdata/export.dbml", export.DBML(m))
 	golden(t, "testdata/export.mmd", export.Mermaid(m))
 	ddl := export.SQL(m)
@@ -106,10 +123,71 @@ func testExport(t *testing.T, h Harness) {
 		}
 		sameSchema(t, want, got)
 	})
+
+	t.Run("GORM's AutoMigrate recreates the schema", func(t *testing.T) {
+		if !*exportCheck || h.URI == nil {
+			t.Skip("runs under make export-check")
+		}
+		kind := string(p.Kind())
+		dir := filepath.Join("../../../tools/gormcheck/out", kind)
+		if err := os.RemoveAll(dir); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(filepath.Join(dir, "models"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		mainGo := "package main\n\nimport (\n\t\"gormcheck\"\n\t\"gormcheck/out/" + kind + "/models\"\n)\n\nfunc main() { gormcheck.Main(models.Models()...) }\n"
+		for path, src := range map[string]string{"main.go": mainGo, "models/models.go": export.GORM(m)} {
+			if err := os.WriteFile(filepath.Join(dir, path), []byte(src), 0o644); err != nil {
+				t.Fatal(err)
+			}
+		}
+		uri := h.URI(t)
+		fresh := h.Connect(t, uri)
+		// AutoMigrate cannot create enum types; the export lists them for this.
+		for _, s := range sqlscan.Split(ddl, fresh.Syntax()) {
+			if strings.Contains(s.Text, "CREATE TYPE ") && !strings.Contains(s.Text, "CREATE TABLE") {
+				mustExec(t, fresh, s.Text)
+			}
+		}
+		cmd := exec.Command("go", "run", "./out/"+kind, kind, uri)
+		cmd.Dir = "../../../tools/gormcheck"
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("gormcheck: %v\n%s", err, out)
+		}
+		again, err := fresh.IntrospectSchema(context.Background(), fresh.DefaultSchema())
+		if err != nil {
+			t.Fatal(err)
+		}
+		want, got := comparable(schema, dialect), comparable(again, dialect)
+		// GORM names foreign keys itself (fk_<owner>_<field>), with no tag to set them,
+		// and reads a CHECK name other than [\w-]+ as expression: it becomes chk_<table>_<field>.
+		for _, s := range []*db.Schema{want, got} {
+			for i := range s.Relations {
+				s.Relations[i].ConstraintName = ""
+			}
+		}
+		for i, tb := range want.Tables {
+			for j, c := range tb.Checks {
+				if !gormCheckName.MatchString(c.Name) {
+					want.Tables[i].Checks[j].Name = "chk_" + tb.Name + "_" + tb.Fields[j].Name
+				}
+			}
+		}
+		if h.Export.GORMLimits != nil {
+			h.Export.GORMLimits(want, got)
+		}
+		sameSchema(t, want, got)
+	})
 }
 
 func sameSchema(t *testing.T, want, got *db.Schema) {
 	t.Helper()
+	for _, s := range []*db.Schema{want, got} {
+		for i := range s.Tables {
+			slices.SortFunc(s.Tables[i].Checks, func(a, b db.Check) int { return strings.Compare(a.Name, b.Name) })
+		}
+	}
 	if !reflect.DeepEqual(want, got) {
 		w, _ := json.MarshalIndent(want, "", "  ")
 		g, _ := json.MarshalIndent(got, "", "  ")

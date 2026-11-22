@@ -80,13 +80,7 @@ func TestConformance(t *testing.T) {
 					}
 				})
 				dbtest.EachField(got, func(_ *db.Table, f *db.Field) { f.NativeType = strings.ToLower(f.NativeType) })
-				for _, s := range []*db.Schema{want, got} {
-					for i := range s.Tables {
-						for j := range s.Tables[i].Checks {
-							s.Tables[i].Checks[j].Name = ""
-						}
-					}
-				}
+				dbtest.ClearCheckNames(want, got)
 			},
 			Setup: []string{
 				`CREATE TABLE users (id INTEGER PRIMARY KEY, email VARCHAR(255) NOT NULL UNIQUE, name TEXT,
