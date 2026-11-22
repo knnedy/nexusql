@@ -451,6 +451,9 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   `CHECK (tag <> ':x')` on every dialect, so all goldens cover a colon text() reads as a
   parameter. Without escaping, SQLAlchemy silently writes 'at NULL' (mutation-checked).
 
+- docs(readme): what test-integration, e2e and export-check need beyond Go/Node/pnpm
+  (Docker, Playwright Chromium, cgo compiler, python3-venv); none of it ships.
+
 ## Next 3 steps
 
 1. STOP and summarize group B (done: B5-B12 plus the TypeORM round trip).

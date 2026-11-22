@@ -146,6 +146,14 @@ make check     # everything CI runs (vet, test, Go build, web typecheck/lint/bui
 make clean     # remove build artifacts (web/out, web/.next, bin, internal/ui/dist)
 ```
 
+Building and running NexusQL needs only Go, Node and pnpm. The checks behind some targets need more on the development machine; none of it ships in the binary:
+
+| Target | Also needs |
+| --- | --- |
+| `make test-integration` | Docker (Postgres and MySQL run in containers) |
+| `make e2e` | Playwright's Chromium (`pnpm exec playwright install chromium` in `web/`) |
+| `make export-check` | Docker; a C compiler for cgo (GORM's SQLite driver); Python 3 with `venv` (on Debian/Ubuntu: `sudo apt install python3-venv`). Its Node, Go and Python tools install into `tools/` on first run. |
+
 See [CONTRIBUTING.md](CONTRIBUTING.md#project-structure) for the project layout.
 
 ---
