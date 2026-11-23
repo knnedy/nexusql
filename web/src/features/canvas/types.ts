@@ -7,6 +7,8 @@ export interface TableNodeData extends Record<string, unknown> {
   isSelected: boolean;
   /** Columns some foreign key references; each gets a target handle. */
   referenced: string[];
+  /** FK columns whose lines are hidden behind a chip, to the hub table they reference. */
+  hubRefs?: Record<string, string>;
 }
 
 export interface RelationEdgeData extends Record<string, unknown> {
@@ -15,4 +17,6 @@ export interface RelationEdgeData extends Record<string, unknown> {
   targetY?: number;
   /** ELK's orthogonal route, from source handle to target handle. */
   points?: { x: number; y: number }[];
+  /** Into a hub table: left out of the layout, drawn only while either end is in focus. */
+  hub?: boolean;
 }

@@ -96,7 +96,26 @@ function referencedFields(relations: SchemaResponse["relations"]): Map<string, S
   return out;
 }
 
-function buildElkGraph(schema: SchemaResponse): {
+// Hubs only in larger schemas: lines from everywhere into one table cross everything.
+const HUB_MIN_TABLES = 40;
+const HUB_MIN_REFS = 10;
+const HUB_SHARE = 0.05;
+
+/** Tables so widely referenced that their incoming lines are shown as chips instead. */
+export function findHubs(schema: SchemaResponse): Set<string> {
+  const tables = schema?.tables?.length ?? 0;
+  if (tables < HUB_MIN_TABLES) return new Set();
+  const threshold = Math.max(HUB_MIN_REFS, Math.ceil(tables * HUB_SHARE));
+  const referrers = new Map<string, Set<string>>();
+  for (const r of schema.relations ?? []) {
+    if (r.sourceTable === r.targetTable) continue;
+    if (!referrers.has(r.targetTable)) referrers.set(r.targetTable, new Set());
+    referrers.get(r.targetTable)!.add(r.sourceTable);
+  }
+  return new Set([...referrers].filter(([, from]) => from.size >= threshold).map(([t]) => t));
+}
+
+function buildElkGraph(schema: SchemaResponse, hubs: Set<string>): {
   elkGraph: ElkNode;
   rfEdges: Edge<RelationEdgeData>[];
 } {
@@ -112,7 +131,9 @@ function buildElkGraph(schema: SchemaResponse): {
     layoutOptions: { "elk.portConstraints": "FIXED_POS" },
   }));
 
-  const elkEdges: ElkExtendedEdge[] = safeRelations.map((relation) => ({
+  const isHub = (r: SchemaResponse["relations"][number]) =>
+    hubs.has(r.targetTable) && r.sourceTable !== r.targetTable;
+  const elkEdges: ElkExtendedEdge[] = safeRelations.filter((r) => !isHub(r)).map((relation) => ({
     id: relation.constraintName,
     sources: [`${relation.sourceTable}__${relation.sourceField}__source`],
     targets: [`${relation.targetTable}__${relation.targetField}__target`],
@@ -125,7 +146,7 @@ function buildElkGraph(schema: SchemaResponse): {
     sourceHandle: `${relation.sourceTable}__${relation.sourceField}__source`,
     targetHandle: `${relation.targetTable}__${relation.targetField}__target`,
     type: "relationEdge",
-    data: { relation },
+    data: { relation, hub: isHub(relation) || undefined },
   }));
 
   return {
@@ -144,7 +165,15 @@ export async function buildCanvasGraph(
   provider: DatabaseProvider,
 ): Promise<{ nodes: Node<TableNodeData>[]; edges: Edge<RelationEdgeData>[] }> {
   try {
-    const { elkGraph, rfEdges } = buildElkGraph(schema);
+    const hubs = findHubs(schema);
+    const { elkGraph, rfEdges } = buildElkGraph(schema, hubs);
+    const hubRefs = new Map<string, Record<string, string>>();
+    for (const e of rfEdges) {
+      if (!e.data?.hub) continue;
+      const refs = hubRefs.get(e.source) ?? {};
+      refs[e.data.relation.sourceField] = e.target;
+      hubRefs.set(e.source, refs);
+    }
     const layouted = await (await getElk()).layout(elkGraph);
 
     // Build a port position lookup from ELK's output
@@ -180,6 +209,7 @@ export async function buildCanvasGraph(
             provider,
             isSelected: false,
             referenced: [...(referenced.get(table.name) ?? [])].sort(),
+            hubRefs: hubRefs.get(table.name),
           },
         };
       })

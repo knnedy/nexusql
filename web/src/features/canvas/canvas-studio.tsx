@@ -39,6 +39,7 @@ import { Relation, Table } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { SeedDataModal } from "@/features/seed";
 import { studioSession } from "@/shared/lib/session-storage";
+import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode };
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
@@ -86,6 +87,9 @@ function CanvasInner() {
   const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
+  const setHovered = useCanvasFocus((s) => s.setHovered);
+  const setFocusSelected = useCanvasFocus((s) => s.setSelected);
+  useEffect(() => () => useCanvasFocus.getState().reset(), []);
 
   const provider = useSyncExternalStore<DatabaseProvider>(
     emptySubscribe,
@@ -107,13 +111,14 @@ function CanvasInner() {
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TableNodeData>) => {
       setSelectedRelation(null);
+      setFocusSelected(node.id);
       setSelectedTable({
         table: node.data.table,
         provider: node.data.provider,
       });
       setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
     },
-    [setEdges],
+    [setEdges, setFocusSelected],
   );
 
   const handleEdgeClick = useCallback(
@@ -128,7 +133,8 @@ function CanvasInner() {
   const handlePaneClick = useCallback(() => {
     setSelectedTable(null);
     setSelectedRelation(null);
-  }, []);
+    setFocusSelected(null);
+  }, [setFocusSelected]);
 
   const handleLayoutApply = useCallback(
     (laid: Node<TableNodeData>[], routed: Edge<RelationEdgeData>[]) => {
@@ -282,6 +288,8 @@ function CanvasInner() {
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
+          onNodeMouseEnter={(_, node) => setHovered(node.id)}
+          onNodeMouseLeave={() => setHovered(null)}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}

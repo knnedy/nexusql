@@ -575,6 +575,15 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   the chip jumps to the hub; layout ignores those edges. Plus focus: hover/select dims
   unrelated edges. Only for larger schemas (threshold scales with size).
 
+- D18b feat(canvas): hub relations as chips + focus. findHubs: schema >= 40 tables and
+  >= max(10, 5% of tables) distinct referrers (self-references ignored). Hub edges leave
+  the ELK graph (data.hub, no route); the FK row shows "-> users" (HubChip: centres the
+  hub, keeps it in focus). lib/focus-store.ts (zustand): hovered ?? selected; edges in
+  focus full opacity/2px, others 0.12; hub lines only while either end is in focus
+  (smooth-step, no route). Crossings 2085 -> under 521 at 150, 18992 -> under 4748 at
+  400 (asserted < 1/4); measured ~306 / ~1890. Six layout mutants and four UI mutants
+  killed (e2e/canvas.spec.ts hub test).
+
 ## Resume here (D18)
 
 - Goal (user 2026-11-23): many tables laid out so nothing overlaps, edges route around
@@ -593,8 +602,8 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 ## Next 3 steps
 
-1. D18b: hub chips + focus mode (see the decision above); assert crossings well
-   below the D18a numbers; e2e for hover line and chip jump.
+1. D18c: min zoom 0.02 so the first view fits a 400-table schema (e2e red at 0.05:
+   353/400 on screen). Then the group D summary.
 2. STOP: group D summary to the user.
 3. E19: CALL/FETCH show their rows.
 

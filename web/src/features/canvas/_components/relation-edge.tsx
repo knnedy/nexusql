@@ -10,9 +10,12 @@ import {
 } from "@xyflow/react";
 import { RelationEdgeData } from "@/features/canvas/types";
 import { routedPath } from "@/features/canvas/lib/edge-path";
+import { useEdgeFocus } from "@/features/canvas/lib/focus-store";
 
 function RelationEdge({
   id,
+  source,
+  target,
   sourceX,
   sourceY,
   targetX,
@@ -23,6 +26,7 @@ function RelationEdge({
   data,
 }: EdgeProps<Edge<RelationEdgeData>>) {
   const [hovered, setHovered] = useState(false);
+  const focus = useEdgeFocus(source, target);
 
   // ELK's route avoids tables; a dragged table falls back to a direct step until re-layout.
   const routed = routedPath(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }, 12);
@@ -39,8 +43,11 @@ function RelationEdge({
         offset: 40,
       });
 
-  // Use your direct accent variables to ensure the active edge line pops out
-  const strokeColor = selected ? "var(--coral)" : "var(--edge-color)";
+  // Lines into a hub table stay hidden behind its chip unless either end is in focus.
+  if (data?.hub && focus !== "on") return null;
+
+  const strokeColor = selected ? "var(--coral)" : focus === "on" ? "var(--teal)" : "var(--edge-color)";
+  const opacity = selected || focus === "on" ? 1 : focus === "off" ? 0.12 : 0.7;
   const showLabel = (hovered || selected) && data?.relation.constraintName;
 
   return (
@@ -55,6 +62,8 @@ function RelationEdge({
         onMouseLeave={() => setHovered(false)}
         className="cursor-pointer"
         data-routed={routed ? "true" : "false"}
+        data-focus={focus}
+        data-hub={data?.hub ? "" : undefined}
       />
 
       <BaseEdge
@@ -62,10 +71,9 @@ function RelationEdge({
         path={edgePath}
         style={{
           stroke: strokeColor,
-          strokeWidth: selected ? 2.5 : 1.5, // Thicker stroke lines for visibility
-          opacity: selected ? 1 : 0.7,
-          transition:
-            "stroke 0.15s ease, stroke-width 0.15s ease, opacity 0.15s ease",
+          strokeWidth: selected ? 2.5 : focus === "on" ? 2 : 1.5,
+          opacity,
+          transition: "stroke 100ms ease, stroke-width 100ms ease, opacity 100ms ease",
         }}
       />
 

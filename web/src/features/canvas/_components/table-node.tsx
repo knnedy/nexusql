@@ -1,7 +1,14 @@
 "use client";
 
 import { memo } from "react";
-import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import {
+  Handle,
+  Position,
+  useReactFlow,
+  type NodeProps,
+  type Node,
+} from "@xyflow/react";
+import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 import {
   getNodeHeight,
   NODE_HEADER,
@@ -47,15 +54,44 @@ function KeyBadge({ kind }: { kind: "PK" | "FK" }) {
   );
 }
 
+// Stands in for the line to a hub table; jumps there and keeps it in focus.
+function HubChip({ target }: { target: string }) {
+  const { getNode, getZoom, setCenter } = useReactFlow();
+  return (
+    <button
+      type="button"
+      aria-label={`Go to ${target}`}
+      title={`Go to ${target}`}
+      onClick={(e) => {
+        e.stopPropagation();
+        const node = getNode(target);
+        if (!node) return;
+        const w = node.measured?.width ?? NODE_WIDTH;
+        const h = node.measured?.height ?? 0;
+        useCanvasFocus.getState().setSelected(target);
+        setCenter(node.position.x + w / 2, node.position.y + h / 2, {
+          zoom: Math.max(getZoom(), 0.6),
+          duration: 300,
+        });
+      }}
+      className="nodrag nopan inline-flex items-center gap-0.5 max-w-24 rounded-md px-1.5 py-0.5 text-[9px] font-bold font-mono tracking-wide shrink-0 border cursor-pointer bg-badge-teal-bg/15 text-badge-teal-text border-badge-teal-text/10 dark:bg-badge-teal-bg/20 dark:text-teal dark:border-teal/20 hover:bg-badge-teal-bg/30 transition-[transform,background-color] duration-150 ease-out active:scale-[0.97]">
+      <span aria-hidden>→</span>
+      <span className="truncate">{target}</span>
+    </button>
+  );
+}
+
 // Individual field row
 function FieldRow({
   field,
   tableId,
   referenced,
+  hubTarget,
 }: {
   field: Field;
   tableId: string;
   referenced: boolean;
+  hubTarget?: string;
 }) {
   const handleId = `${tableId}__${field.name}`;
   const isKey = field.isPrimaryKey || field.isForeignKey;
@@ -95,7 +131,11 @@ function FieldRow({
       <div className="flex items-center gap-1.5 shrink-0">
         <TypeBadge type={field.type} />
         {field.isPrimaryKey && <KeyBadge kind="PK" />}
-        {field.isForeignKey && <KeyBadge kind="FK" />}
+        {hubTarget ? (
+          <HubChip target={hubTarget} />
+        ) : (
+          field.isForeignKey && <KeyBadge kind="FK" />
+        )}
       </div>
     </div>
   );
@@ -159,6 +199,7 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
             field={field}
             tableId={table.name}
             referenced={data.referenced?.includes(field.name) ?? false}
+            hubTarget={data.hubRefs?.[field.name]}
           />
         ))}
       </div>

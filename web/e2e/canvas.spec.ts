@@ -39,3 +39,42 @@ test("edges follow the layout's routes, and a dragged table falls back until re-
   await page.getByRole("button", { name: /Auto-layout/ }).click();
   await expect(page.locator('[data-routed="true"]')).toHaveCount(6);
 });
+
+// Forty tables that all reference users (a hub), and every odd one its neighbour.
+const HUB = [
+  "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT)",
+  ...Array.from({ length: 40 }, (_, i) =>
+    `CREATE TABLE a${i} (id INTEGER PRIMARY KEY, user_id INTEGER REFERENCES users (id)` +
+    (i % 2 ? `, prev_id INTEGER REFERENCES a${i - 1} (id))` : ")"),
+  ),
+].join(";\n");
+
+test("lines into a hub table show as chips until either end is in focus", async ({ page }) => {
+  await connectSqlite(page, HUB);
+  await page.reload();
+  const a1 = page.locator('.react-flow__node[data-id="a1"]');
+  await expect(a1).toBeVisible();
+  await expect(page.locator("[data-hub]")).toHaveCount(0);
+  await expect(a1.getByRole("button", { name: "Go to users" })).toBeVisible();
+
+  // Focus a1: its hub line appears, its own edges light up, the rest dim.
+  await a1.hover();
+  await expect(page.locator("[data-hub]")).toHaveCount(1);
+  await expect(page.locator('[data-focus="on"]')).toHaveCount(2);
+  await expect(page.locator('[data-focus="off"]').first()).toBeAttached();
+
+  await page.mouse.move(5, 700);
+  await expect(page.locator("[data-hub]")).toHaveCount(0);
+  await expect(page.locator('[data-focus="on"]')).toHaveCount(0);
+
+  // The chip jumps to users and keeps it in focus, so its lines show.
+  await a1.getByRole("button", { name: "Go to users" }).click();
+  await page.mouse.move(5, 700);
+  const users = page.locator('.react-flow__node[data-id="users"]');
+  await expect.poll(async () => {
+    const b = await users.boundingBox();
+    const v = page.viewportSize()!;
+    return !!b && Math.abs(b.x + b.width / 2 - v.width / 2) < 40 && Math.abs(b.y + b.height / 2 - v.height / 2) < 40;
+  }).toBe(true);
+  await expect.poll(() => page.locator("[data-hub]").count()).toBeGreaterThan(0);
+});
