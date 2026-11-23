@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { connectSqlite } from "./helpers";
+import { generateSchema } from "../src/test/schema-gen";
 
 test("draws a key that references a unique column", async ({ page }) => {
   await connectSqlite(page, `CREATE TABLE skus (id INTEGER PRIMARY KEY, code TEXT UNIQUE);
@@ -77,4 +78,28 @@ test("lines into a hub table show as chips until either end is in focus", async 
     return !!b && Math.abs(b.x + b.width / 2 - v.width / 2) < 40 && Math.abs(b.y + b.height / 2 - v.height / 2) < 40;
   }).toBe(true);
   await expect.poll(() => page.locator("[data-hub]").count()).toBeGreaterThan(0);
+});
+
+test("the first view fits every table of a large schema", async ({ page }) => {
+  // The 400-table generated schema: modules, hubs and lone tables.
+  const { tables, relations } = generateSchema(400);
+  const sql = tables.map((t) => {
+    const cols = t.fields.map((f) => {
+      const r = relations.find((x) => x.sourceTable === t.name && x.sourceField === f.name);
+      const ref = r ? ` REFERENCES ${r.targetTable} (${r.targetField})` : "";
+      return `${f.name} ${f.isPrimaryKey ? "INTEGER PRIMARY KEY" : f.nativeType.toUpperCase()}${ref}`;
+    });
+    return `CREATE TABLE ${t.name} (${cols.join(", ")})`;
+  });
+  await connectSqlite(page, sql.join(";\n"));
+  await page.reload();
+  await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 20_000 });
+  const pane = (await page.locator(".react-flow").boundingBox())!;
+  await expect.poll(async () => {
+    const boxes = await page.locator(".react-flow__node").evaluateAll((els) =>
+      els.map((e) => e.getBoundingClientRect()).map((r) => [r.left, r.top, r.right, r.bottom]),
+    );
+    const inside = boxes.filter(([l, t, r, b]) => l >= pane.x - 1 && t >= pane.y - 1 && r <= pane.x + pane.width + 1 && b <= pane.y + pane.height + 1);
+    return [boxes.length, inside.length];
+  }).toEqual([400, 400]);
 });

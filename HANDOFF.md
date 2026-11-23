@@ -8,8 +8,8 @@ commit.
 ## Current stage
 
 Stage 3 (approved 2026-11-22), on `feat/stage-3`, pushed to origin at `ae94c59`
-(2026-11-24). Groups A, B, C done and summarized. Group D: D16, D17 done; D18 next, then
-the group D summary. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+(2026-11-24). Groups A, B, C done and summarized. Group D done (D16-D18); summary given
+2026-11-24. Next: group E, after the user agrees. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -584,6 +584,13 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   400 (asserted < 1/4); measured ~306 / ~1890. Six layout mutants and four UI mutants
   killed (e2e/canvas.spec.ts hub test).
 
+- D18c feat(canvas): min zoom 0.2 -> 0.02 so the first view fits a 400-table schema
+  (needs ~0.028; e2e red at 0.2 and 0.05, 353/400 on screen). Declaring node
+  width/height was tried and not needed. Trade-off: panning the fitted 400-table
+  overview renders everything (~75-130 ms main thread per step, noisy); hiding row text
+  below 0.35 zoom gave no measurable gain and was reverted. The random hub-heavy harness
+  schema still lays out as a tall strip; the modular fixture is near-square.
+
 ## Resume here (D18)
 
 - Goal (user 2026-11-23): many tables laid out so nothing overlaps, edges route around
@@ -602,10 +609,9 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 ## Next 3 steps
 
-1. D18c: min zoom 0.02 so the first view fits a 400-table schema (e2e red at 0.05:
-   353/400 on screen). Then the group D summary.
-2. STOP: group D summary to the user.
-3. E19: CALL/FETCH show their rows.
+1. STOP: group D summary to the user (D done). Ask before group E.
+2. E19: CALL/FETCH show their rows.
+3. E20: explicit "create new SQLite database", else mode=rw.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

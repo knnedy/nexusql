@@ -299,7 +299,7 @@ function CanvasInner() {
           fitViewOptions={{ padding: "14%", includeHiddenNodes: false }}
           forceColorMode={resolvedTheme === "light" ? "light" : "dark"} // follow the app theme, not the OS
           onlyRenderVisibleElements
-          minZoom={0.2}
+          minZoom={0.02} // low enough that the first view fits a few hundred tables
           maxZoom={2}
           proOptions={{ hideAttribution: true }}>
           <Background
