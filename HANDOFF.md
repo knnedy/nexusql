@@ -561,6 +561,20 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   PKs). Ports and target handles now exist for every referenced column. Found while
   starting D18. vitest (buildCanvasGraph) + e2e/canvas.spec.ts; both halves mutation-checked.
 
+- D18a feat(canvas): edges follow ELK's orthogonal routes (lib/edge-path.ts: rounded
+  bends, label at half length; falls back to smooth step when a dragged table's handles
+  leave the route). Ports are FIXED_POS, zero-size, at the handle centres; table nodes
+  render at exactly getNodeHeight (border always 1px, header 44, rows 34, pad 4; select
+  no longer scales or drops the border). Auto-layout now also replaces the edges.
+  Measured (vitest, src/test/layout-metrics.ts on the modular generator): edge segments
+  under a table 70/667/1547 -> 0 at 30/150/400 tables, overlaps 0. Crossings 79/2085/
+  18992 (modular fixture), about 90% from hub edges (next step). Relayout-edges mutant is
+  equivalent (deterministic layout restores the same routes); others killed.
+- D18 decision (user 2026-11-24): relations into heavily referenced tables become a chip
+  on the FK row ("-> users"); their line shows on hover/select of either table; clicking
+  the chip jumps to the hub; layout ignores those edges. Plus focus: hover/select dims
+  unrelated edges. Only for larger schemas (threshold scales with size).
+
 ## Resume here (D18)
 
 - Goal (user 2026-11-23): many tables laid out so nothing overlaps, edges route around
@@ -579,8 +593,8 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 ## Next 3 steps
 
-1. D18: readable layout for many tables (see plan). Start with the vitest layout
-   metric (overlaps, edges through tables, crossings, time) and record today's baseline.
+1. D18b: hub chips + focus mode (see the decision above); assert crossings well
+   below the D18a numbers; e2e for hover line and chip jump.
 2. STOP: group D summary to the user.
 3. E19: CALL/FETCH show their rows.
 

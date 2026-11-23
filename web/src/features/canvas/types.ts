@@ -13,4 +13,6 @@ export interface RelationEdgeData extends Record<string, unknown> {
   relation: Relation;
   sourceY?: number;
   targetY?: number;
+  /** ELK's orthogonal route, from source handle to target handle. */
+  points?: { x: number; y: number }[];
 }

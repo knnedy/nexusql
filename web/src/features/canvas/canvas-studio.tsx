@@ -131,8 +131,11 @@ function CanvasInner() {
   }, []);
 
   const handleLayoutApply = useCallback(
-    (laid: Node<TableNodeData>[]) => setNodes(laid),
-    [setNodes],
+    (laid: Node<TableNodeData>[], routed: Edge<RelationEdgeData>[]) => {
+      setNodes(laid);
+      setEdges(routed);
+    },
+    [setNodes, setEdges],
   );
 
   const handleGeneratePng = useCallback(async () => {

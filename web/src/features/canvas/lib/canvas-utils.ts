@@ -8,12 +8,20 @@ import { SchemaResponse } from "@/shared/types/schema";
 import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { DatabaseProvider } from "@/shared/types/provider";
 
-const NODE_WIDTH = 260;
-const NODE_HEIGHT_BASE = 44;
-const NODE_HEIGHT_PER_ROW = 34;
+// The table node renders at exactly these sizes, so layout and handles agree.
+export const NODE_WIDTH = 260;
+export const NODE_BORDER = 1;
+export const NODE_HEADER = 44;
+export const NODE_ROW = 34;
+export const NODE_PAD_BOTTOM = 4;
 
 export function getNodeHeight(fieldCount: number): number {
-  return NODE_HEIGHT_BASE + (fieldCount || 0) * NODE_HEIGHT_PER_ROW;
+  return 2 * NODE_BORDER + NODE_HEADER + (fieldCount || 0) * NODE_ROW + NODE_PAD_BOTTOM;
+}
+
+/** A field's handle centre, from the node's top edge. */
+export function handleOffsetY(index: number): number {
+  return NODE_BORDER + NODE_HEADER + index * NODE_ROW + NODE_ROW / 2;
 }
 
 const ELK_LAYOUT_OPTIONS = {
@@ -23,7 +31,7 @@ const ELK_LAYOUT_OPTIONS = {
   "elk.spacing.nodeNode": "80",
   "elk.edgeRouting": "ORTHOGONAL",
   "elk.layered.nodePlacement.strategy": "SIMPLE",
-  "elk.portConstraints": "FIXED_SIDE",
+  "elk.portConstraints": "FIXED_POS",
 };
 
 let elk: Promise<ElkApi> | null = null;
@@ -48,8 +56,7 @@ function buildPorts(
 ) {
   const safeFields = fields || [];
   return safeFields.flatMap((field, index) => {
-    const topOffset =
-      NODE_HEIGHT_BASE + index * NODE_HEIGHT_PER_ROW + NODE_HEIGHT_PER_ROW / 2;
+    const topOffset = handleOffsetY(index);
     const ports = [];
 
     // A key may reference any unique column, not only the primary key.
@@ -59,8 +66,8 @@ function buildPorts(
         layoutOptions: { "port.side": "WEST" },
         y: topOffset,
         x: 0,
-        width: 8,
-        height: 8,
+        width: 0,
+        height: 0,
       });
     }
 
@@ -70,8 +77,8 @@ function buildPorts(
         layoutOptions: { "port.side": "EAST" },
         y: topOffset,
         x: NODE_WIDTH,
-        width: 8,
-        height: 8,
+        width: 0,
+        height: 0,
       });
     }
 
@@ -102,7 +109,7 @@ function buildElkGraph(schema: SchemaResponse): {
     width: NODE_WIDTH,
     height: getNodeHeight(table.fields?.length || 0),
     ports: buildPorts(table.fields, table.name, referenced.get(table.name) ?? new Set()),
-    layoutOptions: { portConstraints: "FIXED_SIDE" },
+    layoutOptions: { "elk.portConstraints": "FIXED_POS" },
   }));
 
   const elkEdges: ElkExtendedEdge[] = safeRelations.map((relation) => ({
@@ -178,6 +185,14 @@ export async function buildCanvasGraph(
       })
       .filter((node): node is Node<TableNodeData> => node !== null);
 
+    const routes = new Map(
+      (layouted.edges ?? []).map((e) => {
+        const sec = (e as ElkExtendedEdge).sections?.[0];
+        const pts = sec ? [sec.startPoint, ...(sec.bendPoints ?? []), sec.endPoint] : undefined;
+        return [e.id, pts?.map(({ x, y }) => ({ x, y }))] as const;
+      }),
+    );
+
     const edges: Edge<RelationEdgeData>[] = rfEdges.map((edge) => {
       const sourcePos = portPositions.get(edge.sourceHandle ?? "");
       const targetPos = portPositions.get(edge.targetHandle ?? "");
@@ -187,6 +202,7 @@ export async function buildCanvasGraph(
           ...edge.data!,
           sourceY: sourcePos?.y,
           targetY: targetPos?.y,
+          points: routes.get(edge.id),
         },
       };
     });
@@ -208,4 +224,4 @@ export async function reapplyLayout(
   return buildCanvasGraph(schema, provider);
 }
 
-export { NODE_WIDTH };
+

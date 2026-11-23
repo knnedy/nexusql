@@ -1,6 +1,7 @@
-import { expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildCanvasGraph } from "./canvas-utils";
 import { generateSchema } from "@/test/schema-gen";
+import { measureLayout } from "@/test/layout-metrics";
 
 it("lays out a key that references a unique, non-primary column", async () => {
   const s = generateSchema(3);
@@ -20,4 +21,15 @@ it("lays out a key that references a unique, non-primary column", async () => {
   expect(nodes.map((n) => n.id).sort()).toEqual(["t0", "t1", "t2"]);
   expect(edges.find((e) => e.id === "t2_code_fkey")?.targetHandle).toBe("t0__code__target");
   expect(nodes.find((n) => n.id === "t0")?.data.referenced).toEqual(["code", "id"]);
+});
+
+describe.each([30, 150, 400])("a %i-table schema", (n) => {
+  it("keeps tables apart and every edge out from under them", async () => {
+    const { nodes, edges } = await buildCanvasGraph(generateSchema(n), "postgres");
+    expect(nodes).toHaveLength(n);
+    expect(edges.every((e) => (e.data?.points?.length ?? 0) >= 2)).toBe(true);
+    const m = measureLayout(nodes, edges);
+    expect(m.overlaps).toBe(0);
+    expect(m.through).toBe(0);
+  }, 30_000);
 });

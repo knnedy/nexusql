@@ -21,8 +21,8 @@ import {
 } from "@/shared/hooks/use-export";
 import { reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { useSchema } from "@/shared/hooks/use-schema";
-import type { Node } from "@xyflow/react";
-import { TableNodeData } from "@/features/canvas/types";
+import type { Edge, Node } from "@xyflow/react";
+import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { studioSession } from "@/shared/lib/session-storage";
 import { FormatIcon, formatTint } from "@/features/export";
@@ -30,7 +30,7 @@ import { FormatIcon, formatTint } from "@/features/export";
 interface CanvasSidebarProps {
   open: boolean;
   onClose: () => void;
-  onLayoutApply: (nodes: Node<TableNodeData>[]) => void;
+  onLayoutApply: (nodes: Node<TableNodeData>[], edges: Edge<RelationEdgeData>[]) => void;
   onSelectExport: (type: string | null) => void;
   activeExport: string | null;
   onOpenMirror?: () => void;
@@ -140,8 +140,8 @@ export default function CanvasSidebar({
 
   const handleAutoLayout = useCallback(async () => {
     if (!schema) return;
-    const { nodes } = await reapplyLayout(schema, provider);
-    onLayoutApply(nodes);
+    const { nodes, edges } = await reapplyLayout(schema, provider);
+    onLayoutApply(nodes, edges);
   }, [schema, provider, onLayoutApply]);
 
   return (

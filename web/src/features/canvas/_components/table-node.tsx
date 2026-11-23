@@ -2,7 +2,13 @@
 
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
-import { NODE_WIDTH } from "@/features/canvas/lib/canvas-utils";
+import {
+  getNodeHeight,
+  NODE_HEADER,
+  NODE_PAD_BOTTOM,
+  NODE_ROW,
+  NODE_WIDTH,
+} from "@/features/canvas/lib/canvas-utils";
 import { Field, FIELD_TYPE_BADGE_MAP } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { TableNodeData } from "@/features/canvas/types";
@@ -55,7 +61,9 @@ function FieldRow({
   const isKey = field.isPrimaryKey || field.isForeignKey;
 
   return (
-    <div className="relative flex items-center gap-3 px-3.5 py-2 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors group">
+    <div
+      style={{ height: NODE_ROW }}
+      className="relative flex items-center gap-3 px-3.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors group">
       {(field.isPrimaryKey || referenced) && (
         <Handle
           type="target"
@@ -123,14 +131,17 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
   return (
     <div
       className={[
-        "rounded-xl overflow-hidden transition-[box-shadow,scale] duration-50",
+        // Exact size and a constant border: the layout routes edges to these rows.
+        "rounded-xl overflow-hidden border transition-[box-shadow,border-color] duration-100",
         selected
-          ? "shadow-[0_0_0_2px_var(--coral)] scale-[1.01]"
-          : "shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] border border-node-border/80 dark:border-node-border/40",
+          ? "border-coral shadow-[0_0_0_1px_var(--coral)]"
+          : "shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] border-node-border/80 dark:border-node-border/40",
       ].join(" ")}
-      style={{ width: NODE_WIDTH }}>
+      style={{ width: NODE_WIDTH, height: getNodeHeight(table.fields.length) }}>
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-3.5 py-3 bg-node-header-bg border-b-[0.5px] border-node-border/80 dark:border-node-border/40">
+      <div
+        style={{ height: NODE_HEADER }}
+        className="flex items-center justify-between gap-3 px-3.5 bg-node-header-bg border-b-[0.5px] border-node-border/80 dark:border-node-border/40">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="w-2 h-2 rounded-full bg-coral shrink-0 shadow-sm shadow-coral/40" />
           <span className="text-[13px] font-bold text-text-primary truncate tracking-tight antialiased">
@@ -141,7 +152,7 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
       </div>
 
       {/* Fields */}
-      <div className="bg-node-bg pb-1">
+      <div className="bg-node-bg" style={{ paddingBottom: NODE_PAD_BOTTOM }}>
         {table.fields.map((field) => (
           <FieldRow
             key={field.name}

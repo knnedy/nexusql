@@ -9,6 +9,7 @@ import {
   type Edge,
 } from "@xyflow/react";
 import { RelationEdgeData } from "@/features/canvas/types";
+import { routedPath } from "@/features/canvas/lib/edge-path";
 
 function RelationEdge({
   id,
@@ -23,16 +24,20 @@ function RelationEdge({
 }: EdgeProps<Edge<RelationEdgeData>>) {
   const [hovered, setHovered] = useState(false);
 
-  const [edgePath, labelX, labelY] = getSmoothStepPath({
-    sourceX,
-    sourceY,
-    sourcePosition,
-    targetX,
-    targetY,
-    targetPosition,
-    borderRadius: 16,
-    offset: 40,
-  });
+  // ELK's route avoids tables; a dragged table falls back to a direct step until re-layout.
+  const routed = routedPath(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }, 12);
+  const [edgePath, labelX, labelY] = routed
+    ? [routed.path, routed.label.x, routed.label.y]
+    : getSmoothStepPath({
+        sourceX,
+        sourceY,
+        sourcePosition,
+        targetX,
+        targetY,
+        targetPosition,
+        borderRadius: 16,
+        offset: 40,
+      });
 
   // Use your direct accent variables to ensure the active edge line pops out
   const strokeColor = selected ? "var(--coral)" : "var(--edge-color)";
@@ -49,6 +54,7 @@ function RelationEdge({
         onMouseEnter={() => setHovered(true)}
         onMouseLeave={() => setHovered(false)}
         className="cursor-pointer"
+        data-routed={routed ? "true" : "false"}
       />
 
       <BaseEdge
