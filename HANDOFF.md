@@ -2,13 +2,14 @@
 
 Working log for the staged refactor. Stages 1–2 were on `refactor/architecture`, merged
 (fast-forward) into main at `5a18329` and pushed 2026-11-21. Stage 3 is on `feat/stage-3`
-(pushed to origin 2026-11-22 at `2e4f677`, tracking; main untouched). Updated with every
+(tracking origin; last pushed at `ae94c59`; main untouched). Updated with every
 commit.
 
 ## Current stage
 
-Stage 3 (approved 2026-11-22), on `feat/stage-3`. Groups A and B done and summarized; C
-done (C13-C15), awaiting its summary. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+Stage 3 (approved 2026-11-22), on `feat/stage-3`, pushed to origin at `ae94c59`
+(2026-11-24). Groups A, B, C done and summarized. Group D: D16, D17 done; D18 next, then
+the group D summary. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -554,6 +555,27 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   not measured): longest main-thread block at 400 tables 4-5 s -> 0.6-1.0 s, at 150
   1.4-4 s -> 0.3 s; pan main-thread per step at 400 tables ~81 -> ~45 ms; paint +
   composite per pan step ~15-25% lower without the blurs. Remaining pan cost is edges.
+
+- fix(canvas): a foreign key that references a UNIQUE non-primary column left the whole
+  canvas empty (ELK "Referenced shape does not exist": target ports existed only for
+  PKs). Ports and target handles now exist for every referenced column. Found while
+  starting D18. vitest (buildCanvasGraph) + e2e/canvas.spec.ts; both halves mutation-checked.
+
+## Resume here (D18)
+
+- Goal (user 2026-11-23): many tables laid out so nothing overlaps, edges route around
+  tables, few crossings. Today: canvas-utils.ts runs ELK layered + ORTHOGONAL, but only
+  node positions are used; relation-edge.tsx draws getSmoothStepPath handle to handle, so
+  routes ignore tables. Node heights are constants (NODE_HEIGHT_BASE 44 + 34/row).
+- First: a vitest layout metric on generated schemas (30/150/400 tables). ELK runs
+  in-thread under vitest (no Worker), so buildCanvasGraph is the seam. Record baseline.
+- Perf/visual harness (outside the repo, survives reboots):
+  ~/.claude/projects/-home-kenny-code-projects-nexusql/d18-harness/. Build with
+  `make build`, then from web/: `pnpm exec playwright test --config <harness>/shots.config.ts
+  perf.spec.ts` (SIZES=150,400 SHOT_TAG=name; prints RESULT lines, writes screenshots).
+  schema-gen.ts is the deterministic hub-heavy schema generator to reuse in vitest.
+- Measuring caveats: headless rAF/frame timing is meaningless here (3 tables "50 ms");
+  use CDP Performance metrics and trace Paint/RasterTask sums. Runs are noisy: repeat 3x.
 
 ## Next 3 steps
 

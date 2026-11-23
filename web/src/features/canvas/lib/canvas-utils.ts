@@ -44,6 +44,7 @@ function getElk(): Promise<ElkApi> {
 function buildPorts(
   fields: SchemaResponse["tables"][number]["fields"],
   tableName: string,
+  referenced: Set<string>,
 ) {
   const safeFields = fields || [];
   return safeFields.flatMap((field, index) => {
@@ -51,8 +52,8 @@ function buildPorts(
       NODE_HEIGHT_BASE + index * NODE_HEIGHT_PER_ROW + NODE_HEIGHT_PER_ROW / 2;
     const ports = [];
 
-    // Checked using updated camelCase properties
-    if (field.isPrimaryKey) {
+    // A key may reference any unique column, not only the primary key.
+    if (field.isPrimaryKey || referenced.has(field.name)) {
       ports.push({
         id: `${tableName}__${field.name}__target`,
         layoutOptions: { "port.side": "WEST" },
@@ -78,6 +79,16 @@ function buildPorts(
   });
 }
 
+/** Per table, the columns some foreign key points at. */
+function referencedFields(relations: SchemaResponse["relations"]): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const r of relations) {
+    if (!out.has(r.targetTable)) out.set(r.targetTable, new Set());
+    out.get(r.targetTable)!.add(r.targetField);
+  }
+  return out;
+}
+
 function buildElkGraph(schema: SchemaResponse): {
   elkGraph: ElkNode;
   rfEdges: Edge<RelationEdgeData>[];
@@ -85,11 +96,12 @@ function buildElkGraph(schema: SchemaResponse): {
   const safeTables = schema?.tables || [];
   const safeRelations = schema?.relations || [];
 
+  const referenced = referencedFields(safeRelations);
   const elkNodes: ElkNode[] = safeTables.map((table) => ({
     id: table.name,
     width: NODE_WIDTH,
     height: getNodeHeight(table.fields?.length || 0),
-    ports: buildPorts(table.fields, table.name),
+    ports: buildPorts(table.fields, table.name, referenced.get(table.name) ?? new Set()),
     layoutOptions: { portConstraints: "FIXED_SIDE" },
   }));
 
@@ -140,6 +152,7 @@ export async function buildCanvasGraph(
     });
 
     const safeTables = schema?.tables || [];
+    const referenced = referencedFields(schema?.relations || []);
     const nodes: Node<TableNodeData>[] = (layouted.children ?? [])
       .map((elkNode): Node<TableNodeData> | null => {
         const table = safeTables.find((t) => t.name === elkNode.id);
@@ -155,7 +168,12 @@ export async function buildCanvasGraph(
           id: elkNode.id,
           type: "tableNode",
           position: { x: elkNode.x ?? 0, y: elkNode.y ?? 0 },
-          data: { table, provider, isSelected: false },
+          data: {
+            table,
+            provider,
+            isSelected: false,
+            referenced: [...(referenced.get(table.name) ?? [])].sort(),
+          },
         };
       })
       .filter((node): node is Node<TableNodeData> => node !== null);

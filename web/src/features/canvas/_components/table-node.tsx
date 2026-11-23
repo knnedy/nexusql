@@ -42,13 +42,21 @@ function KeyBadge({ kind }: { kind: "PK" | "FK" }) {
 }
 
 // Individual field row
-function FieldRow({ field, tableId }: { field: Field; tableId: string }) {
+function FieldRow({
+  field,
+  tableId,
+  referenced,
+}: {
+  field: Field;
+  tableId: string;
+  referenced: boolean;
+}) {
   const handleId = `${tableId}__${field.name}`;
   const isKey = field.isPrimaryKey || field.isForeignKey;
 
   return (
     <div className="relative flex items-center gap-3 px-3.5 py-2 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors group">
-      {field.isPrimaryKey && (
+      {(field.isPrimaryKey || referenced) && (
         <Handle
           type="target"
           position={Position.Left}
@@ -135,7 +143,12 @@ function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
       {/* Fields */}
       <div className="bg-node-bg pb-1">
         {table.fields.map((field) => (
-          <FieldRow key={field.name} field={field} tableId={table.name} />
+          <FieldRow
+            key={field.name}
+            field={field}
+            tableId={table.name}
+            referenced={data.referenced?.includes(field.name) ?? false}
+          />
         ))}
       </div>
     </div>

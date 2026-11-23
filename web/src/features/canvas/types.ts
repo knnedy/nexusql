@@ -5,6 +5,8 @@ export interface TableNodeData extends Record<string, unknown> {
   table: Table;
   provider: DatabaseProvider;
   isSelected: boolean;
+  /** Columns some foreign key references; each gets a target handle. */
+  referenced: string[];
 }
 
 export interface RelationEdgeData extends Record<string, unknown> {
