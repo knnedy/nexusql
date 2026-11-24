@@ -248,7 +248,10 @@ func TestStatementsThatMayReturnRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(p.Close)
-	for _, c := range []struct{ name, sql, column, first string; rows int }{
+	for _, c := range []struct {
+		name, sql, column, first string
+		rows                     int
+	}{
 		{"CALL returns INOUT parameters", `CREATE PROCEDURE double_it(INOUT n int) LANGUAGE plpgsql AS $$
 			BEGIN n := n * 2; END $$; CALL double_it(21)`, "n", "42", 1},
 		{"FETCH reads a cursor", `BEGIN; DECLARE c CURSOR FOR SELECT g FROM generate_series(1, 5) g;

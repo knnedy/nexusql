@@ -614,6 +614,8 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   tests (red first: FETCH 2 used to show "2 rows affected"); 3 mutants killed. ADR 0010
   updated.
 
+- style: gofmt the E19 integration tests (a one-line struct type gofmt expands).
+
 ## Canvas rework (user feedback 2026-11-25, do after group E/F or when the user asks)
 
 The user checked the D18 canvas and was disappointed:

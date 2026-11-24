@@ -162,7 +162,10 @@ func TestStatementsThatMayReturnRows(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(p.Close)
-	for _, c := range []struct{ name, sql, column, first string; rows int }{
+	for _, c := range []struct {
+		name, sql, column, first string
+		rows                     int
+	}{
 		{"CALL returns the procedure's result set", `CREATE TABLE nums (n INT);
 			INSERT INTO nums VALUES (3), (1), (2);
 			CREATE PROCEDURE sorted() SELECT n FROM nums ORDER BY n; CALL sorted()`, "n", "1", 3},
