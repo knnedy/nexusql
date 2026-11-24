@@ -281,3 +281,35 @@ func TestStatementsThatMayReturnRows(t *testing.T) {
 		}
 	})
 }
+
+func TestKeysIntoOtherSchemasAreLeftOut(t *testing.T) {
+	ctx := context.Background()
+	p, err := postgres.Connect(ctx, dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	// billing.users shares its name with public.users; a line to it would land on the wrong table.
+	if _, err := dbtest.Script(ctx, p, `CREATE SCHEMA billing;
+		CREATE TABLE billing.users (id int PRIMARY KEY);
+		CREATE TABLE users (id int PRIMARY KEY);
+		CREATE TABLE orders (id int PRIMARY KEY,
+			buyer int REFERENCES billing.users (id), owner int REFERENCES users (id))`, 0); err != nil {
+		t.Fatal(err)
+	}
+	sch, err := p.IntrospectSchema(ctx, "public")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range sch.Relations {
+		got = append(got, r.SourceTable+"."+r.SourceField+"->"+r.TargetTable)
+	}
+	if fmt.Sprint(got) != "[orders.owner->users]" {
+		t.Fatalf("relations = %v, want only the key into this schema", got)
+	}
+	tbl, _ := sch.Table("orders")
+	if f, _ := tbl.Field("buyer"); !f.IsForeignKey {
+		t.Error("buyer lost its foreign key flag")
+	}
+}

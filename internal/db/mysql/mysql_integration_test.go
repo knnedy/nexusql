@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
 	"github.com/knnedy/nexusql/internal/db/dbtest"
@@ -189,4 +190,39 @@ func dbtestStr(v any) string {
 		return string(b)
 	}
 	return fmt.Sprint(v)
+}
+
+func TestKeysIntoOtherDatabasesAreLeftOut(t *testing.T) {
+	ctx := context.Background()
+	p, err := mysql.Connect(ctx, dbtest.MySQLDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	other := fmt.Sprintf("billing_%d", time.Now().UnixNano())
+	// other.users shares its name with users here; a line to it would land on the wrong table.
+	if _, err := dbtest.Script(ctx, p, fmt.Sprintf(`CREATE DATABASE %[1]s;
+		CREATE TABLE %[1]s.users (id int PRIMARY KEY);
+		CREATE TABLE users (id int PRIMARY KEY);
+		CREATE TABLE orders (id int PRIMARY KEY,
+			buyer int, FOREIGN KEY (buyer) REFERENCES %[1]s.users (id),
+			owner int, FOREIGN KEY (owner) REFERENCES users (id))`, other), 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _, _ = dbtest.Script(context.Background(), p, "DROP DATABASE "+other, 0) })
+	sch, err := p.IntrospectSchema(ctx, p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, r := range sch.Relations {
+		got = append(got, r.SourceTable+"."+r.SourceField+"->"+r.TargetTable)
+	}
+	if fmt.Sprint(got) != "[orders.owner->users]" {
+		t.Fatalf("relations = %v, want only the key into this database", got)
+	}
+	tbl, _ := sch.Table("orders")
+	if f, _ := tbl.Field("buyer"); !f.IsForeignKey {
+		t.Error("buyer lost its foreign key flag")
+	}
 }

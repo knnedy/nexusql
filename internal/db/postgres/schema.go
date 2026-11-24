@@ -36,8 +36,8 @@ WHERE c.table_schema = $1
 ORDER BY c.table_name, c.ordinal_position
 `
 
-// One row per foreign key; conkey/confkey are unnested together so column
-// pairs stay aligned instead of forming a cross product.
+// One row per foreign key into this schema (others name tables we don't load);
+// conkey/confkey are unnested together so column pairs stay aligned.
 const queryRelations = `
 SELECT
     con.conname,
@@ -51,10 +51,11 @@ FROM pg_constraint con
 JOIN pg_class src ON src.oid = con.conrelid
 JOIN pg_namespace n ON n.oid = src.relnamespace
 JOIN pg_class tgt ON tgt.oid = con.confrelid
+JOIN pg_namespace tn ON tn.oid = tgt.relnamespace
 CROSS JOIN LATERAL unnest(con.conkey, con.confkey) WITH ORDINALITY AS k(src_att, tgt_att, ord)
 JOIN pg_attribute sa ON sa.attrelid = con.conrelid AND sa.attnum = k.src_att
 JOIN pg_attribute ta ON ta.attrelid = con.confrelid AND ta.attnum = k.tgt_att
-WHERE con.contype = 'f' AND n.nspname = $1
+WHERE con.contype = 'f' AND n.nspname = $1 AND tn.nspname = $1
 GROUP BY con.oid, con.conname, src.relname, tgt.relname, con.confdeltype, con.confupdtype
 ORDER BY con.conname, src.relname
 `

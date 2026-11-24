@@ -33,7 +33,8 @@ SELECT
     k.REFERENCED_COLUMN_NAME,
     k.ORDINAL_POSITION,
     r.DELETE_RULE,
-    r.UPDATE_RULE
+    r.UPDATE_RULE,
+    k.REFERENCED_TABLE_SCHEMA = k.TABLE_SCHEMA
 FROM information_schema.key_column_usage k
 JOIN information_schema.REFERENTIAL_CONSTRAINTS r
   ON r.CONSTRAINT_SCHEMA = k.TABLE_SCHEMA AND r.CONSTRAINT_NAME = k.CONSTRAINT_NAME AND r.TABLE_NAME = k.TABLE_NAME
@@ -99,16 +100,11 @@ type fkRow struct {
 	ordinalPos     int
 	onDelete       string
 	onUpdate       string
+	local          bool // the referenced table is in this database
 }
 
-// introspectForeignKeys returns single-column relations plus a full
-// table->column FK membership set. Composite (multi-column) foreign keys
-// are detected by grouping on (TABLE_NAME, CONSTRAINT_NAME) — db.Relation
-// can only express one column pair, so a composite key is logged and
-// excluded from the relations list rather than collapsed into an
-// incorrect single-column edge. Its columns are still marked
-// IsForeignKey via fkCols, so the UI can flag them even without a drawable
-// relation line.
+// introspectForeignKeys returns relations into this database, grouped per constraint,
+// and every FK column (keys into other databases included) for IsForeignKey.
 func (p *provider) introspectForeignKeys(ctx context.Context, schema string) ([]db.Relation, map[string]map[string]bool, error) {
 	rows, err := p.conn.QueryContext(ctx, queryForeignKeys, schema)
 	if err != nil {
@@ -128,6 +124,7 @@ func (p *provider) introspectForeignKeys(ctx context.Context, schema string) ([]
 			&r.ordinalPos,
 			&r.onDelete,
 			&r.onUpdate,
+			&r.local,
 		); err != nil {
 			return nil, nil, fmt.Errorf("scan foreign key: %w", err)
 		}
@@ -146,6 +143,9 @@ func (p *provider) introspectForeignKeys(ctx context.Context, schema string) ([]
 			fkCols[r.tableName] = make(map[string]bool)
 		}
 		fkCols[r.tableName][r.columnName] = true
+		if !r.local {
+			continue // its target is a table we don't load
+		}
 
 		key := r.tableName + "\x00" + r.constraintName
 		if _, exists := groups[key]; !exists {

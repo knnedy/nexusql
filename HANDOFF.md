@@ -639,6 +639,14 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   SQLite FKs still show the server's placeholder name fk_<table>_<n>. vitest (6 mutants
   killed) + e2e in export.spec.ts (red on the old inspector).
 
+- Close-out 2 fix(db): the "same-named tables collide on the canvas" item could not
+  happen (only the default schema is introspected), but its real form did: PG keys into
+  another schema and MySQL keys into another database came back as relations to a
+  same-named local table (wrong line, wrong export reference, seeder picking wrong ids)
+  or to a table not loaded. Relations now only target the introspected schema; the
+  column keeps IsForeignKey. PG/MySQL integration tests (red first; 3 mutants killed).
+  Also replaced MySQL introspectForeignKeys' stale comment (composites are supported).
+
 ## Canvas rework (user feedback 2026-11-25, do after group E/F or when the user asks)
 
 The user checked the D18 canvas and was disappointed:
@@ -652,7 +660,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Close-out 2: tables with the same name in different Postgres schemas, then merge/push.
+1. Fast-forward main to feat/stage-3, push main and the branch, switch to main.
 2. Canvas rework (see section above): agree the target look with screenshots first.
 3. eslint 10 once react/import/jsx-a11y plugins declare ^10 support.
 
@@ -701,6 +709,8 @@ None.
 - Console statements other than CALL/FETCH/EXECUTE that return rows but are not
   recognised run as writes and show a count; a MySQL CALL shows only its first result
   set (ADR 0010).
+- Keys into other schemas/databases are left out of relations (close-out 2); showing
+  tables from several schemas would need schema-qualified table ids end to end.
 - CHECK constraints other than single-column string lists (ranges, multi-column,
   `IN (...) OR x IS NULL`) only reach `Table.Checks`, not `Field.Allowed`: the seeder
   retries then skips rows they reject.
