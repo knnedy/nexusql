@@ -9,7 +9,9 @@ commit.
 
 Stage 3 (approved 2026-11-22), on `feat/stage-3`, pushed to origin at `ae94c59`
 (2026-11-24). Groups A, B, C done and summarized. Group D done (D16-D18); summary given
-2026-11-24. Group E done (E19-E20); summary given 2026-11-25. Next: group F, after the user agrees. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+2026-11-24. Group E done (E19-E20); summary given 2026-11-25. Group F done (F21: stay on eslint 9).
+Stage 3 summary given 2026-11-25. User approved the close-out: two fixes (inspector keys,
+same-named tables on the canvas), then fast-forward main, push, switch to main until Stage 4. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -624,6 +626,19 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
   ConnectNew, API create flag, e2e connect.spec; dbtest.SQLiteFile makes empty files for
   older tests. 7 mutants killed (incl. rw->rwc via the reopen test, UI create flag).
 
+- F21 decision (2026-11-25, no code change): stay on eslint 9. eslint-config-next 16.4.6
+  allows eslint >=9, but its eslint-plugin-react 7.37.5, -import 2.32.0 and -jsx-a11y
+  6.10.2 (all latest) cap their eslint peer at ^9; typescript-eslint, react-hooks and the
+  TanStack plugin allow ^10. A trial with eslint 10.15.0 linted clean and fired the same
+  react/import/hooks/a11y rules as 9, but on unmet peers for no new checks. Revisit when
+  those three plugins declare ^10 (check: pnpm view eslint-plugin-react peerDependencies).
+
+- Close-out 1 fix(canvas): the inspector's Indexes tab lists what the server introspected
+  (lib/table-keys.ts: PK, FKs with real constraint names, column pairs and non-default
+  actions, unique sets, named indexes, CHECKs) instead of client-made pk_/fk_ names.
+  SQLite FKs still show the server's placeholder name fk_<table>_<n>. vitest (6 mutants
+  killed) + e2e in export.spec.ts (red on the old inspector).
+
 ## Canvas rework (user feedback 2026-11-25, do after group E/F or when the user asks)
 
 The user checked the D18 canvas and was disappointed:
@@ -637,9 +652,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. F21 (after the user agrees): eslint 10 if eslint-config-next supports it, else record why.
-2. Stage 3 summary; ask before merge/push.
-3. Canvas rework (see section above): agree the target look with screenshots first.
+1. Close-out 2: tables with the same name in different Postgres schemas, then merge/push.
+2. Canvas rework (see section above): agree the target look with screenshots first.
+3. eslint 10 once react/import/jsx-a11y plugins declare ^10 support.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
@@ -678,8 +693,6 @@ None.
 
 ## Stage 2 backlog (found during Stage 1, not yet fixed)
 
-- Canvas inspector "Indexes" tab still derives indexes on the client (`deriveIndexes`);
-  the schema now carries `unique`, `indexes` and `checks` to show instead.
 - SQL DDL leaves out what is not introspected: MySQL charset/collation and ON UPDATE
   CURRENT_TIMESTAMP, generated columns, comments, views, triggers, non-serial sequences;
   composite primary keys follow column order, not key order; tables are unqualified.
