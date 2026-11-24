@@ -2,11 +2,11 @@ package server_test
 
 import (
 	"context"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/db/dbtest"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/server"
@@ -19,7 +19,7 @@ func TestShutdownClosesTheDatabase(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	conn, err := db.Connect(context.Background(), "sqlite://"+filepath.Join(t.TempDir(), "a.db"), db.Options{})
+	conn, err := db.Connect(context.Background(), dbtest.SQLiteFile(t, "a.db"), db.Options{})
 	if err != nil {
 		t.Fatal(err)
 	}

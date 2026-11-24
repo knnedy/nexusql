@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 
@@ -33,8 +35,8 @@ func Connect(ctx context.Context, uri string) (db.Provider, error) {
 	return ConnectWith(ctx, uri, db.Options{})
 }
 
-// ConnectWith is Connect with file access limited by opts. A file that does
-// not exist yet is created, as long as it would sit inside the root.
+// ConnectWith is Connect with file access limited by opts. Only an existing file
+// opens, unless opts.CreateFile asks for a new one (which must not exist yet).
 func ConnectWith(ctx context.Context, uri string, opts db.Options) (db.Provider, error) {
 	path, err := extractPath(uri)
 	if err != nil {
@@ -44,9 +46,16 @@ func ConnectWith(ctx context.Context, uri string, opts db.Options) (db.Provider,
 		if err := allowed(path, opts); err != nil {
 			return nil, err
 		}
+		_, statErr := os.Stat(path)
+		switch {
+		case opts.CreateFile && statErr == nil:
+			return nil, fmt.Errorf("a file already exists at %s; connect to it instead of creating a new database", path)
+		case !opts.CreateFile && errors.Is(statErr, fs.ErrNotExist):
+			return nil, fmt.Errorf("no SQLite database at %s; check the path, or create a new database there", path)
+		}
 	}
 
-	conn, err := sql.Open("sqlite", dsn(path))
+	conn, err := sql.Open("sqlite", dsn(path, opts.CreateFile))
 	if err != nil {
 		return nil, fmt.Errorf("failed to open database: %w", err)
 	}
@@ -95,10 +104,17 @@ func allowed(path string, opts db.Options) error {
 // unenforced unless each connection turns them on.
 const foreignKeys = "PRAGMA foreign_keys = ON"
 
-// dsn opens path as a file: URI (so ? and # in names stay part of the path)
-// with foreign keys enforced on every connection the pool opens.
-func dsn(path string) string {
-	return "file:" + (&url.URL{Path: path}).EscapedPath() + "?_pragma=foreign_keys(1)"
+// dsn opens path as a file: URI (so ? and # stay in the path), enforcing foreign
+// keys; mode=rw never creates a file, so a typo cannot leave an empty database.
+func dsn(path string, create bool) string {
+	mode := "rw"
+	if create {
+		mode = "rwc"
+	}
+	if path == ":memory:" {
+		return "file::memory:?_pragma=foreign_keys(1)"
+	}
+	return "file:" + (&url.URL{Path: path}).EscapedPath() + "?mode=" + mode + "&_pragma=foreign_keys(1)"
 }
 
 // extractPath strips the "sqlite://" scheme prefix and validates the

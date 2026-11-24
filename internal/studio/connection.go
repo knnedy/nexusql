@@ -18,6 +18,15 @@ type ConnectResult struct {
 
 // Connect replaces any active connection and records it as a project.
 func (s *Service) Connect(ctx context.Context, uri, name string) (ConnectResult, error) {
+	return s.connect(ctx, uri, name, false)
+}
+
+// ConnectNew creates a new, empty database at uri (SQLite only), then connects as Connect does.
+func (s *Service) ConnectNew(ctx context.Context, uri, name string) (ConnectResult, error) {
+	return s.connect(ctx, uri, name, true)
+}
+
+func (s *Service) connect(ctx context.Context, uri, name string, create bool) (ConnectResult, error) {
 	if uri == "" {
 		return ConnectResult{}, invalid(errors.New("uri is required"))
 	}
@@ -28,7 +37,9 @@ func (s *Service) Connect(ctx context.Context, uri, name string) (ConnectResult,
 
 	cctx, cancel := context.WithTimeout(ctx, s.cfg.ConnectTimeout)
 	defer cancel()
-	conn, err := db.Connect(cctx, uri, s.cfg.Files)
+	opts := s.cfg.Files
+	opts.CreateFile = create
+	conn, err := db.Connect(cctx, uri, opts)
 	if err != nil {
 		if errors.Is(cctx.Err(), context.DeadlineExceeded) {
 			err = fmt.Errorf("no answer within %s: %w", s.cfg.ConnectTimeout, err)

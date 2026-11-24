@@ -9,7 +9,7 @@ commit.
 
 Stage 3 (approved 2026-11-22), on `feat/stage-3`, pushed to origin at `ae94c59`
 (2026-11-24). Groups A, B, C done and summarized. Group D done (D16-D18); summary given
-2026-11-24. Next: group E, after the user agrees. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
+2026-11-24. Group E done (E19-E20); summary given 2026-11-25. Next: group F, after the user agrees. STOP and summarize after each letter group before starting the next. Test seams: dbtest conformance, export goldens + real-tool
 checks, studio.Service, HTTP API, vitest pure modules; Playwright for C14-15 and D17.
 
 - A. Introspection (each fact also reaches Prisma/Drizzle):
@@ -616,6 +616,14 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 
 - style: gofmt the E19 integration tests (a one-line struct type gofmt expands).
 
+- E20 feat(connect): SQLite opens only existing files (mode=rw, plus a stat check with a
+  clear "no SQLite database at ..." error); a "Create a new database file" checkbox (SQLite
+  only) sends create:true -> Service.ConnectNew -> db.Options.CreateFile (mode=rwc, refuses
+  an existing file). Postgres/MySQL return db.ErrCannotCreate. Saved projects never
+  recreate a deleted file. Tests: sqlite (open/create/reopen-after-delete), studio
+  ConnectNew, API create flag, e2e connect.spec; dbtest.SQLiteFile makes empty files for
+  older tests. 7 mutants killed (incl. rw->rwc via the reopen test, UI create flag).
+
 ## Canvas rework (user feedback 2026-11-25, do after group E/F or when the user asks)
 
 The user checked the D18 canvas and was disappointed:
@@ -629,9 +637,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. E20: explicit "create new SQLite database", else mode=rw; then STOP for group E.
-2. F21: eslint 10 if eslint-config-next supports it, else record why.
-3. Stage 3 summary; ask before merge/push. Canvas rework after (see section above).
+1. F21 (after the user agrees): eslint 10 if eslint-config-next supports it, else record why.
+2. Stage 3 summary; ask before merge/push.
+3. Canvas rework (see section above): agree the target look with screenshots first.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

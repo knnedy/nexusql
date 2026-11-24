@@ -16,7 +16,10 @@ type provider struct {
 }
 
 func init() {
-	db.Register(db.ProviderKindMySQL, func(ctx context.Context, uri string, _ db.Options) (db.Provider, error) {
+	db.Register(db.ProviderKindMySQL, func(ctx context.Context, uri string, opts db.Options) (db.Provider, error) {
+		if opts.CreateFile {
+			return nil, db.ErrCannotCreate
+		}
 		return Connect(ctx, uri) // no local files to confine
 	})
 	db.RegisterExporter(db.ProviderKindMySQL, exporter{})

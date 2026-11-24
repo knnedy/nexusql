@@ -51,6 +51,7 @@ export default function ConnectView() {
   const [uri, setUri] = useState("");
   const [projectNameError, setProjectNameError] = useState<string | null>(null);
   const [uriError, setUriError] = useState<string | null>(null);
+  const [createNew, setCreateNew] = useState(false);
 
   const connect = useConnect();
   const activeProvider = PROVIDERS.find((p) => p.id === selectedProvider)!;
@@ -114,6 +115,7 @@ export default function ConnectView() {
       uri,
       provider: selectedProvider,
       name: projectName.trim(),
+      ...(selectedProvider === "sqlite" && createNew && { create: true }),
     });
   }
 
@@ -214,6 +216,26 @@ export default function ConnectView() {
                   />
                 </div>
               </div>
+
+              {/* Opening never creates a file, so a mistyped path cannot start an empty database. */}
+              {selectedProvider === "sqlite" && (
+                <label className="flex items-start gap-2.5 cursor-pointer select-none group">
+                  <input
+                    type="checkbox"
+                    checked={createNew}
+                    onChange={(e) => setCreateNew(e.target.checked)}
+                    className="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-coral"
+                  />
+                  <span className="flex flex-col gap-0.5">
+                    <span className="text-[12px] font-medium text-text-primary">
+                      Create a new database file
+                    </span>
+                    <span className="text-[11px] text-text-tertiary">
+                      Starts an empty database at this path. Leave unticked to open an existing file.
+                    </span>
+                  </span>
+                </label>
+              )}
             </div>
 
             {/* Error Message */}

@@ -5,12 +5,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/api"
+	"github.com/knnedy/nexusql/internal/db/dbtest"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
 	"github.com/knnedy/nexusql/internal/session"
@@ -53,7 +55,7 @@ func TestProjectListNeverContainsThePassword(t *testing.T) {
 
 func TestConnectByProjectID(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	uri := dbtest.SQLiteFile(t, "a.db")
 	w := call(h, "POST", "/projects", `{"name":"local","uri":"`+uri+`"}`)
 	var created struct {
 		Project struct{ ID string } `json:"project"`
@@ -81,7 +83,7 @@ func TestOversizedBodyIsRejected(t *testing.T) {
 
 func TestUpdateRowBody(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	uri := dbtest.SQLiteFile(t, "a.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -117,7 +119,7 @@ func TestUpdateRowBody(t *testing.T) {
 
 func TestRowsFilterParam(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	uri := dbtest.SQLiteFile(t, "a.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -147,7 +149,7 @@ func TestRowsFilterParam(t *testing.T) {
 
 func TestRowsPagingParams(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "a.db")
+	uri := dbtest.SQLiteFile(t, "a.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"x"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -192,7 +194,7 @@ func TestRowsPagingParams(t *testing.T) {
 
 func TestQueryResultsAlwaysCarryArrays(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "q.db")
+	uri := dbtest.SQLiteFile(t, "q.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"q"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -213,7 +215,7 @@ func TestReadOnlySwitch(t *testing.T) {
 	if w := call(h, "GET", "/connection/read-only", ""); w.Code != http.StatusUnauthorized {
 		t.Fatalf("without a connection: %d %s, want 401", w.Code, w.Body)
 	}
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "ro.db")
+	uri := dbtest.SQLiteFile(t, "ro.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"ro"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -239,7 +241,7 @@ func TestReadOnlySwitch(t *testing.T) {
 
 func TestSeedReportsSkippedRows(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "seed.db")
+	uri := dbtest.SQLiteFile(t, "seed.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"seed"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -283,7 +285,7 @@ func TestExportFormatsAreListedAndRendered(t *testing.T) {
 	if w := call(h, "GET", "/export/nope", ""); w.Code != http.StatusNotFound {
 		t.Fatalf("unknown format before connecting: %d %s", w.Code, w.Body)
 	}
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "x.db")
+	uri := dbtest.SQLiteFile(t, "x.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -305,7 +307,7 @@ func TestExportFormatsAreListedAndRendered(t *testing.T) {
 
 func TestTableDDL(t *testing.T) {
 	h := newAPI(t)
-	uri := "sqlite://" + filepath.Join(t.TempDir(), "ddl.db")
+	uri := dbtest.SQLiteFile(t, "ddl.db")
 	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`"}`); w.Code != http.StatusOK {
 		t.Fatalf("connect: %d %s", w.Code, w.Body)
 	}
@@ -329,5 +331,20 @@ func TestTableDDL(t *testing.T) {
 	}
 	if w := call(h, "GET", "/tables/nope/ddl", ""); w.Code != http.StatusBadRequest {
 		t.Fatalf("unknown table: %d %s", w.Code, w.Body)
+	}
+}
+
+func TestConnectCreatesOnlyWhenAsked(t *testing.T) {
+	h := newAPI(t)
+	path := filepath.Join(t.TempDir(), "new.db")
+	body := `{"name":"new","uri":"sqlite://` + path + `"`
+	if w := call(h, "POST", "/connect", body+`}`); w.Code != http.StatusBadRequest {
+		t.Fatalf("missing file without create: %d %s, want 400", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/connect", body+`,"create":true}`); w.Code != http.StatusOK {
+		t.Fatalf("create: %d %s", w.Code, w.Body)
+	}
+	if _, err := os.Stat(path); err != nil {
+		t.Fatalf("file not created: %v", err)
 	}
 }

@@ -13,6 +13,8 @@ type connectRequest struct {
 	ProjectID string `json:"projectId"`
 	URI       string `json:"uri"`
 	Name      string `json:"name"`
+	// Create makes a new, empty database file (SQLite); otherwise it must exist.
+	Create bool `json:"create"`
 }
 
 type connectResponse struct {
@@ -29,9 +31,12 @@ func (h *handler) handleConnect(w http.ResponseWriter, r *http.Request) {
 
 	var res studio.ConnectResult
 	var err error
-	if req.ProjectID != "" {
+	switch {
+	case req.ProjectID != "":
 		res, err = h.studio.OpenProject(r.Context(), req.ProjectID)
-	} else {
+	case req.Create:
+		res, err = h.studio.ConnectNew(r.Context(), req.URI, req.Name)
+	default:
 		res, err = h.studio.Connect(r.Context(), req.URI, req.Name)
 	}
 	if err != nil {

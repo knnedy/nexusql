@@ -7,7 +7,8 @@ export interface HealthResponse {
 
 /** Connect to a new URI (saved as a project), or reopen a saved project by id. */
 export type ConnectRequest =
-  | { uri: string; provider: DatabaseProvider; name: string }
+  /** create: make a new, empty SQLite file; otherwise the database must exist. */
+  | { uri: string; provider: DatabaseProvider; name: string; create?: boolean }
   | { projectId: string; name: string };
 
 export interface ConnectResponse {

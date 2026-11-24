@@ -172,10 +172,15 @@ type Options struct {
 	FileRoot string
 	// NoFiles refuses file-backed databases; in-memory ones stay available.
 	NoFiles bool
+	// CreateFile makes a new, empty database file; without it only existing files open.
+	CreateFile bool
 }
 
 // Confined reports whether file access is restricted.
 func (o Options) Confined() bool { return o.NoFiles || o.FileRoot != "" }
+
+// ErrCannotCreate is returned when asked to create a database a provider can only open.
+var ErrCannotCreate = errors.New("only SQLite databases can be created here; create this one on its server, then connect")
 
 type providerConstructor func(ctx context.Context, uri string, opts Options) (Provider, error)
 

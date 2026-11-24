@@ -5,6 +5,8 @@ package dbtest
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
@@ -138,4 +140,15 @@ func update(t *testing.T, p db.Provider, table, pk, pkValue, target, value strin
 	tbl := tableOf(t, p, table)
 	key := []db.KeyValue{{Field: fieldOf(t, tbl, pk), Value: pkValue}}
 	return p.UpdateRow(context.Background(), tbl, key, fieldOf(t, tbl, target), &value)
+}
+
+// SQLiteFile returns the URI of a new, empty SQLite database file (a zero-byte
+// file is one), since connecting never creates a file unless asked to.
+func SQLiteFile(t *testing.T, name string) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return "sqlite://" + path
 }

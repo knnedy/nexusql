@@ -18,7 +18,7 @@ import (
 
 func TestConformance(t *testing.T) {
 	dbtest.Run(t, dbtest.Harness{
-		URI: func(t *testing.T) string { return "sqlite://" + filepath.Join(t.TempDir(), "test.db") },
+		URI: func(t *testing.T) string { return dbtest.SQLiteFile(t, "test.db") },
 		Connect: func(t *testing.T, uri string) db.Provider {
 			p, err := sqlite.Connect(context.Background(), uri)
 			if err != nil {
@@ -28,7 +28,7 @@ func TestConformance(t *testing.T) {
 			return p
 		},
 		Open: func(t *testing.T) db.Provider {
-			uri := "sqlite://" + filepath.Join(t.TempDir(), "test.db")
+			uri := dbtest.SQLiteFile(t, "test.db")
 			p, err := sqlite.Connect(context.Background(), uri)
 			if err != nil {
 				t.Fatalf("connect: %v", err)
@@ -194,7 +194,7 @@ func TestInMemoryDatabaseSurvivesRuns(t *testing.T) {
 
 func TestReturningRows(t *testing.T) {
 	ctx := context.Background()
-	p, err := sqlite.Connect(ctx, "sqlite://"+filepath.Join(t.TempDir(), "r.db"))
+	p, err := sqlite.Connect(ctx, dbtest.SQLiteFile(t, "r.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -260,7 +260,7 @@ func TestOnlyPlainInListsBecomeAllowedValues(t *testing.T) {
 }
 
 func TestForeignKeysStayEnforcedAfterAConsoleRun(t *testing.T) {
-	for _, uri := range []string{"sqlite://" + filepath.Join(t.TempDir(), "fk.db"), "sqlite://:memory:"} {
+	for _, uri := range []string{dbtest.SQLiteFile(t, "fk.db"), "sqlite://:memory:"} {
 		t.Run(uri, func(t *testing.T) {
 			ctx := context.Background()
 			p, err := sqlite.Connect(ctx, uri)
@@ -288,6 +288,11 @@ func TestFilesConfinedToTheRoot(t *testing.T) {
 	root, outside := t.TempDir(), t.TempDir()
 	if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
 		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(root, "in.db"), filepath.Join(outside, "out.db")} {
+		if err := os.WriteFile(f, nil, 0o600); err != nil { // existing files: only confinement may refuse
+			t.Fatal(err)
+		}
 	}
 	opts := db.Options{FileRoot: root}
 	for _, c := range []struct {
@@ -345,5 +350,66 @@ func TestUnconfinedConsoleMayAttach(t *testing.T) {
 	t.Cleanup(p.Close)
 	if _, err := dbtest.Script(ctx, p, "ATTACH DATABASE ':memory:' AS other", 0); err != nil {
 		t.Fatalf("local use lost ATTACH: %v", err)
+	}
+}
+
+func TestOpensOnlyExistingFilesUnlessAskedToCreate(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "new.db")
+	uri := "sqlite://" + path
+	exists := func() bool { _, err := os.Stat(path); return err == nil }
+
+	if _, err := sqlite.ConnectWith(ctx, uri, db.Options{}); err == nil || !strings.Contains(err.Error(), "no SQLite database at") {
+		t.Fatalf("missing file: err = %v, want a no-database error", err)
+	}
+	if exists() {
+		t.Fatal("opening a missing file created it")
+	}
+
+	p, err := sqlite.ConnectWith(ctx, uri, db.Options{CreateFile: true})
+	if err != nil {
+		t.Fatalf("create: %v", err)
+	}
+	p.Close()
+	if !exists() {
+		t.Fatal("create did not make the file")
+	}
+
+	if _, err := sqlite.ConnectWith(ctx, uri, db.Options{CreateFile: true}); err == nil || !strings.Contains(err.Error(), "already exists") {
+		t.Fatalf("create over an existing file: err = %v, want already exists", err)
+	}
+	p, err = sqlite.ConnectWith(ctx, uri, db.Options{})
+	if err != nil {
+		t.Fatalf("open the existing file: %v", err)
+	}
+	p.Close()
+
+	p, err = sqlite.ConnectWith(ctx, "sqlite://:memory:", db.Options{})
+	if err != nil {
+		t.Fatalf("in-memory: %v", err)
+	}
+	p.Close()
+}
+
+func TestReconnectingNeverRecreatesADeletedFile(t *testing.T) {
+	ctx := context.Background()
+	uri := dbtest.SQLiteFile(t, "gone.db")
+	path := strings.TrimPrefix(uri, "sqlite://")
+	p, err := sqlite.Connect(ctx, uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	// A write run, which SQLite fails on an unlinked file, closes its connection,
+	// so the next run opens the file again.
+	_, _ = dbtest.Script(ctx, p, "CREATE TABLE t (a INTEGER)", 0)
+	if _, err := dbtest.Script(ctx, p, "SELECT 1", 0); err == nil {
+		t.Error("query after the file was deleted succeeded")
+	}
+	if _, err := os.Stat(path); err == nil {
+		t.Fatal("reopening the connection recreated the deleted file")
 	}
 }

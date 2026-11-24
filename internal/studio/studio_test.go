@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/knnedy/nexusql/internal/db"
+	"github.com/knnedy/nexusql/internal/db/dbtest"
 	_ "github.com/knnedy/nexusql/internal/db/postgres"
 	_ "github.com/knnedy/nexusql/internal/db/sqlite"
 	"github.com/knnedy/nexusql/internal/projects"
@@ -39,7 +41,7 @@ func newServiceWith(t *testing.T, cfg studio.Config) *studio.Service {
 }
 
 func sqliteURI(t *testing.T) string {
-	return "sqlite://" + filepath.Join(t.TempDir(), "studio.db")
+	return dbtest.SQLiteFile(t, "studio.db")
 }
 
 // connected returns a Service connected to a SQLite db with a users table.
@@ -502,6 +504,57 @@ func TestRowsPaging(t *testing.T) {
 		}
 		if _, err := s.Count(ctx, studio.CountQuery{Table: "n", Filters: []studio.RowFilter{{Column: "zz", Op: "isNull"}}}); !errors.Is(err, studio.ErrInvalid) {
 			t.Fatalf("unknown filter column: err = %v, want ErrInvalid", err)
+		}
+	})
+}
+
+func TestConnectNew(t *testing.T) {
+	ctx := context.Background()
+	path := filepath.Join(t.TempDir(), "fresh.db")
+	uri := "sqlite://" + path
+
+	t.Run("connecting to a missing file says how to create it", func(t *testing.T) {
+		_, err := newService(t).Connect(ctx, uri, "x")
+		if !errors.Is(err, studio.ErrInvalid) || !strings.Contains(err.Error(), "create a new database") {
+			t.Fatalf("err = %v, want ErrInvalid suggesting to create a new database", err)
+		}
+	})
+
+	t.Run("creates the file and saves the project", func(t *testing.T) {
+		s := newService(t)
+		res, err := s.ConnectNew(ctx, uri, "fresh")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if res.Provider != "sqlite" || len(s.Projects()) != 1 {
+			t.Fatalf("got %+v with %d projects, want one sqlite project", res, len(s.Projects()))
+		}
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("file not created: %v", err)
+		}
+	})
+
+	t.Run("a server database cannot be created from here", func(t *testing.T) {
+		_, err := newService(t).ConnectNew(ctx, "postgres://u@127.0.0.1:1/db", "x")
+		if !errors.Is(err, studio.ErrInvalid) || !strings.Contains(err.Error(), "only SQLite") {
+			t.Fatalf("err = %v, want ErrInvalid: only SQLite", err)
+		}
+	})
+
+	t.Run("a saved project whose file is gone is not recreated", func(t *testing.T) {
+		s := newService(t)
+		gone := filepath.Join(t.TempDir(), "gone.db")
+		if _, err := s.ConnectNew(ctx, "sqlite://"+gone, "gone"); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Remove(gone); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := s.OpenProject(ctx, s.Projects()[0].ID); err == nil {
+			t.Fatal("opened a project whose file was deleted")
+		}
+		if _, err := os.Stat(gone); err == nil {
+			t.Fatal("reopening the project recreated its file")
 		}
 	})
 }
