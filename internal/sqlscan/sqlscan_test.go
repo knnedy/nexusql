@@ -101,6 +101,12 @@ func TestClassify(t *testing.T) {
 		{sqlscan.Postgres, "COMMIT", false, false},
 		{sqlscan.Postgres, "ROLLBACK", false, false},
 		{sqlscan.Postgres, "frobnicate the database", true, false},
+		// may write, and may return rows: OUT parameters, a cursor, a prepared SELECT
+		{sqlscan.Postgres, "CALL double_it(21)", true, true},
+		{sqlscan.MySQL, "CALL emails()", true, true},
+		{sqlscan.Postgres, "FETCH 2 FROM c", true, true},
+		{sqlscan.Postgres, "EXECUTE q", true, true},
+		{sqlscan.MySQL, "EXECUTE q USING @a", true, true},
 	} {
 		stmts := sqlscan.Split(c.in, c.syntax)
 		if len(stmts) != 1 {

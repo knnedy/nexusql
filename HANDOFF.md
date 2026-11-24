@@ -607,11 +607,29 @@ db.Provider suite, studio.Service, HTTP API (httptest), pure Go modules.
 - Measuring caveats: headless rAF/frame timing is meaningless here (3 tables "50 ms");
   use CDP Performance metrics and trace Paint/RasterTask sums. Runs are noisy: repeat 3x.
 
+- E19 fix(console): CALL, FETCH and EXECUTE are classified write + rows, so as the last
+  statement they show their result set (PG INOUT/OUT parameters, cursor rows, prepared
+  SELECTs; MySQL procedure result sets) instead of a count; they still need confirmation
+  and close the connection. Executors unchanged. sqlscan unit + PG/MySQL integration
+  tests (red first: FETCH 2 used to show "2 rows affected"); 3 mutants killed. ADR 0010
+  updated.
+
+## Canvas rework (user feedback 2026-11-25, do after group E/F or when the user asks)
+
+The user checked the D18 canvas and was disappointed:
+1. Table placement doesn't follow relationships: related tables are not near each other.
+2. Zoomed out, tables lose legibility (min zoom 0.02 shows unreadable boxes).
+D18's metrics (overlaps, edges under tables, crossings) passed but don't measure what
+the user cares about. Next time: agree the target look with screenshots first. Ideas:
+cluster related tables (modules) and lay out per cluster, then place clusters; a
+zoomed-out level of detail with large table names (and cluster labels) instead of
+shrunken full tables; judge on realistic schemas side by side with the user.
+
 ## Next 3 steps
 
-1. STOP: group D summary to the user (D done). Ask before group E.
-2. E19: CALL/FETCH show their rows.
-3. E20: explicit "create new SQLite database", else mode=rw.
+1. E20: explicit "create new SQLite database", else mode=rw; then STOP for group E.
+2. F21: eslint 10 if eslint-config-next supports it, else record why.
+3. Stage 3 summary; ask before merge/push. Canvas rework after (see section above).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
@@ -657,8 +675,9 @@ None.
   composite primary keys follow column order, not key order; tables are unqualified.
 - Partial and expression indexes are not introspected, so exports (and the B6 DDL) leave
   them out; index sort order (DESC) and collations are not kept either.
-- Console statements that return rows but are not recognised (`CALL`, `FETCH`) run as
-  writes and show a count (ADR 0010).
+- Console statements other than CALL/FETCH/EXECUTE that return rows but are not
+  recognised run as writes and show a count; a MySQL CALL shows only its first result
+  set (ADR 0010).
 - CHECK constraints other than single-column string lists (ranges, multi-column,
   `IN (...) OR x IS NULL`) only reach `Table.Checks`, not `Field.Allowed`: the seeder
   retries then skips rows they reject.

@@ -42,7 +42,8 @@ console `PRAGMA foreign_keys = OFF` changed it for the whole app.
 - An unfinished `BEGIN` is rolled back when the run ends, never committed.
 - SQLite connections enforce foreign keys (`_pragma=foreign_keys(1)` on every connection;
   the kept in-memory session is reset to it), so `PRAGMA foreign_keys = OFF` lasts one run.
-- Statements that return rows but are not recognised (`CALL` with results, `FETCH`) run as
-  writes and show a count, not rows.
+- `CALL`, `FETCH` and `EXECUTE` count as writes that may return rows (updated 2026-11-25):
+  as the last statement they show their result set, if any. A MySQL `CALL` whose procedure
+  returns several result sets shows the first. Other unrecognised statements show a count.
 - Side effects hidden in functions (`SELECT nextval(...)`, `set_config`) are not seen by
   the classifier. Step 12's read-only mode is enforced by the database for that reason.

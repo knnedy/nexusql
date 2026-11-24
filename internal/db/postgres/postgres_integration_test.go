@@ -241,3 +241,40 @@ func TestOneStatementPerMessage(t *testing.T) {
 		t.Fatal("two statements ran from one message")
 	}
 }
+
+func TestStatementsThatMayReturnRows(t *testing.T) {
+	p, err := postgres.Connect(context.Background(), dbtest.PostgresDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	for _, c := range []struct{ name, sql, column, first string; rows int }{
+		{"CALL returns INOUT parameters", `CREATE PROCEDURE double_it(INOUT n int) LANGUAGE plpgsql AS $$
+			BEGIN n := n * 2; END $$; CALL double_it(21)`, "n", "42", 1},
+		{"FETCH reads a cursor", `BEGIN; DECLARE c CURSOR FOR SELECT g FROM generate_series(1, 5) g;
+			FETCH 2 FROM c`, "g", "1", 2},
+		{"EXECUTE runs a prepared SELECT", "PREPARE q AS SELECT 7 AS seven; EXECUTE q", "seven", "7", 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			res, err := dbtest.Script(context.Background(), p, c.sql, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !res.IsWrite || len(res.Columns) != 1 || res.Columns[0] != c.column || len(res.Rows) != c.rows ||
+				fmt.Sprint(res.Rows[0][c.column]) != c.first {
+				t.Fatalf("got %+v, want %d %s rows starting %s, as a write", res, c.rows, c.column, c.first)
+			}
+		})
+	}
+	t.Run("CALL without parameters still runs", func(t *testing.T) {
+		res, err := dbtest.Script(context.Background(), p, `CREATE TABLE hits (n int);
+			CREATE PROCEDURE hit() LANGUAGE sql AS $$ INSERT INTO hits VALUES (1) $$; CALL hit()`, 0)
+		if err != nil || !res.IsWrite || len(res.Columns) != 0 {
+			t.Fatalf("got %+v err %v, want a write with no columns", res, err)
+		}
+		res, _ = dbtest.Script(context.Background(), p, "SELECT count(*) AS n FROM hits", 0)
+		if fmt.Sprint(res.Rows[0]["n"]) != "1" {
+			t.Fatalf("procedure did not run: %+v", res)
+		}
+	})
+}

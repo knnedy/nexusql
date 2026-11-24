@@ -4,6 +4,7 @@ package mysql_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/knnedy/nexusql/internal/db"
@@ -153,4 +154,36 @@ func TestConformance(t *testing.T) {
 			Auto: map[string]bool{"auto_key.id": true, "child.id": false, "parent.a": false},
 		},
 	})
+}
+
+func TestStatementsThatMayReturnRows(t *testing.T) {
+	p, err := mysql.Connect(context.Background(), dbtest.MySQLDB(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(p.Close)
+	for _, c := range []struct{ name, sql, column, first string; rows int }{
+		{"CALL returns the procedure's result set", `CREATE TABLE nums (n INT);
+			INSERT INTO nums VALUES (3), (1), (2);
+			CREATE PROCEDURE sorted() SELECT n FROM nums ORDER BY n; CALL sorted()`, "n", "1", 3},
+		{"EXECUTE runs a prepared SELECT", "PREPARE q FROM 'SELECT 7 AS seven'; EXECUTE q", "seven", "7", 1},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			res, err := dbtest.Script(context.Background(), p, c.sql, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !res.IsWrite || len(res.Columns) != 1 || res.Columns[0] != c.column || len(res.Rows) != c.rows ||
+				dbtestStr(res.Rows[0][c.column]) != c.first {
+				t.Fatalf("got %+v, want %d %s rows starting %s, as a write", res, c.rows, c.column, c.first)
+			}
+		})
+	}
+}
+
+func dbtestStr(v any) string {
+	if b, ok := v.([]byte); ok {
+		return string(b)
+	}
+	return fmt.Sprint(v)
 }

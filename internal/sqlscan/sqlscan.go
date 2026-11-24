@@ -211,6 +211,10 @@ func classify(text string, words []string) Statement {
 		s.Rows = !s.Write || has("RETURNING")
 	case "INSERT", "UPDATE", "DELETE", "MERGE", "REPLACE", "UPSERT":
 		s.Write, s.Rows = true, has("RETURNING")
+	case "CALL", "FETCH", "EXECUTE":
+		// What they run is unseen, so it may write; OUT parameters, cursors and
+		// prepared SELECTs come back as a result set.
+		s.Write, s.Rows = true, true
 	case "BEGIN", "START", "COMMIT", "END", "ROLLBACK", "SAVEPOINT", "RELEASE":
 		// transaction control changes nothing by itself
 	default:
