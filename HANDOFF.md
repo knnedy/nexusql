@@ -59,7 +59,10 @@ Plan:
   Sizes are exact px because html is 14px (rem spacing is off-scale); move html to 16px
   and canonical classes once legacy screens are gone. Gallery at /dev/primitives under
   `pnpm dev` only (page.dev.tsx + pageExtensions; absent from the shipped build).
-  Still to do: menu, select, dialog, tooltip, toast (need an accessible headless base).
+  Overlays on @base-ui/react 1.9 (user chose it 2026-11-26): Menu/MenuContent/MenuItem/
+  MenuGroup/MenuSeparator, Select, Dialog/DialogContent, Tooltip(+Provider), Toast
+  (ToastProvider + useToast). IconButton carries its own tooltip. Shared popup look and
+  motion in shared/ui/popup.ts. Step 4 done; providers get mounted in the shell (step 5).
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
@@ -719,10 +722,11 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 4 (rest): menu, select, dialog, tooltip, toast.
-2. Step 5: workspace shell per workspace-v3.html (top bar, tables sidebar, context bar
-   with trail + tabs, stage, SQL dock; view and table in the URL).
-3. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
+1. UI rebuild step 5: workspace shell per workspace-v3.html (top bar, tables sidebar,
+   context bar with trail + tabs, stage, SQL dock; view and table in the URL; mount
+   TooltipProvider and ToastProvider). Group A ends at step 4: summary given first.
+2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
+3. Step 7: home (projects + connect) on the new primitives.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

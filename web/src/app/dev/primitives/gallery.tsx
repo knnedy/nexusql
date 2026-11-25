@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Download, Network, Play, Plus, Search, Table2, TableProperties, FileCode, PanelRight, Inbox } from "lucide-react";
+import { Copy, Download, Ellipsis, FileCode, Inbox, Network, PanelRight, Play, Plus, Search, Table2, TableProperties, Trash2 } from "lucide-react";
 import { Button, IconButton } from "@/shared/ui/button";
 import { Badge, FilterChip } from "@/shared/ui/chip";
 import { EmptyState } from "@/shared/ui/empty-state";
@@ -9,6 +9,11 @@ import { Input } from "@/shared/ui/input";
 import { Kbd } from "@/shared/ui/kbd";
 import { FloatCard, Skeleton } from "@/shared/ui/surface";
 import { Tabs } from "@/shared/ui/tabs";
+import { Dialog, DialogContent } from "@/shared/ui/dialog";
+import { Menu, MenuContent, MenuGroup, MenuItem, MenuSeparator } from "@/shared/ui/menu";
+import { Select } from "@/shared/ui/select";
+import { ToastProvider, useToast } from "@/shared/ui/toast";
+import { Tooltip, TooltipProvider } from "@/shared/ui/tooltip";
 
 function Row({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -20,6 +25,43 @@ function Row({ title, children }: { title: string; children: ReactNode }) {
 }
 
 export function Gallery() {
+  return (
+    <TooltipProvider>
+      <ToastProvider>
+        <Inner />
+      </ToastProvider>
+    </TooltipProvider>
+  );
+}
+
+function Overlays() {
+  const [rows, setRows] = useState("50");
+  const toast = useToast();
+  return (
+    <Row title="Overlays">
+      <Menu.Root>
+        <Menu.Trigger render={<Button />}><Ellipsis aria-hidden />Table actions</Menu.Trigger>
+        <MenuContent>
+          <MenuGroup label="orders">
+            <MenuItem icon={<Table2 aria-hidden />}>Open data</MenuItem>
+            <MenuItem icon={<Copy aria-hidden />} hint="Ctrl C">Copy DDL</MenuItem>
+          </MenuGroup>
+          <MenuSeparator />
+          <MenuItem icon={<Trash2 aria-hidden />} danger>Empty table…</MenuItem>
+        </MenuContent>
+      </Menu.Root>
+      <Select aria-label="Rows per page" value={rows} onValueChange={setRows} items={["25", "50", "100", "250"].map((v) => ({ value: v, label: v }))} />
+      <Dialog.Root>
+        <Dialog.Trigger render={<Button variant="danger" />}>Delete 3 rows</Dialog.Trigger>
+        <DialogContent title="Delete 3 rows from orders?" description="Rows 9, 13 and 17 will be removed. This cannot be undone." footer={<><Dialog.Close render={<Button />}>Cancel</Dialog.Close><Button variant="primary">Delete rows</Button></>} />
+      </Dialog.Root>
+      <Tooltip label="Rows 1 to 30 of 30"><span className="text-label text-fg-muted underline decoration-dotted underline-offset-[3px]">30 rows</span></Tooltip>
+      <Button onClick={() => toast({ title: "Copied schema.prisma", description: "6 models, 2.1 KB", tone: "success" })}>Show toast</Button>
+    </Row>
+  );
+}
+
+function Inner() {
   const [view, setView] = useState("diagram");
   return (
     <main className="min-h-screen bg-ground px-[32px] py-[24px] text-body text-fg">
@@ -52,6 +94,7 @@ export function Gallery() {
         <FilterChip removeLabel="Remove filter status is paid" onRemove={() => {}}><b>status</b> is <b>paid</b></FilterChip>
         <Badge>INDEX</Badge><Badge tone="accent">PK</Badge><Badge tone="relation">FK</Badge><Badge tone="warn">pending</Badge><Badge tone="danger">error</Badge>
       </Row>
+      <Overlays />
       <Row title="Surfaces">
         <FloatCard className="w-[304px] p-[16px]">
           <p className="text-heading font-semibold">orders</p>

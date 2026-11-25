@@ -1,5 +1,8 @@
+"use client";
+
 import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cx } from "@/shared/lib/cx";
+import { Tooltip } from "./tooltip";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
@@ -38,15 +41,16 @@ export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonEle
   children: ReactNode;
 }
 
-/** An icon-only button; `label` is its accessible name and tooltip. */
+/** An icon-only button; `label` is its accessible name and its tooltip. */
 export function IconButton({ label, size = "md", type = "button", className, ...rest }: IconButtonProps) {
   return (
-    <button
-      type={type}
-      aria-label={label}
-      title={label}
-      className={cx(BASE, VARIANTS.ghost, size === "sm" ? "size-[28px]" : "size-[32px]", className)}
-      {...rest}
-    />
+    <Tooltip label={label}>
+      <button
+        type={type}
+        aria-label={label}
+        className={cx(BASE, VARIANTS.ghost, size === "sm" ? "size-[28px]" : "size-[32px]", className)}
+        {...rest}
+      />
+    </Tooltip>
   );
 }
