@@ -20,7 +20,9 @@ Zustand) embedded via go:embed (internal/ui/dist). Ships as one binary.
 ## UI
 
 - The existing theme tokens are the starting point: reuse them, improve them, and add new ones when needed.
-- emil-design-eng for UI/UX design and polish.
+- PRODUCT.md is the product brief; DESIGN.md (once written) is the design system. Both bind UI work.
+- impeccable for design direction, critique, audit and polish; emil-design-eng for motion and interaction feel.
+- web-design-guidelines reviews every finished screen; hallmark only when the user names it.
 - Tailwind v4 canonical classes if the project uses v4.
 
 ## Git

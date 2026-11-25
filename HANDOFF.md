@@ -1,9 +1,51 @@
 # HANDOFF
 
-Working log for the staged refactor. Stages 1–2 were on `refactor/architecture`, merged
-(fast-forward) into main at `5a18329` and pushed 2026-11-21. Stage 3 is on `feat/stage-3`
-(tracking origin; last pushed at `ae94c59`; main untouched). Updated with every
-commit.
+Working log. Stages 1–2 were on `refactor/architecture`, merged (fast-forward) into main
+at `5a18329` and pushed 2026-11-21. Stage 3 (`feat/stage-3`) was fast-forwarded into main
+at `f101328` and pushed 2026-11-25. The UI rebuild is on `feat/ui-rebuild` (from main,
+2026-11-26; not pushed). Updated with every commit.
+
+## UI rebuild (current work, `feat/ui-rebuild`)
+
+User 2026-11-26: the UI is "mid tier, nothing eye catching"; wants a complete rebuild,
+page by page, with Canvas vs Explorer reimagined and the export sidebar/drawer redone.
+Branches are named after the work, not "stage N".
+
+Critique (impeccable, single-context, screenshots in
+~/.claude/projects/-home-kenny-code-projects-nexusql/d18-harness/ui/): 20/40. P1: canvas
+and explorer are two apps (two shells; console/seed only on canvas; mode switcher always
+highlights Explorer because trailingSlash makes the path /studio/canvas/); type below
+11px and text-tertiary #606060 failing contrast in dark (2.5-3.0:1), coral text 4.3:1 on
+dark panels; exports hidden behind an unlabelled sidebar icon, ~400px drawer clips code,
+no grouping/scope/wrap. P2: console and seed are modals; permanent empty inspector,
+crowded floating header, sparse projects page. Code: 166 arbitrary font sizes (12
+values, 9-16px), raw red/indigo/amber/blue outside tokens.
+
+Decisions (user): one workspace with views (left schema navigator; Diagram / Data /
+Structure as views of the selected table; contextual inspector; SQL docked at the bottom
+in every view; Ctrl/Cmd+K palette). Direction "Instrument" (calm precision, graphite and
+paper neutrals, coral for action/selection only, teal for relationships only, dense,
+readable type). Order: foundations, then layout, then screens. Comps approved by the user
+before any screen is coded. Skills: impeccable (direction/critique/audit/polish),
+emil-design-eng (motion), web-design-guidelines (review), hallmark only when named.
+
+Plan:
+- A. Foundations: 1 PRODUCT.md (done, user interview 2026-11-26); 2 direction comps
+  (static mockups of the workspace on a real 16-table schema, both themes; user picks);
+  3 DESIGN.md + tokens (11/12px type floor, contrast-checked text, semantic state colours,
+  spacing/radius/motion); 4 component primitives (button, input, select, tabs, badge,
+  panel, dialog, menu, tooltip, kbd, toast, skeleton, empty state).
+- B. Workspace: 5 shell (top bar with project switcher + status, navigator, views,
+  inspector, SQL dock; view and table in the URL); 6 command palette + keyboard map.
+- C. Screens: 7 home (projects + connect); 8 diagram (absorbs the canvas rework:
+  clusters, zoomed-out level of detail, pan speed, square packing, inspector overlap);
+  9 data; 10 structure/inspector; 11 SQL dock; 12 export view (formats grouped, wide
+  preview, wrap, scope, visible copy/download, per-table copy-as); 13 seed flow.
+- D. Finish: 14 states + a11y + keyboard + 1024px; 15 motion/polish, re-run critique
+  (target 32/40+).
+- Gate per step: screenshots both themes, impeccable detect on live pages,
+  web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
+  move to their own branch after the rebuild.
 
 ## Current stage
 
@@ -660,9 +702,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Fast-forward main to feat/stage-3, push main and the branch, switch to main.
-2. Canvas rework (see section above): agree the target look with screenshots first.
-3. eslint 10 once react/import/jsx-a11y plugins declare ^10 support.
+1. UI rebuild step 2: direction comps ("Instrument") for the user to pick from.
+2. Step 3: DESIGN.md and tokens from the chosen comp.
+3. Step 4: component primitives.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 
