@@ -266,3 +266,110 @@
     left: -5px;
   }
 }
+
+/* UI rebuild tokens (DESIGN.md). Legacy tokens above go once every screen has moved over. */
+@theme {
+  --color-ground: var(--nx-ground);
+  --color-panel: var(--nx-panel);
+  --color-sunk: var(--nx-sunk);
+  --color-raised: var(--nx-raised);
+  --color-line: var(--nx-line);
+  --color-line-strong: var(--nx-line-strong);
+  --color-fg: var(--nx-fg);
+  --color-fg-muted: var(--nx-fg-muted);
+  --color-fg-subtle: var(--nx-fg-subtle);
+  --color-accent: var(--nx-accent);
+  --color-accent-fill: var(--nx-accent-fill);
+  --color-on-accent: var(--nx-on-accent);
+  --color-accent-tint: var(--nx-accent-tint);
+  --color-accent-line: var(--nx-accent-line);
+  --color-relation: var(--nx-relation);
+  --color-relation-line: var(--nx-relation-line);
+  --color-relation-tint: var(--nx-relation-tint);
+  --color-relation-faint: var(--nx-relation-faint);
+  --color-warn: var(--nx-warn);
+  --color-warn-tint: var(--nx-warn-tint);
+  --color-danger: var(--nx-danger);
+  --color-danger-tint: var(--nx-danger-tint);
+  --color-grid-dot: var(--nx-grid-dot);
+
+  --text-caption: 11px;
+  --text-caption--line-height: 1.35;
+  --text-label: 12px;
+  --text-label--line-height: 1.4;
+  --text-body: 13px;
+  --text-body--line-height: 1.45;
+  --text-title: 14px;
+  --text-title--line-height: 1.4;
+  --text-subheading: 16px;
+  --text-subheading--line-height: 1.35;
+  --text-heading: 18px;
+  --text-heading--line-height: 1.3;
+
+  --radius-control: 7px;
+  --radius-card: 11px;
+  --radius-panel: 12px;
+
+  --shadow-card: var(--nx-shadow-card);
+  --shadow-float: var(--nx-shadow-float);
+
+  --ease-out-strong: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@layer base {
+  :root {
+    --nx-ground: #f7f6f2;
+    --nx-panel: #ffffff;
+    --nx-sunk: #efede7;
+    --nx-raised: #ffffff;
+    --nx-line: #e3e0d8;
+    --nx-line-strong: #cdc9bf;
+    --nx-fg: #17181a;
+    --nx-fg-muted: #4a4d52;
+    --nx-fg-subtle: #63676e;
+    --nx-accent: #b4411b;
+    --nx-accent-fill: #c24a22;
+    --nx-on-accent: #ffffff;
+    --nx-accent-tint: #f9e6dd;
+    --nx-accent-line: #e2a083;
+    --nx-relation: #0b7356;
+    --nx-relation-line: #1d9e75;
+    --nx-relation-tint: #dcf1e9;
+    --nx-relation-faint: #bcdccf;
+    --nx-warn: #8a5a00;
+    --nx-warn-tint: #fbefd4;
+    --nx-danger: #b42318;
+    --nx-danger-tint: #fdecea;
+    --nx-grid-dot: #dad6cc;
+    --nx-shadow-card: 0 1px 2px rgb(23 24 26 / 0.06), 0 10px 30px rgb(23 24 26 / 0.08);
+    --nx-shadow-float: 0 2px 6px rgb(23 24 26 / 0.08), 0 24px 60px rgb(23 24 26 / 0.16);
+  }
+
+  .dark {
+    --nx-ground: #0f1112;
+    --nx-panel: #16191b;
+    --nx-sunk: #121416;
+    --nx-raised: #1c2023;
+    --nx-line: #24282c;
+    --nx-line-strong: #343a40;
+    --nx-fg: #ecedee;
+    --nx-fg-muted: #b0b4ba;
+    --nx-fg-subtle: #959aa2;
+    --nx-accent: #f0855f;
+    --nx-accent-fill: #f0855f;
+    --nx-on-accent: #1a0d08;
+    --nx-accent-tint: #3a1f15;
+    --nx-accent-line: #8d4a32;
+    --nx-relation: #4ccfa3;
+    --nx-relation-line: #3fbf93;
+    --nx-relation-tint: #11312a;
+    --nx-relation-faint: #23473d;
+    --nx-warn: #f2c063;
+    --nx-warn-tint: #3a2e12;
+    --nx-danger: #f97066;
+    --nx-danger-tint: #3b1715;
+    --nx-grid-dot: #1f2327;
+    --nx-shadow-card: 0 1px 2px rgb(0 0 0 / 0.4), 0 10px 28px rgb(0 0 0 / 0.35);
+    --nx-shadow-float: 0 2px 6px rgb(0 0 0 / 0.5), 0 24px 60px rgb(0 0 0 / 0.55);
+  }
+}

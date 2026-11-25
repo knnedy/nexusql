@@ -43,6 +43,17 @@ Plan:
   preview, wrap, scope, visible copy/download, per-table copy-as); 13 seed flow.
 - D. Finish: 14 states + a11y + keyboard + 1024px; 15 motion/polish, re-run critique
   (target 32/40+).
+- Progress: step 2 done 2026-11-26. Three comps in .impeccable/mocks/ (gitignored):
+  workspace-instrument.html (7.5/10, sidebar disliked), workspace-v2.html (no sidebar,
+  teal top bar; user: "i think i need a sidebar for tables"), workspace-v3.html = chosen:
+  v2 plus a tables sidebar (filter, "Linked to <table>" with direction + key column,
+  grouped tables with row-count bars, Ctrl+B collapse), top bar "neutral" (teal bar
+  rejected: clashed). Use the user's own icon (web/src/app/icon.png, favicon.ico).
+  Step 3 done: DESIGN.md (root), .impeccable/design.json, direction contract in
+  .impeccable/surfaces/web-src-app-studio.md, new tokens in globals.css (own block,
+  --nx-* raw vars; classes bg-panel, text-fg, text-body, rounded-card, shadow-float...).
+  Legacy tokens untouched (27 bg-coral + text-white would fail contrast on the new dark
+  coral); remove them when the last screen has moved over.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
@@ -702,9 +713,11 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 2: direction comps ("Instrument") for the user to pick from.
-2. Step 3: DESIGN.md and tokens from the chosen comp.
-3. Step 4: component primitives.
+1. UI rebuild step 4: component primitives on the new tokens (button, input, select,
+   tabs, badge/chip, panel, dialog, menu, tooltip, kbd, toast, skeleton, empty state).
+2. Step 5: workspace shell per workspace-v3.html (top bar, tables sidebar, context bar
+   with trail + tabs, stage, SQL dock; view and table in the URL).
+3. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

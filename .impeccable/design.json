@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-26T00:00:00Z",
+  "title": "Design System: NexusQL",
+  "extensions": {
+    "colorMeta": {
+      "accent": { "role": "primary", "displayName": "Coral (you are here)" },
+      "relation": { "role": "secondary", "displayName": "Teal (connected)" },
+      "warn": { "role": "tertiary", "displayName": "Amber (status)" },
+      "danger": { "role": "tertiary", "displayName": "Red (destructive)" },
+      "ground": { "role": "neutral", "displayName": "Ground" },
+      "panel": { "role": "neutral", "displayName": "Panel" }
+    },
+    "shadows": [
+      { "name": "card", "value": "0 1px 2px rgba(23,24,26,.06), 0 10px 30px rgba(23,24,26,.08)", "purpose": "Diagram table cards and floating canvas controls (light)." },
+      { "name": "card-dark", "value": "0 1px 2px rgba(0,0,0,.4), 0 10px 28px rgba(0,0,0,.35)", "purpose": "Card, dark theme." },
+      { "name": "float", "value": "0 2px 6px rgba(23,24,26,.08), 0 24px 60px rgba(23,24,26,.16)", "purpose": "Details card, search panel, popovers (light)." },
+      { "name": "float-dark", "value": "0 2px 6px rgba(0,0,0,.5), 0 24px 60px rgba(0,0,0,.55)", "purpose": "Float, dark theme." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Entrances, presses, the trail drawing in." },
+      { "name": "press", "value": "160ms", "purpose": "Button press scale(0.97)." },
+      { "name": "trail-draw", "value": "500ms", "purpose": "Trail connectors and diagram path drawing in once per trail change." }
+    ],
+    "breakpoints": [
+      { "name": "desktop", "value": "1280px" }
+    ]
+  },
+  "components": [
+    { "name": "Primary Button", "kind": "button", "refersTo": "button-primary", "description": "One primary action per region: Run, Row, Download.",
+      "html": "<button class=\"ds-btn-primary\">Run</button>",
+      "css": ".ds-btn-primary { height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--accent-fill, #c24a22); color: var(--on-accent, #fff); font: 500 13px/1 Geist, system-ui, sans-serif; transition: transform 160ms cubic-bezier(0.23,1,0.32,1); } .ds-btn-primary:active { transform: scale(0.97); } .ds-btn-primary:focus-visible { outline: 2px solid var(--accent, #b4411b); outline-offset: 2px; }" },
+    { "name": "Secondary Button", "kind": "button", "refersTo": "button-secondary", "description": "Everyday actions: Copy, CSV, Details.",
+      "html": "<button class=\"ds-btn\">Copy</button>",
+      "css": ".ds-btn { height: 30px; padding: 0 12px; border: 1px solid var(--line-strong, #cdc9bf); border-radius: 7px; background: var(--panel, #fff); color: var(--fg, #17181a); font: 500 13px/1 Geist, system-ui, sans-serif; } .ds-btn:hover { border-color: var(--fg-subtle, #63676e); } .ds-btn:focus-visible { outline: 2px solid var(--accent, #b4411b); outline-offset: 2px; }" },
+    { "name": "Filter Input", "kind": "input", "refersTo": "input", "description": "Sidebar filter and other fields.",
+      "html": "<input class=\"ds-input\" placeholder=\"Filter tables\">",
+      "css": ".ds-input { height: 32px; padding: 0 10px; border: 1px solid var(--line-strong, #cdc9bf); border-radius: 7px; background: var(--ground, #f7f6f2); color: var(--fg, #17181a); font: 400 13px Geist, system-ui, sans-serif; outline: 0; } .ds-input::placeholder { color: var(--fg-subtle, #63676e); } .ds-input:focus { border-color: var(--accent, #b4411b); box-shadow: 0 0 0 3px var(--accent-tint, #f9e6dd); }" },
+    { "name": "Relationship Trail", "kind": "custom", "refersTo": "trail-chip", "description": "The followed foreign-key path in the context bar.",
+      "html": "<nav class=\"ds-trail\"><a>customers</a><span class=\"ds-hop\"><small>customer_id</small><i></i></span><a class=\"cur\">orders</a></nav>",
+      "css": ".ds-trail { display: flex; align-items: center; font: 500 13px Geist, system-ui, sans-serif; } .ds-trail a { height: 28px; padding: 0 11px; display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid var(--relation-faint, #bcdccf); background: var(--relation-tint, #dcf1e9); color: var(--relation, #0b7356); } .ds-trail a.cur { border-color: var(--accent-line, #e2a083); background: var(--accent-tint, #f9e6dd); color: var(--accent, #b4411b); } .ds-hop { display: flex; flex-direction: column; align-items: center; margin: 0 6px; } .ds-hop small { font: 400 11px 'Geist Mono', monospace; color: var(--fg-subtle, #63676e); } .ds-hop i { width: 44px; height: 2px; background: var(--relation-line, #1d9e75); }" },
+    { "name": "Filter Chip", "kind": "chip", "refersTo": "filter-chip", "description": "An applied data filter.",
+      "html": "<span class=\"ds-filter\"><b>status</b> is <b>paid</b> ×</span>",
+      "css": ".ds-filter { height: 28px; padding: 0 8px 0 10px; display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; border: 1px solid var(--accent-line, #e2a083); background: var(--accent-tint, #f9e6dd); color: var(--fg, #17181a); font: 400 12px Geist, system-ui, sans-serif; } .ds-filter b { font-weight: 500; }" },
+    { "name": "Sidebar Row", "kind": "nav", "refersTo": "nav-row-selected", "description": "A table in the tables sidebar; selected state shown.",
+      "html": "<div class=\"ds-row sel\"><span>orders</span><span class=\"n\">120</span></div>",
+      "css": ".ds-row { height: 30px; padding: 0 8px; display: flex; align-items: center; border-radius: 7px; font: 400 13px Geist, system-ui, sans-serif; color: var(--fg, #17181a); } .ds-row:hover { background: var(--sunk, #efede7); } .ds-row.sel { background: var(--accent-tint, #f9e6dd); font-weight: 600; } .ds-row .n { margin-left: auto; font-size: 12px; font-weight: 400; color: var(--fg-subtle, #63676e); font-variant-numeric: tabular-nums; }" }
+  ],
+  "narrative": {
+    "northStar": "The schema is the map you walk",
+    "overview": "An instrument for understanding a database: quiet neutral chrome, coral for where you are, teal for what is connected, one workspace with connected views.",
+    "keyCharacteristics": ["One workspace, views of the selected table", "Tables sidebar led by linked tables", "Relationship trail", "Neutral chrome, two semantic colours"],
+    "rules": [
+      { "name": "The Two Meanings Rule", "body": "Coral means you are here; teal means connected.", "section": "colors" },
+      { "name": "The Quiet Chrome Rule", "body": "Chrome surfaces are panel-coloured, never tinted.", "section": "colors" },
+      { "name": "The Six Sizes Rule", "body": "Text uses 11, 12, 13, 14, 16 or 18px.", "section": "typography" },
+      { "name": "The Float-Only Shadow Rule", "body": "Only floating things cast shadows.", "section": "elevation" }
+    ],
+    "dos": ["Do keep coral for the current table and primary actions", "Do show what a key points to wherever it appears", "Do keep text at 4.5:1 or better"],
+    "donts": ["Don't tint chrome", "Don't split diagram and data into separate apps", "Don't clip generated code in a drawer", "Don't go below 11px"]
+  }
+}
