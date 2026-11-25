@@ -54,6 +54,12 @@ Plan:
   --nx-* raw vars; classes bg-panel, text-fg, text-body, rounded-card, shadow-float...).
   Legacy tokens untouched (27 bg-coral + text-white would fail contrast on the new dark
   coral); remove them when the last screen has moved over.
+  Step 4 in progress: primitives in web/src/shared/ui (Button/IconButton, Tabs/TabPanel,
+  FilterChip/Badge, Kbd, Input, FloatCard/Skeleton, EmptyState; cx in shared/lib).
+  Sizes are exact px because html is 14px (rem spacing is off-scale); move html to 16px
+  and canonical classes once legacy screens are gone. Gallery at /dev/primitives under
+  `pnpm dev` only (page.dev.tsx + pageExtensions; absent from the shipped build).
+  Still to do: menu, select, dialog, tooltip, toast (need an accessible headless base).
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
@@ -713,8 +719,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 4: component primitives on the new tokens (button, input, select,
-   tabs, badge/chip, panel, dialog, menu, tooltip, kbd, toast, skeleton, empty state).
+1. UI rebuild step 4 (rest): menu, select, dialog, tooltip, toast.
 2. Step 5: workspace shell per workspace-v3.html (top bar, tables sidebar, context bar
    with trail + tabs, stage, SQL dock; view and table in the URL).
 3. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).

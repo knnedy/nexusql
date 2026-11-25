@@ -7,6 +7,9 @@ const nextConfig: NextConfig = {
   // every route becomes a real folder: /about is /about/index.html
   trailingSlash: true,
 
+  // *.dev.tsx routes (the primitives gallery) exist only under next dev.
+  pageExtensions: process.env.NODE_ENV === "production" ? ["tsx", "ts"] : ["dev.tsx", "tsx", "ts"],
+
   images: {
     // image optimization requires a server so we disable it
     unoptimized: true,
