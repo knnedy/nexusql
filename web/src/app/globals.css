@@ -381,3 +381,18 @@
 .sql-code .token.number, .sql-code .token.boolean { color: var(--nx-warn); }
 .sql-code .token.operator, .sql-code .token.punctuation { color: var(--nx-fg-muted); }
 .sql-code .token.comment { color: var(--nx-fg-subtle); font-style: italic; }
+
+/* The relationship trail's connector: an arrowhead, drawn on in once. */
+.trail-line::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: -1px;
+  border: 4px solid transparent;
+  border-right: 0;
+  border-left-color: var(--nx-relation-line);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .trail-line { transform-origin: left; animation: trail-grow 240ms var(--ease-out-strong) both; }
+}
+@keyframes trail-grow { from { transform: scaleX(0.2); opacity: 0; } }

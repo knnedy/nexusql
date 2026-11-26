@@ -78,7 +78,10 @@ Plan:
   toggles; collapsed bar keeps the last query and its summary; History is a Menu; the
   read-only toggle left the console since the top bar owns it). Prism colours in
   globals.css (.sql-code) on --nx tokens.
-  Next: 5d details card + trail. Row counts in the sidebar need server
+  5d-1 (done): relationship trail in the context bar (workspace/lib/trail.ts: back along
+  it, onward by a link drops what came after, anything else starts over; follows ?table=).
+  Next: 5d-2 floating details card replacing canvas InspectorPanel (facts, relationships
+  that select, keys and checks, DDL, Open data; Details toggle in the context bar). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
   diagram clustering (step 8); the comp's group names were invented.
 - Gate per step: screenshots both themes, impeccable detect on live pages,

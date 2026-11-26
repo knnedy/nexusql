@@ -14,8 +14,10 @@ import { TabPanel, Tabs } from "@/shared/ui/tabs";
 import { ToastProvider } from "@/shared/ui/toast";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { DataView } from "./_components/data-view";
+import { RelationshipTrail } from "./_components/relationship-trail";
 import { TablesSidebar } from "./_components/tables-sidebar";
 import { TopBar } from "./_components/top-bar";
+import { EMPTY_TRAIL, stepTrail } from "./lib/trail";
 import { nextSearch, parseView, selectTableUpdates, type Updates } from "./lib/workspace-url";
 
 const VIEW_TABS = [
@@ -47,6 +49,14 @@ function WorkspaceInner() {
   const [collapsed, setCollapsed] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
+  const relations = schema?.relations ?? [];
+  // The trail follows the URL's table, however it was chosen.
+  const [trail, setTrail] = useState(EMPTY_TRAIL);
+  const [trailFor, setTrailFor] = useState<string | null>(null);
+  if (table !== trailFor) {
+    setTrailFor(table);
+    setTrail(stepTrail(trail, table, relations));
+  }
 
   const go = useCallback(
     (updates: Updates) => router.replace(`/studio/?${nextSearch(params, updates)}`, { scroll: false }),
@@ -73,7 +83,7 @@ function WorkspaceInner() {
       <TopBar />
       <TablesSidebar
         tables={schema?.tables ?? []}
-        relations={schema?.relations ?? []}
+        relations={relations}
         selected={table}
         onSelect={selectTable}
         collapsed={collapsed}
@@ -85,7 +95,8 @@ function WorkspaceInner() {
           </Button>
         }
       />
-      <div className="flex items-stretch gap-3.5 border-b border-line bg-panel px-4">
+      <div className="flex min-w-0 items-stretch gap-3.5 border-b border-line bg-panel px-4">
+        <RelationshipTrail trail={trail} relations={relations} onSelect={selectTable} />
         <Tabs label="View" idPrefix={TABS_ID} items={VIEW_TABS} value={view} onChange={(v) => go({ view: v })} />
       </div>
       <TabPanel idPrefix={TABS_ID} id={view} className="relative min-h-0 overflow-hidden">
