@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -29,13 +30,12 @@ import { buildCanvasGraph } from "@/features/canvas/lib/canvas-utils";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
-import CanvasToolbar from "@/features/canvas/_components/canvas-toolbar";
 import CanvasSidebar from "@/features/canvas/_components/canvas-sidebar";
 import { ExportPreviewDrawer } from "@/features/export";
 import InspectorPanel from "@/features/canvas/_components/inspector-panel";
 import { SqlConsoleModal } from "@/features/console";
 import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
-import { Relation, Table } from "@/shared/types/schema";
+import { Relation } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { SeedDataModal } from "@/features/seed";
 import { studioSession } from "@/shared/lib/session-storage";
@@ -52,15 +52,21 @@ function getCssVar(name: string): string {
 
 const emptySubscribe = () => () => {};
 
-export default function CanvasStudio() {
+interface CanvasStudioProps {
+  /** The workspace's selected table; the diagram follows it. */
+  selectedTable: string | null;
+  onSelectTable: (table: string | null) => void;
+}
+
+export default function CanvasStudio(props: CanvasStudioProps) {
   return (
     <ReactFlowProvider>
-      <CanvasInner />
+      <CanvasInner {...props} />
     </ReactFlowProvider>
   );
 }
 
-function CanvasInner() {
+function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudioProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
   );
@@ -72,10 +78,6 @@ function CanvasInner() {
   const [activeExport, setActiveExport] = useState<string | null>(null);
   const [seedOpen, setSeedOpen] = useState(false);
   const [sqlConsoleOpen, setSqlConsoleOpen] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<{
-    table: Table;
-    provider: DatabaseProvider;
-  } | null>(null);
   const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
     null,
   );
@@ -83,10 +85,16 @@ function CanvasInner() {
   const [isGeneratingPng, setIsGeneratingPng] = useState(false);
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
-  const { getViewport, setViewport, getNodes, getNodesBounds } = useReactFlow();
+  const { getViewport, setViewport, getNodes, getNodesBounds, fitView } = useReactFlow();
+  // Set when the selection came from a click here, so the view does not jump.
+  const clickedRef = useRef<string | null>(null);
   const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
+  const selectedTable = useMemo(
+    () => schema?.tables.find((t) => t.name === selectedName) ?? null,
+    [schema, selectedName],
+  );
   const setHovered = useCanvasFocus((s) => s.setHovered);
   const setFocusSelected = useCanvasFocus((s) => s.setSelected);
   useEffect(() => () => useCanvasFocus.getState().reset(), []);
@@ -108,22 +116,28 @@ function CanvasInner() {
     });
   }, [schema, provider, setNodes, setEdges]);
 
+  useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
+
+  // A table chosen elsewhere (sidebar, links) is brought into view.
+  useEffect(() => {
+    if (!graphReady || !selectedName) return;
+    if (clickedRef.current === selectedName) return;
+    if (!getNodes().some((n) => n.id === selectedName)) return;
+    fitView({ nodes: [{ id: selectedName }], duration: 300, maxZoom: Math.max(getViewport().zoom, 0.8) });
+  }, [graphReady, selectedName, fitView, getNodes, getViewport]);
+
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node<TableNodeData>) => {
       setSelectedRelation(null);
-      setFocusSelected(node.id);
-      setSelectedTable({
-        table: node.data.table,
-        provider: node.data.provider,
-      });
+      clickedRef.current = node.id;
+      onSelectTable(node.id);
       setEdges((eds) => eds.map((e) => ({ ...e, selected: false })));
     },
-    [setEdges, setFocusSelected],
+    [setEdges, onSelectTable],
   );
 
   const handleEdgeClick = useCallback(
     (_: React.MouseEvent, edge: Edge<RelationEdgeData>) => {
-      setSelectedTable(null);
       if (edge.data?.relation) setSelectedRelation(edge.data.relation);
       setNodes((nds) => nds.map((n) => ({ ...n, selected: false })));
     },
@@ -131,10 +145,10 @@ function CanvasInner() {
   );
 
   const handlePaneClick = useCallback(() => {
-    setSelectedTable(null);
     setSelectedRelation(null);
-    setFocusSelected(null);
-  }, [setFocusSelected]);
+    clickedRef.current = null;
+    onSelectTable(null);
+  }, [onSelectTable]);
 
   const handleLayoutApply = useCallback(
     (laid: Node<TableNodeData>[], routed: Edge<RelationEdgeData>[]) => {
@@ -249,8 +263,6 @@ function CanvasInner() {
         <SlidersHorizontal size={15} aria-hidden />
       </button>
 
-      <CanvasToolbar />
-
       <CanvasSidebar
         open={sidebarOpen}
         onClose={() => {
@@ -309,7 +321,7 @@ function CanvasInner() {
             color="var(--canvas-dot)"
           />
           <InspectorPanel
-            table={selectedTable?.table ?? null}
+            table={selectedRelation ? null : selectedTable}
             relation={selectedRelation}
           />
           <MiniMap

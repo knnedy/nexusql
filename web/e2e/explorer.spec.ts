@@ -6,7 +6,7 @@ const SETUP = `CREATE TABLE pets (
 INSERT INTO pets (name, nick, age) VALUES ('Rex', 'rexy', 3), ('Tom', '', 5)`;
 
 async function openPets(page: Page) {
-  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("tab", { name: "Data" }).click();
   await page.getByRole("button", { name: /pets/ }).click();
   await expect(page.getByText("Rex", { exact: true })).toBeVisible();
 }
@@ -111,7 +111,7 @@ test("is one of picks from a column's allowed values", async ({ page }) => {
   await connectSqlite(page, `CREATE TABLE sizes (id INTEGER PRIMARY KEY,
     s TEXT CHECK (s IN ('small', 'large')));
     INSERT INTO sizes (s) VALUES ('small'), ('large'), ('small')`);
-  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("tab", { name: "Data" }).click();
   await page.getByRole("button", { name: /sizes/ }).click();
   await page.getByRole("button", { name: "Filters" }).click();
   const dialog = page.getByRole("dialog", { name: "Filters" });
@@ -129,7 +129,7 @@ test("following a foreign key filters the target table", async ({ page }) => {
     CREATE TABLE dogs (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id), dog TEXT);
     INSERT INTO owners (who) VALUES ('Ann'), ('Ben');
     INSERT INTO dogs (owner_id, dog) VALUES (2, 'Fido')`);
-  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("tab", { name: "Data" }).click();
   await page.getByRole("button", { name: /dogs/ }).click();
   await page.getByText("Fido", { exact: true }).hover();
   await page.getByTitle("Go to related row").click();
@@ -142,7 +142,7 @@ test("pages forward by cursor and back, and a reload falls back to the offset", 
   await connectSqlite(page, `CREATE TABLE big (id INTEGER PRIMARY KEY, label TEXT NOT NULL);
     WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 60)
     INSERT INTO big (label) SELECT 'row ' || i FROM n`);
-  await page.getByRole("button", { name: "Explorer" }).click();
+  await page.getByRole("tab", { name: "Data" }).click();
   await page.getByRole("button", { name: /big/ }).click();
   await expect(page.getByText("1–50 of 60")).toBeVisible();
   await expect(page.getByText("row 1", { exact: true })).toBeVisible();
@@ -167,8 +167,10 @@ test("pages forward by cursor and back, and a reload falls back to the offset", 
 test("a read-only connection makes the grid read-only", async ({ page }) => {
   await connectSqlite(page, SETUP);
   await page.request.put("/api/connection/read-only", { data: { readOnly: true } });
+  await page.reload(); // the page read the flag before this request changed it
   await openPets(page);
-  await expect(page.getByRole("status")).toContainText("read-only");
+  await expect(page.getByRole("button", { name: "Read-only" })).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByRole("tabpanel").getByRole("status")).toContainText("read-only");
   const inputs = await page.getByRole("textbox").count(); // search and the like
   await page.getByText("Rex", { exact: true }).dblclick();
   await expect(page.getByRole("textbox")).toHaveCount(inputs);

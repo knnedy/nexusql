@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
 import {
   Search,
   RotateCw,
@@ -12,13 +11,9 @@ import {
   X,
   Loader2,
 } from "lucide-react";
-import { useStudioStore } from "@/shared/store/studio-store";
-import { DisconnectButton, ModeSwitcher } from "@/features/studio";
-import ThemeToggle from "@/components/theme-toggle";
 import type { EnumType, Field } from "@/shared/types/schema";
 import type { RowFilter } from "../lib/filters";
 import FilterMenu from "./filter-menu";
-import icon from "@/app/icon.png";
 
 interface ExplorerToolbarProps {
   tableSelected: boolean;
@@ -61,8 +56,6 @@ export default function ExplorerToolbar({
   onSaveChanges,
   onDiscardChanges,
 }: ExplorerToolbarProps) {
-  const provider = useStudioStore((s) => s.provider);
-  const projectName = useStudioStore((s) => s.projectName);
   const [columnsOpen, setColumnsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -101,28 +94,6 @@ export default function ExplorerToolbar({
 
   return (
     <div className="flex items-center h-14 px-4 gap-3 border-b border-node-border/80 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 shrink-0">
-      <div className="flex items-center min-w-0">
-        <Image
-          src={icon}
-          alt=""
-          width={48}
-          height={48}
-          className="rounded-lg shrink-0"
-        />
-        <div className="flex flex-col min-w-0 justify-center">
-          <span className="text-[16px] font-bold text-text-primary truncate leading-none antialiased">
-            {projectName}
-          </span>
-          <span className="text-xs font-mono text-text-tertiary leading-none mt-0.5">
-            <span className="inline-flex items-center rounded-md bg-badge-teal-bg/15 dark:bg-badge-teal-bg/20 px-2 py-0.5 text-[9px] font-bold tracking-wider text-badge-teal-text dark:text-teal uppercase border border-black/2 dark:border-white/2 font-mono leading-none">
-              {provider}
-            </span>
-          </span>
-        </div>
-      </div>
-
-      <div className="w-px h-6 bg-node-border/60 dark:bg-node-border/30 shrink-0" />
-
       <div className="flex items-center h-9 rounded-lg border border-node-border/60 dark:border-node-border/40 bg-black/2 dark:bg-white/2 overflow-hidden">
         <div className="flex items-center gap-2 px-3 h-full">
           <Search
@@ -266,15 +237,6 @@ export default function ExplorerToolbar({
         </div>
       )}
 
-      <ThemeToggle className="w-9 h-9 rounded-lg hover:bg-black/2 dark:hover:bg-white/2" />
-
-      <div className="w-px h-6 bg-node-border/60 dark:bg-node-border/30 shrink-0" />
-
-      <ModeSwitcher />
-
-      <div className="w-px h-6 bg-node-border/60 dark:bg-node-border/30 shrink-0" />
-
-      <DisconnectButton className="h-9 px-3.5 rounded-lg hover:bg-coral/10 dark:hover:bg-coral/15" />
     </div>
   );
 }

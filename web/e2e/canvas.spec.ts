@@ -74,8 +74,9 @@ test("lines into a hub table show as chips until either end is in focus", async 
   const users = page.locator('.react-flow__node[data-id="users"]');
   await expect.poll(async () => {
     const b = await users.boundingBox();
-    const v = page.viewportSize()!;
-    return !!b && Math.abs(b.x + b.width / 2 - v.width / 2) < 40 && Math.abs(b.y + b.height / 2 - v.height / 2) < 40;
+    const v = (await page.locator(".react-flow").boundingBox())!; // the diagram, not the window
+    const [cx, cy] = [v.x + v.width / 2, v.y + v.height / 2];
+    return !!b && Math.abs(b.x + b.width / 2 - cx) < 40 && Math.abs(b.y + b.height / 2 - cy) < 40;
   }).toBe(true);
   await expect.poll(() => page.locator("[data-hub]").count()).toBeGreaterThan(0);
 });

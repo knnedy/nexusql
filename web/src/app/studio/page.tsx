@@ -1,14 +1,5 @@
-"use client";
-
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { Workspace } from "@/features/workspace";
 
 export default function StudioPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace("/studio/canvas");
-  }, [router]);
-
-  return null;
+  return <Workspace />;
 }

@@ -1,5 +1,5 @@
-import { CanvasStudio } from "@/features/canvas";
+import { LegacyRedirect } from "@/features/workspace";
 
 export default function CanvasPage() {
-  return <CanvasStudio />;
+  return <LegacyRedirect view="diagram" />;
 }

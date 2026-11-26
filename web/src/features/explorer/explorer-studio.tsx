@@ -15,7 +15,6 @@ import { useUpdateRow } from "@/features/explorer/hooks/use-update-row";
 import { useDebouncedValue } from "@/shared/hooks/use-debounced-value";
 import { useQueryClient } from "@tanstack/react-query";
 import { exportToCsv } from "@/features/explorer/lib/csv";
-import TableList from "@/features/explorer/_components/table-list";
 import DataGrid, {
   type PendingEdit,
   type CellEditPayload,
@@ -142,7 +141,6 @@ function ExplorerInner() {
   const debouncedSearch = useDebouncedValue(searchValue, 300);
 
   const qc = useQueryClient();
-  const tables = schema?.tables ?? [];
 
   const updateParams = useCallback(
     (updates: Record<string, string | number | null>) => {
@@ -154,7 +152,7 @@ function ExplorerInner() {
           next.set(key, String(value));
         }
       }
-      router.replace(`/studio/explorer?${next.toString()}`, {
+      router.replace(`/studio/?${next.toString()}`, {
         scroll: false,
       });
     },
@@ -191,20 +189,6 @@ function ExplorerInner() {
   const updateRow = useUpdateRow(selectedTable ?? "");
   const { readOnly } = useReadOnly();
   const failedCount = [...pendingEdits.values()].filter((e) => e.error).length;
-
-  function handleSelectTable(name: string) {
-    setSearchValue("");
-    setColumnVisibility({});
-    setPendingEdits(new Map());
-    updateParams({
-      table: name,
-      page: null,
-      sort: null,
-      dir: null,
-      search: null,
-      filters: null,
-    });
-  }
 
   function handleSort(col: string) {
     if (sortCol !== col) {
@@ -380,12 +364,6 @@ function ExplorerInner() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <TableList
-          tables={tables}
-          selectedTable={selectedTable}
-          onSelectTable={handleSelectTable}
-          rowCount={total}
-        />
 
         <div className="relative flex flex-col flex-1 overflow-hidden">
           {selectedTable ? (

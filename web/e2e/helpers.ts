@@ -18,6 +18,7 @@ export async function connectSqlite(page: Page, setupSql = ""): Promise<string> 
       data: { sql: setupSql, confirmed: true },
     });
     expect(res.ok(), await res.text()).toBeTruthy();
+    await page.reload(); // the workspace loaded the schema before these tables existed
   }
   return file;
 }

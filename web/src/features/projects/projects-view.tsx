@@ -91,7 +91,7 @@ function ProjectRow({
       {
         onSuccess: () => {
           router.push(
-            mode === "explorer" ? "/studio/explorer/" : "/studio/canvas/",
+            mode === "explorer" ? "/studio/?view=data" : "/studio/?view=diagram",
           );
         },
       },

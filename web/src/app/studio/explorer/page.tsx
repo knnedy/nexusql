@@ -1,5 +1,5 @@
-import { ExplorerStudio } from "@/features/explorer";
+import { LegacyRedirect } from "@/features/workspace";
 
 export default function ExplorerPage() {
-  return <ExplorerStudio />;
+  return <LegacyRedirect view="data" />;
 }

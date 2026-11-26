@@ -64,6 +64,16 @@ Plan:
   MenuGroup/MenuSeparator, Select, Dialog/DialogContent, Tooltip(+Provider), Toast
   (ToastProvider + useToast). IconButton carries its own tooltip. Shared popup look and
   motion in shared/ui/popup.ts. Step 4 done; providers get mounted in the shell (step 5).
+  Step 5 split (user: commit regularly): 5a workspace frame (done): /studio/ renders
+  features/workspace (top bar with project menu, connection status, Read-only/Read-write,
+  theme; tables sidebar with filter, "Linked to <table>" (direction + key columns), all
+  tables A-Z, collapse; Diagram/Data tabs). URL holds view and table (plus the data
+  params); the diagram follows ?table= and pans to it. /studio/canvas and /studio/explorer
+  redirect. e2e: helpers reload after setup SQL (the workspace loads the schema first).
+  Next: 5b canvas sidebar tools move (Export view, Seed in sidebar, Auto-layout on the
+  diagram), 5c SQL dock, 5d details card + trail. Row counts in the sidebar need server
+  estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
+  diagram clustering (step 8); the comp's group names were invented.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
@@ -723,9 +733,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 5: workspace shell per workspace-v3.html (top bar, tables sidebar,
-   context bar with trail + tabs, stage, SQL dock; view and table in the URL; mount
-   TooltipProvider and ToastProvider). Group A ends at step 4: summary given first.
+1. UI rebuild step 5b-5d (see above), then row-count estimates.
 2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 3. Step 7: home (projects + connect) on the new primitives.
 
