@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useMemo, useState, type ReactNode, type Ref } from "react";
 import { ArrowLeft, ArrowRight, PanelLeftClose, PanelLeftOpen, Search, Table2 } from "lucide-react";
 import { cx } from "@/shared/lib/cx";
 import type { Relation, Table } from "@/shared/types/schema";
@@ -17,6 +17,8 @@ interface TablesSidebarProps {
   onToggle: () => void;
   /** Tools pinned under the list. */
   footer?: ReactNode;
+  /** The filter field, for the / shortcut. */
+  filterRef?: Ref<HTMLInputElement>;
 }
 
 const ROW =
@@ -24,7 +26,7 @@ const ROW =
   "hover:bg-sunk focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent";
 
 /** Every table, led by those linked to the selected one; filter with the field at the top. */
-export function TablesSidebar({ tables, relations, selected, onSelect, collapsed, onToggle, footer }: TablesSidebarProps) {
+export function TablesSidebar({ tables, relations, selected, onSelect, collapsed, onToggle, footer, filterRef }: TablesSidebarProps) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const match = (name: string) => !q || name.toLowerCase().includes(q);
@@ -54,7 +56,7 @@ export function TablesSidebar({ tables, relations, selected, onSelect, collapsed
         </IconButton>
       </div>
       <div className="shrink-0 px-2.5 pt-2.5 pb-1">
-        <Input aria-label="Filter tables" placeholder="Filter tables" value={query} onChange={(e) => setQuery(e.target.value)} leading={<Search aria-hidden />} />
+        <Input ref={filterRef} aria-label="Filter tables" placeholder="Filter tables" value={query} onChange={(e) => setQuery(e.target.value)} leading={<Search aria-hidden />} />
       </div>
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 pb-3">
         {shownLinked.length > 0 && (

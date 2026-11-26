@@ -1,7 +1,8 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import { FileCode2, Network, PanelRight, Sprout, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
 import { SqlDock } from "@/features/console";
@@ -15,8 +16,11 @@ import { ToastProvider } from "@/shared/ui/toast";
 import { TooltipProvider } from "@/shared/ui/tooltip";
 import { DataView } from "./_components/data-view";
 import { RelationshipTrail } from "./_components/relationship-trail";
+import { SearchPanel } from "./_components/search-panel";
 import { TablesSidebar } from "./_components/tables-sidebar";
 import { TopBar } from "./_components/top-bar";
+import type { SearchItem } from "./lib/search";
+import { shortcutFor } from "./lib/shortcuts";
 import { EMPTY_TRAIL, stepTrail } from "./lib/trail";
 import { nextSearch, parseView, selectTableUpdates, type Updates } from "./lib/workspace-url";
 
@@ -50,6 +54,9 @@ function WorkspaceInner() {
   const [dockOpen, setDockOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const { resolvedTheme, setTheme } = useTheme();
   const relations = schema?.relations ?? [];
   // The trail follows the URL's table, however it was chosen.
   const [trail, setTrail] = useState(EMPTY_TRAIL);
@@ -63,17 +70,52 @@ function WorkspaceInner() {
     (updates: Updates) => router.replace(`/studio/?${nextSearch(params, updates)}`, { scroll: false }),
     [router, params],
   );
+  const focusFilter = useCallback(() => {
+    setCollapsed(false);
+    requestAnimationFrame(() => filterRef.current?.focus());
+  }, []);
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j") {
-        e.preventDefault();
-        setDockOpen((o) => !o);
-      }
+      const shortcut = shortcutFor(e);
+      if (!shortcut) return;
+      e.preventDefault();
+      if (shortcut === "search") setSearchOpen((o) => !o);
+      if (shortcut === "sidebar") setCollapsed((c) => !c);
+      if (shortcut === "sql") setDockOpen((o) => !o);
+      if (shortcut === "filter") focusFilter();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [focusFilter]);
   const selectTable = useCallback((name: string | null) => go(name ? selectTableUpdates(name) : { table: null }), [go]);
+
+  const searchItems = useMemo<SearchItem[]>(() => {
+    const tables = [...(schema?.tables ?? [])].sort((a, b) => a.name.localeCompare(b.name));
+    return [
+      ...tables.map((t): SearchItem => ({ id: `table:${t.name}`, kind: "table", label: t.name, detail: `${t.fields.length} columns` })),
+      ...VIEW_TABS.map((v): SearchItem => ({ id: `view:${v.id}`, kind: "view", label: v.label, keywords: "view tab" })),
+      { id: "action:sql", kind: "action", label: "Toggle SQL console", detail: "Ctrl J", keywords: "query run" },
+      { id: "action:sidebar", kind: "action", label: "Toggle tables sidebar", detail: "Ctrl B", keywords: "hide show" },
+      { id: "action:seed", kind: "action", label: "Seed data", keywords: "generate fake rows" },
+      { id: "action:theme", kind: "action", label: "Switch theme", keywords: "dark light mode" },
+      { id: "action:projects", kind: "action", label: "All projects", keywords: "switch project connection" },
+      ...tables.flatMap((t) =>
+        t.fields.map((f): SearchItem => ({ id: `column:${t.name}.${f.name}`, kind: "column", label: f.name, detail: t.name })),
+      ),
+    ];
+  }, [schema]);
+
+  function runSearch(item: SearchItem) {
+    const [kind, rest] = [item.id.slice(0, item.id.indexOf(":")), item.id.slice(item.id.indexOf(":") + 1)];
+    if (kind === "table") selectTable(rest);
+    else if (kind === "column") selectTable(item.detail ?? null);
+    else if (kind === "view") go({ view: rest });
+    else if (rest === "sql") setDockOpen((o) => !o);
+    else if (rest === "sidebar") setCollapsed((c) => !c);
+    else if (rest === "seed") setSeedOpen(true);
+    else if (rest === "theme") setTheme(resolvedTheme === "dark" ? "light" : "dark");
+    else if (rest === "projects") router.push("/projects");
+  }
 
   return (
     <div
@@ -81,7 +123,7 @@ function WorkspaceInner() {
         "grid h-screen grid-rows-[auto_3rem_minmax(0,1fr)_auto] bg-ground text-body text-fg",
         collapsed ? "grid-cols-[3.25rem_minmax(0,1fr)]" : "grid-cols-[16.5rem_minmax(0,1fr)]",
       )}>
-      <TopBar />
+      <TopBar onSearch={() => setSearchOpen(true)} />
       <TablesSidebar
         tables={schema?.tables ?? []}
         relations={relations}
@@ -89,6 +131,7 @@ function WorkspaceInner() {
         onSelect={selectTable}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
+        filterRef={filterRef}
         footer={
           <Button variant="ghost" className="justify-start" onClick={() => setSeedOpen(true)}>
             <Sprout aria-hidden />
@@ -121,6 +164,7 @@ function WorkspaceInner() {
       </TabPanel>
       <SqlDock open={dockOpen} onOpenChange={setDockOpen} />
       <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
+      <SearchPanel open={searchOpen} onOpenChange={setSearchOpen} items={searchItems} onRun={runSearch} />
     </div>
   );
 }

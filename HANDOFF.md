@@ -84,6 +84,10 @@ Plan:
   both ways that select, columns, keys and checks, Show DDL, Open data; relationships
   show both ends). Details toggle in the context bar on the diagram. linkedTables moved
   to shared/lib. Minimap moved bottom-left. Step 5 done.
+  Step 6 (done): Ctrl+K search panel (workspace/lib/search.ts ranks exact, prefix, word
+  start, substring, keywords; tables before columns; columns need a query), search box
+  in the top bar, shortcuts in lib/shortcuts.ts (Ctrl/Cmd K, B, J; / unless typing).
+  No open/close motion on the panel: keyboard-driven.
   Known: a table chosen from outside is centred in the whole stage, partly under the
   card; fix with the diagram work (step 8). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
@@ -747,8 +751,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 6: Ctrl+K search panel, shortcuts (Ctrl+B sidebar, / filter); then
-   row-count estimates. Group B ends after step 6: summary first.
+1. Group B done (steps 5-6). Summary to the user, then ask before group C. Pending
+   inside B's scope: row-count estimates (own commit), web-design-guidelines review of
+   the workspace screen.
 2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 3. Step 7: home (projects + connect) on the new primitives.
 

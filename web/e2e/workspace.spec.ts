@@ -24,3 +24,26 @@ test("following links builds a trail that leads back", async ({ page }) => {
   await tables.getByRole("button", { name: /^audit_log/ }).click();
   await expect(trail).toHaveCount(0); // nothing links it to customers
 });
+
+test("Ctrl+K goes to a table or a column's table; / and Ctrl+B work the sidebar", async ({ page }) => {
+  await connectSqlite(page, SHOP);
+  await page.keyboard.press("Control+k");
+  const box = page.getByRole("combobox", { name: "Search" });
+  await box.fill("order_it");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/table=order_items/);
+  await expect(box).toHaveCount(0);
+
+  await page.getByRole("button", { name: /Go to a table/ }).click();
+  await box.fill("customer_id");
+  await expect(page.getByRole("option", { selected: true })).toContainText("orders");
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/table=orders/);
+
+  await page.keyboard.press("/");
+  await expect(page.getByRole("textbox", { name: "Filter tables" })).toBeFocused();
+  await page.keyboard.press("Escape");
+  await page.locator("body").click({ position: { x: 700, y: 400 } });
+  await page.keyboard.press("Control+b");
+  await expect(page.getByRole("button", { name: "Show tables" })).toBeVisible();
+});

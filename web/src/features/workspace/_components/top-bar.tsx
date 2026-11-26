@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
-import { ChevronDown, FolderOpen, Moon, Sun, Unplug } from "lucide-react";
+import { ChevronDown, FolderOpen, Moon, Search, Sun, Unplug } from "lucide-react";
 import icon from "@/app/icon.png";
 import { useDisconnect } from "@/features/studio/hooks/use-disconnect";
 import { cx } from "@/shared/lib/cx";
@@ -13,6 +13,7 @@ import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
 import { PROVIDERS } from "@/shared/types/provider";
 import { IconButton } from "@/shared/ui/button";
+import { Kbd } from "@/shared/ui/kbd";
 import { Menu, MenuContent, MenuItem, MenuSeparator } from "@/shared/ui/menu";
 
 const noop = () => () => {};
@@ -59,7 +60,7 @@ function ThemeButton() {
 }
 
 /** The app bar: project menu, connection, access and theme. */
-export function TopBar() {
+export function TopBar({ onSearch }: { onSearch: () => void }) {
   const router = useRouter();
   const disconnect = useDisconnect();
   const projectName = useStudioStore((s) => s.projectName);
@@ -85,7 +86,20 @@ export function TopBar() {
           </MenuItem>
         </MenuContent>
       </Menu.Root>
-      <div className="flex-1" />
+      <div className="flex min-w-0 flex-1 justify-center px-4">
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={onSearch}
+          className="flex h-9 w-full max-w-140 cursor-pointer items-center gap-2.5 rounded-card border border-line-strong bg-ground pr-2 pl-3 text-left text-body text-fg-subtle transition-colors duration-150 hover:border-fg-subtle focus-visible:outline-2 focus-visible:outline-accent">
+          <Search aria-hidden className="size-3.75 shrink-0" />
+          <span className="flex-1 truncate">Go to a table, column or action</span>
+          <span className="flex gap-0.5" aria-hidden>
+            <Kbd>Ctrl</Kbd>
+            <Kbd>K</Kbd>
+          </span>
+        </button>
+      </div>
       <ConnectionStatus />
       <AccessSwitch />
       <ThemeButton />
