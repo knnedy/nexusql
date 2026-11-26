@@ -104,6 +104,22 @@ Plan:
   card; fix with the diagram work (step 8). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
   diagram clustering (step 8); the comp's group names were invented.
+  Step 8 (comp .impeccable/mocks/diagram.html approved after one revision; split 8a-8c).
+  8a done: canvas/lib/groups.ts groups tables by FK links (deterministic Louvain,
+  CASCADE keys weigh 1.5, groups under 3 tables fold into the group they link to most,
+  "Not linked" last), named after the most-linked table; hub links excluded. Each group is
+  its own ELK layered graph (direction LEFT, FK ports west / targets east, so a table sits
+  right of what it points to); groups pack with rectpacking (aspect 1.6) in an order that
+  keeps linked groups adjacent; unlinked tables rectpack. Regions are groupNode nodes
+  behind tables (pointer-events none). Lines between groups (cross) and into hubs hide
+  behind chips until either end is in focus. Card per DESIGN.md (34px header, 26px rows,
+  rounded-card); new --radius-region token; old React Flow handle/edge CSS overrides
+  removed (they moved handles to the wrong side). e2e selects .react-flow__node-tableNode.
+  Fit area vs the old layout: 400 tables 11.0k x 11.4k (was 14.5k x 18.2k).
+  Next 8b: zoomed-out level of detail (keys cards counter-scaled below zoom 0.8, group
+  labels readable, one "N links" connector per group pair). 8c: centre the selected table
+  left of the details card, light neighbours and dim the rest, restyle minimap/controls
+  (zoom %, Fit schema), then web-design-guidelines review of the diagram.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
@@ -763,13 +779,11 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group C in progress. Step 7 done: connect (/) and projects (/projects) rebuilt as
-   two pages (user rejected merging them; comp .impeccable/mocks/home.html). Step 9 data
-   done next (user asked to finish data before the diagram). Next: step 8 diagram (show a
-   comp first), then 10-13. Pending: row-count estimates (own commit),
-   web-design-guidelines review of the workspace and home screens.
-2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
-3. Step 7: home (projects + connect) on the new primitives.
+1. Step 8b: diagram level of detail when zoomed out, plus group-to-group connectors.
+2. Step 8c: selection centring beside the details card, neighbour highlight, minimap and
+   controls restyle; web-design-guidelines review of the diagram.
+3. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first. Pending:
+   row-count estimates (own commit), guidelines review of the workspace screens.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

@@ -16,43 +16,9 @@ import {
   NODE_ROW,
   NODE_WIDTH,
 } from "@/features/canvas/lib/canvas-utils";
-import { Field, FIELD_TYPE_BADGE_MAP } from "@/shared/types/schema";
-import { DatabaseProvider } from "@/shared/types/provider";
-import { TableNodeData } from "@/features/canvas/types";
-
-// Field type badge
-function TypeBadge({ type }: { type: string }) {
-  const variant = FIELD_TYPE_BADGE_MAP[type] ?? "gray";
-
-  const styles = {
-    teal: "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal",
-    coral:
-      "bg-badge-coral-bg/15 text-badge-coral-text dark:bg-badge-coral-bg/20 dark:text-coral",
-    gray: "bg-badge-gray-bg/50 text-badge-gray-text dark:bg-badge-gray-bg/20 dark:text-text-secondary",
-  } as const;
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold font-mono tracking-wide border border-black/3 dark:border-white/3 ${styles[variant]}`}>
-      {type}
-    </span>
-  );
-}
-
-// PK / FK indicator badge
-function KeyBadge({ kind }: { kind: "PK" | "FK" }) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center rounded-md px-1.5 py-0.5 text-[9px] font-extrabold tracking-wider shrink-0 border",
-        kind === "PK"
-          ? "bg-coral/10 text-coral border-coral/20 dark:bg-coral/20"
-          : "bg-badge-teal-bg/15 text-badge-teal-text border-badge-teal-text/10 dark:bg-badge-teal-bg/20 dark:text-teal dark:border-teal/20",
-      ].join(" ")}>
-      {kind}
-    </span>
-  );
-}
+import type { Field } from "@/shared/types/schema";
+import type { TableNodeData } from "@/features/canvas/types";
+import { cx } from "@/shared/lib/cx";
 
 // Stands in for the line to a hub table; jumps there and keeps it in focus.
 function HubChip({ target }: { target: string }) {
@@ -74,132 +40,56 @@ function HubChip({ target }: { target: string }) {
           duration: 300,
         });
       }}
-      className="nodrag nopan inline-flex items-center gap-0.5 max-w-24 rounded-md px-1.5 py-0.5 text-[9px] font-bold font-mono tracking-wide shrink-0 border cursor-pointer bg-badge-teal-bg/15 text-badge-teal-text border-badge-teal-text/10 dark:bg-badge-teal-bg/20 dark:text-teal dark:border-teal/20 hover:bg-badge-teal-bg/30 transition-[transform,background-color] duration-150 ease-out active:scale-[0.97]">
+      className="nodrag nopan inline-flex max-w-24 shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-relation-tint px-1.5 font-mono text-caption text-relation hover:underline">
       <span aria-hidden>→</span>
       <span className="truncate">{target}</span>
     </button>
   );
 }
 
-// Individual field row
-function FieldRow({
-  field,
-  tableId,
-  referenced,
-  hubTarget,
-}: {
-  field: Field;
-  tableId: string;
-  referenced: boolean;
-  hubTarget?: string;
-}) {
+const HANDLE = "size-1.5! min-h-0! min-w-0! border-0! bg-relation-line! opacity-0 group-hover/card:opacity-100";
+
+function FieldRow({ field, tableId, referenced, hubTarget }: { field: Field; tableId: string; referenced: boolean; hubTarget?: string }) {
   const handleId = `${tableId}__${field.name}`;
-  const isKey = field.isPrimaryKey || field.isForeignKey;
-
   return (
-    <div
-      style={{ height: NODE_ROW }}
-      className="relative flex items-center gap-3 px-3.5 border-t-[0.5px] border-node-row-border/60 hover:bg-black/1 dark:hover:bg-white/1 transition-colors group">
-      {(field.isPrimaryKey || referenced) && (
-        <Handle
-          type="target"
-          position={Position.Left}
-          id={`${handleId}__target`}
-          className="w-2! h-2! bg-teal! border-2! border-node-bg! rounded-full! transition-transform group-hover:scale-125"
-        />
-      )}
-
-      {field.isForeignKey && (
-        <Handle
-          type="source"
-          position={Position.Right}
-          id={`${handleId}__source`}
-          className="w-2! h-2! bg-teal! border-2! border-node-bg! rounded-full! transition-transform group-hover:scale-125"
-        />
-      )}
-
-      <span
-        className={[
-          "text-[12px] flex-1 truncate font-mono tracking-tight",
-          isKey
-            ? "text-text-primary font-semibold antialiased"
-            : "text-text-secondary/90",
-        ].join(" ")}>
-        {field.name}
+    <div style={{ height: NODE_ROW }} className="relative flex items-center gap-2 border-t border-line px-3 first:border-t-0">
+      {/* Keys flow right to left: a table's own keys leave on the left, lines arrive on the right. */}
+      {field.isForeignKey && <Handle type="source" position={Position.Left} id={`${handleId}__source`} className={HANDLE} />}
+      {(field.isPrimaryKey || referenced) && <Handle type="target" position={Position.Right} id={`${handleId}__target`} className={HANDLE} />}
+      <span className={cx("w-4.5 shrink-0 text-caption font-semibold", field.isPrimaryKey ? "text-accent" : "text-relation")}>
+        {field.isPrimaryKey ? "PK" : field.isForeignKey ? "FK" : ""}
       </span>
-
-      <div className="flex items-center gap-1.5 shrink-0">
-        <TypeBadge type={field.type} />
-        {field.isPrimaryKey && <KeyBadge kind="PK" />}
-        {hubTarget ? (
-          <HubChip target={hubTarget} />
-        ) : (
-          field.isForeignKey && <KeyBadge kind="FK" />
-        )}
-      </div>
+      <span className="min-w-0 flex-1 truncate font-mono text-label text-fg">{field.name}</span>
+      {hubTarget ? <HubChip target={hubTarget} /> : <span className="shrink-0 font-mono text-caption text-fg-subtle">{field.type}</span>}
     </div>
   );
 }
 
-// Provider label shown in the node header
-function ProviderLabel({ provider }: { provider: DatabaseProvider }) {
-  const styles = {
-    postgres:
-      "bg-badge-teal-bg/15 text-badge-teal-text dark:bg-badge-teal-bg/20 dark:text-teal",
-    mysql:
-      "bg-badge-blue-bg/15 text-badge-blue-text dark:bg-badge-blue-bg/20 dark:text-blue-400",
-    sqlite: "bg-badge-gray-bg/50 text-badge-gray-text dark:bg-badge-gray-bg/20",
-  } as const;
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-md px-2 py-0.5 text-[9px] font-bold tracking-wider border border-black/2 dark:border-white/2 ${styles[provider]}`}>
-      {provider}
-    </span>
-  );
-}
-
-// Table node
 function TableNode({ data, selected }: NodeProps<Node<TableNodeData>>) {
-  const { table, provider } = data;
-
-  const displayName =
-    table.schema && table.schema !== "public"
-      ? `${table.schema}.${table.name}`
-      : table.name;
-
+  const { table } = data;
+  const name = table.schema && table.schema !== "public" ? `${table.schema}.${table.name}` : table.name;
   return (
     <div
-      className={[
-        // Exact size and a constant border: the layout routes edges to these rows.
-        "rounded-xl overflow-hidden border transition-[box-shadow,border-color] duration-100",
-        selected
-          ? "border-coral shadow-[0_0_0_1px_var(--coral)]"
-          : "shadow-[0_2px_8px_rgba(0,0,0,0.04),0_12px_24px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.4)] border-node-border/80 dark:border-node-border/40",
-      ].join(" ")}
-      style={{ width: NODE_WIDTH, height: getNodeHeight(table.fields.length) }}>
-      {/* Header */}
-      <div
-        style={{ height: NODE_HEADER }}
-        className="flex items-center justify-between gap-3 px-3.5 bg-node-header-bg border-b-[0.5px] border-node-border/80 dark:border-node-border/40">
-        <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-2 h-2 rounded-full bg-coral shrink-0 shadow-sm shadow-coral/40" />
-          <span className="text-[13px] font-bold text-text-primary truncate tracking-tight antialiased">
-            {displayName}
-          </span>
-        </div>
-        <ProviderLabel provider={provider} />
+      // Exact size: the layout routes lines to these rows.
+      style={{ width: NODE_WIDTH, height: getNodeHeight(table.fields.length) }}
+      className={cx(
+        "group/card overflow-hidden rounded-card border bg-panel shadow-card transition-[border-color,box-shadow] duration-150",
+        selected ? "border-accent ring-3 ring-accent-tint" : "border-line-strong",
+      )}>
+      <div style={{ height: NODE_HEADER }} className="flex items-center gap-2 border-b border-line bg-sunk px-3">
+        <span className="min-w-0 flex-1 truncate text-body font-semibold text-fg">{name}</span>
+        <span className="shrink-0 text-caption text-fg-subtle tabular-nums">
+          {table.fields.length} {table.fields.length === 1 ? "column" : "columns"}
+        </span>
       </div>
-
-      {/* Fields */}
-      <div className="bg-node-bg" style={{ paddingBottom: NODE_PAD_BOTTOM }}>
+      <div style={{ paddingBottom: NODE_PAD_BOTTOM }}>
         {table.fields.map((field) => (
           <FieldRow
             key={field.name}
             field={field}
             tableId={table.name}
             referenced={data.referenced?.includes(field.name) ?? false}
-            hubTarget={data.hubRefs?.[field.name]}
+            hubTarget={data.chips?.[field.name]}
           />
         ))}
       </div>

@@ -6,7 +6,7 @@ test("draws a key that references a unique column", async ({ page }) => {
   await connectSqlite(page, `CREATE TABLE skus (id INTEGER PRIMARY KEY, code TEXT UNIQUE);
     CREATE TABLE lines (id INTEGER PRIMARY KEY, sku_code TEXT REFERENCES skus (code))`);
   await page.reload();
-  await expect(page.locator(".react-flow__node")).toHaveCount(2);
+  await expect(page.locator(".react-flow__node-tableNode")).toHaveCount(2);
   await expect(page.locator(".react-flow__edge")).toHaveCount(1);
 });
 
@@ -28,7 +28,7 @@ test("edges follow the layout's routes, and a dragged table falls back until re-
   // Every route ends at its handles: the drawn tables match the sizes the layout used.
   await expect(page.locator('[data-routed="true"]')).toHaveCount(6);
 
-  const refunds = page.locator(".react-flow__node", { hasText: "refunds" });
+  const refunds = page.locator(".react-flow__node-tableNode", { hasText: "refunds" });
   const box = (await refunds.boundingBox())!;
   await page.mouse.move(box.x + 40, box.y + 15);
   await page.mouse.down();
@@ -93,10 +93,10 @@ test("the first view fits every table of a large schema", async ({ page }) => {
   });
   await connectSqlite(page, sql.join(";\n"));
   await page.reload();
-  await expect(page.locator(".react-flow__node").first()).toBeVisible({ timeout: 20_000 });
+  await expect(page.locator(".react-flow__node-tableNode").first()).toBeVisible({ timeout: 20_000 });
   const pane = (await page.locator(".react-flow").boundingBox())!;
   await expect.poll(async () => {
-    const boxes = await page.locator(".react-flow__node").evaluateAll((els) =>
+    const boxes = await page.locator(".react-flow__node-tableNode").evaluateAll((els) =>
       els.map((e) => e.getBoundingClientRect()).map((r) => [r.left, r.top, r.right, r.bottom]),
     );
     const inside = boxes.filter(([l, t, r, b]) => l >= pane.x - 1 && t >= pane.y - 1 && r <= pane.x + pane.width + 1 && b <= pane.y + pane.height + 1);

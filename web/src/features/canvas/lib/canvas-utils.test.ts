@@ -30,7 +30,7 @@ describe.each([30, 150, 400])("a %i-table schema", (n) => {
   it("keeps tables apart and every drawn edge out from under them", async () => {
     const { nodes, edges } = await buildCanvasGraph(generateSchema(n), "postgres");
     expect(nodes).toHaveLength(n);
-    const routed = edges.filter((e) => !e.data?.hub);
+    const routed = edges.filter((e) => !e.data?.hub && !e.data?.cross);
     expect(routed.every((e) => (e.data?.points?.length ?? 0) >= 2)).toBe(true);
     const m = measureLayout(nodes, routed);
     expect(m.overlaps).toBe(0);
@@ -47,7 +47,7 @@ describe("hub tables", () => {
 
     const hubEdge = edges.find((e) => e.data?.hub)!;
     const source = nodes.find((n) => n.id === hubEdge.source)!;
-    expect(source.data.hubRefs?.[hubEdge.data!.relation.sourceField]).toBe(hubEdge.target);
+    expect(source.data.chips?.[hubEdge.data!.relation.sourceField]).toBe(hubEdge.target);
   }, 30_000);
 
   it.each([150, 400])("at %i tables, crossings drop to under a quarter", async (n) => {
@@ -95,5 +95,21 @@ describe("hub tables", () => {
     expect(nodes).toHaveLength(n as number);
     expect(edges.filter((e) => e.target === "t0")).toHaveLength((refs as number) + (selfRef ? 1 : 0));
     expect(edges.some((e) => e.target === "t0" && e.data?.hub)).toBe(hub);
+  }, 30_000);
+});
+
+describe("groups", () => {
+  it.each([30, 400])("at %i tables, each table sits inside its own group's region and regions keep apart", async (n) => {
+    const { nodes, groups } = await buildCanvasGraph(generateSchema(n), "postgres");
+    const box = (g: (typeof groups)[number]) => ({ x: g.position.x, y: g.position.y, r: g.position.x + g.width!, b: g.position.y + g.height! });
+    const regions = new Map(groups.map((g) => [g.id, box(g)]));
+    for (const t of nodes) {
+      const r = regions.get(t.data.group!)!;
+      const h = t.data.table.fields.length * 26 + 36;
+      expect(t.position.x >= r.x && t.position.y >= r.y + 40 && t.position.x + 240 <= r.r && t.position.y + h <= r.b, t.id).toBe(true);
+    }
+    const all = [...regions.values()];
+    const apart = all.every((a, i) => all.slice(i + 1).every((b) => a.r <= b.x || b.r <= a.x || a.b <= b.y || b.b <= a.y));
+    expect(apart).toBe(true);
   }, 30_000);
 });

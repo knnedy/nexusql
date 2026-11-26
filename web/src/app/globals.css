@@ -223,7 +223,7 @@
     border-radius: 9999px;
   }
 
-  /* React Flow overrides */
+  /* React Flow: the diagram's components draw cards, lines and handles themselves. */
   .react-flow__node {
     background: transparent !important;
     border: none !important;
@@ -232,38 +232,8 @@
     box-shadow: none !important;
   }
 
-  .react-flow__background {
-    background-color: var(--canvas-bg) !important;
-  }
-
   .react-flow__minimap {
-    border: 0.5px solid var(--border) !important;
-    border-radius: var(--radius-lg) !important;
-    overflow: hidden !important;
-  }
-
-  .react-flow__edge-path {
-    stroke: var(--edge-color) !important;
-    stroke-width: 1.5px;
-  }
-
-  .react-flow__edge.selected .react-flow__edge-path {
-    stroke: var(--edge-selected) !important;
-  }
-
-  .react-flow__handle {
-    width: 8px;
-    height: 8px;
-    background: var(--teal) !important;
-    border: 2px solid var(--node-bg) !important;
-    border-radius: 9999px;
-  }
-
-  .react-flow__handle.source {
-    right: -5px;
-  }
-  .react-flow__handle.target {
-    left: -5px;
+    overflow: hidden;
   }
 }
 
@@ -311,6 +281,7 @@
   --radius-control: 7px;
   --radius-card: 11px;
   --radius-panel: 12px;
+  --radius-region: 18px;
 
   --shadow-card: var(--nx-shadow-card);
   --shadow-float: var(--nx-shadow-float);

@@ -25,21 +25,30 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useTheme } from "next-themes";
 import { toPng } from "html-to-image";
-import { ImageDown, LayoutGrid } from "lucide-react";
+import { ImageDown, LayoutGrid, Loader2, TriangleAlert } from "lucide-react";
+import { EmptyState } from "@/shared/ui/empty-state";
 import { buildCanvasGraph, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { IconButton } from "@/shared/ui/button";
 import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
+import GroupNode from "@/features/canvas/_components/group-node";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
-import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
+import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { Relation } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
 import { studioSession } from "@/shared/lib/session-storage";
 import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
-const nodeTypes: NodeTypes = { tableNode: TableNode };
+const nodeTypes: NodeTypes = { tableNode: TableNode, groupNode: GroupNode };
+type CanvasNode = Node<TableNodeData> | Node<GroupNodeData>;
+
+// Regions sit behind their tables and let clicks and drags through to the canvas.
+const withRegions = (groups: Node<GroupNodeData>[], tables: Node<TableNodeData>[]): CanvasNode[] => [
+  ...groups.map((g) => ({ ...g, style: { pointerEvents: "none" as const } })),
+  ...tables,
+];
 const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
 
 function getCssVar(name: string): string {
@@ -68,9 +77,7 @@ export default function CanvasStudio(props: CanvasStudioProps) {
 }
 
 function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, onCloseDetails, onOpenData }: CanvasStudioProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
-    [],
-  );
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<
     Edge<RelationEdgeData>
   >([]);
@@ -105,8 +112,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
 
   useEffect(() => {
     if (!schema) return;
-    buildCanvasGraph(schema, provider).then(({ nodes, edges }) => {
-      setNodes(nodes);
+    buildCanvasGraph(schema, provider).then(({ nodes, edges, groups }) => {
+      setNodes(withRegions(groups, nodes));
       setEdges(edges);
       setGraphReady(true);
     });
@@ -123,7 +130,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   }, [graphReady, selectedName, fitView, getNodes, getViewport]);
 
   const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node<TableNodeData>) => {
+    (_: React.MouseEvent, node: CanvasNode) => {
+      if (node.type !== "tableNode") return;
       setSelectedRelation(null);
       clickedRef.current = node.id;
       onSelectTable(node.id);
@@ -150,7 +158,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   const handleAutoLayout = useCallback(async () => {
     if (!schema) return;
     const laid = await reapplyLayout(schema, provider);
-    setNodes(laid.nodes);
+    setNodes(withRegions(laid.groups, laid.nodes));
     setEdges(laid.edges);
   }, [schema, provider, setNodes, setEdges]);
 
@@ -193,7 +201,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
       await new Promise((resolve) => setTimeout(resolve, 250));
 
       const dataUrl = await toPng(wrapper, {
-        backgroundColor: getCssVar("--canvas-bg"),
+        backgroundColor: getCssVar("--nx-ground"),
         width: imageWidth,
         height: imageHeight,
         pixelRatio: 2,
@@ -230,25 +238,23 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     }
   }, [getViewport, setViewport, getNodes, getNodesBounds, toast]);
 
-  if (isLoading || !graphReady) {
+  if (isError) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-5 h-5 rounded-full border-2 border-teal border-t-transparent animate-spin" />
-          <span className="text-sm text-text-tertiary">Arranging schema…</span>
-        </div>
+      <div className="grid h-full w-full place-items-center bg-ground">
+        <EmptyState icon={<TriangleAlert aria-hidden />} title="The schema did not load">
+          Check the connection, then reload the page.
+        </EmptyState>
       </div>
     );
   }
 
-  if (isError) {
+  if (isLoading || !graphReady) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-canvas-bg">
-        <div className="flex flex-col items-center gap-3">
-          <span className="text-sm text-text-tertiary">
-            Failed to load schema.
-          </span>
-        </div>
+      <div role="status" className="grid h-full w-full place-items-center bg-ground text-body text-fg-subtle">
+        <span className="flex items-center gap-2.5">
+          <Loader2 aria-hidden className="size-4 motion-safe:animate-spin" />
+          Arranging the schema…
+        </span>
       </div>
     );
   }
@@ -286,7 +292,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           onNodeClick={handleNodeClick}
           onEdgeClick={handleEdgeClick}
           onPaneClick={handlePaneClick}
-          onNodeMouseEnter={(_, node) => setHovered(node.id)}
+          onNodeMouseEnter={(_, node) => node.type === "tableNode" && setHovered(node.id)}
           onNodeMouseLeave={() => setHovered(null)}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
@@ -300,21 +306,13 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           minZoom={0.02} // low enough that the first view fits a few hundred tables
           maxZoom={2}
           proOptions={{ hideAttribution: true }}>
-          <Background
-            variant={BackgroundVariant.Dots}
-            gap={20}
-            size={1}
-            color="var(--canvas-dot)"
-          />
+          <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="var(--nx-grid-dot)" bgColor="var(--nx-ground)" />
           <MiniMap
             position="bottom-left"
-            nodeColor={() => getCssVar("--minimap-node")}
-            maskColor={getCssVar("--minimap-mask")}
-            style={{
-              background: getCssVar("--minimap-bg"),
-              border: "0.5px solid var(--border)",
-              borderRadius: "var(--radius-lg)",
-            }}
+            nodeColor={(n) => (n.type === "groupNode" ? "var(--nx-sunk)" : "var(--nx-line-strong)")}
+            nodeBorderRadius={4}
+            maskColor="color-mix(in srgb, var(--nx-ground) 70%, transparent)"
+            style={{ background: "var(--nx-panel)", border: "1px solid var(--nx-line-strong)", borderRadius: "var(--radius-card)", width: 168, height: 104 }}
           />
         </ReactFlow>
       </div>

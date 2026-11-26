@@ -7,8 +7,16 @@ export interface TableNodeData extends Record<string, unknown> {
   isSelected: boolean;
   /** Columns some foreign key references; each gets a target handle. */
   referenced: string[];
-  /** FK columns whose lines are hidden behind a chip, to the hub table they reference. */
-  hubRefs?: Record<string, string>;
+  /** FK columns whose lines hide behind a chip (into a hub, or out of the group), to the table they reference. */
+  chips?: Record<string, string>;
+  /** The id of the group region the table sits in. */
+  group?: string;
+}
+
+export interface GroupNodeData extends Record<string, unknown> {
+  name: string;
+  count: number;
+  unlinked?: true;
 }
 
 export interface RelationEdgeData extends Record<string, unknown> {
@@ -19,4 +27,6 @@ export interface RelationEdgeData extends Record<string, unknown> {
   points?: { x: number; y: number }[];
   /** Into a hub table: left out of the layout, drawn only while either end is in focus. */
   hub?: boolean;
+  /** Joins two groups: left out of the layout, drawn only while either end is in focus. */
+  cross?: boolean;
 }

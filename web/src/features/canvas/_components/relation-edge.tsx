@@ -43,11 +43,11 @@ function RelationEdge({
         offset: 40,
       });
 
-  // Lines into a hub table stay hidden behind its chip unless either end is in focus.
-  if (data?.hub && focus !== "on") return null;
+  // Lines into a hub or out of the group stay behind their chip unless either end is in focus.
+  if ((data?.hub || data?.cross) && focus !== "on") return null;
 
-  const strokeColor = selected ? "var(--coral)" : focus === "on" ? "var(--teal)" : "var(--edge-color)";
-  const opacity = selected || focus === "on" ? 1 : focus === "off" ? 0.12 : 0.7;
+  const strokeColor = selected ? "var(--nx-accent)" : focus === "on" ? "var(--nx-relation-line)" : "var(--nx-line-strong)";
+  const opacity = focus === "off" && !selected ? 0.25 : 1;
   const showLabel = (hovered || selected) && data?.relation.constraintName;
 
   return (
@@ -72,6 +72,8 @@ function RelationEdge({
         style={{
           stroke: strokeColor,
           strokeWidth: selected ? 2.5 : focus === "on" ? 2 : 1.5,
+          // A line between two groups is dashed: it leaves the region it starts in.
+          strokeDasharray: data?.cross ? "5 4" : undefined,
           opacity,
           transition: "stroke 100ms ease, stroke-width 100ms ease, opacity 100ms ease",
         }}
@@ -84,7 +86,7 @@ function RelationEdge({
               position: "absolute",
               transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             }}
-            className="pointer-events-none select-none px-3 py-1.5 rounded-lg text-xs font-mono tracking-normal bg-node-bg border-2 border-node-border dark:border-node-border text-text-primary shadow-[0_4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_24px_rgba(0,0,0,0.5)] transition-all animate-in fade-in zoom-in-95 duration-50">
+            className="pointer-events-none rounded-full border border-line-strong bg-raised px-2.5 py-1 font-mono text-caption text-fg shadow-card select-none">
             {data.relation.constraintName}
           </div>
         </EdgeLabelRenderer>
