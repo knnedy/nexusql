@@ -12,7 +12,7 @@ export function MenuContent({ children, align = "start", className }: { children
   return (
     <Menu.Portal>
       <Menu.Positioner sideOffset={6} align={align} className="z-50 outline-none">
-        <Menu.Popup className={cx(POPUP, "min-w-[180px]", className)}>{children}</Menu.Popup>
+        <Menu.Popup className={cx(POPUP, "min-w-45", className)}>{children}</Menu.Popup>
       </Menu.Positioner>
     </Menu.Portal>
   );
@@ -39,13 +39,13 @@ export function MenuItem({ children, onClick, icon, hint, danger, disabled }: Me
 }
 
 export function MenuSeparator() {
-  return <Menu.Separator className="mx-[6px] my-[4px] h-px bg-line" />;
+  return <Menu.Separator className="mx-1.5 my-1 h-px bg-line" />;
 }
 
 export function MenuGroup({ label, children }: { label: string; children: ReactNode }) {
   return (
     <Menu.Group>
-      <Menu.GroupLabel className="px-[10px] pt-[6px] pb-[2px] text-label font-medium text-fg-subtle">{label}</Menu.GroupLabel>
+      <Menu.GroupLabel className="px-2.5 pt-1.5 pb-0.5 text-label font-medium text-fg-subtle">{label}</Menu.GroupLabel>
       {children}
     </Menu.Group>
   );

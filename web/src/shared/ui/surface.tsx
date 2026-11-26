@@ -8,5 +8,5 @@ export function FloatCard({ className, ...rest }: HTMLAttributes<HTMLDivElement>
 
 /** A placeholder block while content loads; still under reduced motion. */
 export function Skeleton({ className }: { className?: string }) {
-  return <div aria-hidden className={cx("rounded-[5px] bg-sunk motion-safe:animate-pulse", className)} />;
+  return <div aria-hidden className={cx("rounded-sm bg-sunk motion-safe:animate-pulse", className)} />;
 }

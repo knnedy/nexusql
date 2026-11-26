@@ -56,8 +56,9 @@ Plan:
   coral); remove them when the last screen has moved over.
   Step 4 in progress: primitives in web/src/shared/ui (Button/IconButton, Tabs/TabPanel,
   FilterChip/Badge, Kbd, Input, FloatCard/Skeleton, EmptyState; cx in shared/lib).
-  Sizes are exact px because html is 14px (rem spacing is off-scale); move html to 16px
-  and canonical classes once legacy screens are gone. Gallery at /dev/primitives under
+  html is back to 16px (body keeps 14px so legacy text is unchanged; legacy rem spacing
+  grew 14%, e2e green). Use canonical Tailwind classes (gap-2.5, h-7.5, origin-(--x)),
+  arbitrary values only where no canonical class exists (user preference). Gallery at /dev/primitives under
   `pnpm dev` only (page.dev.tsx + pageExtensions; absent from the shipped build).
   Overlays on @base-ui/react 1.9 (user chose it 2026-11-26): Menu/MenuContent/MenuItem/
   MenuGroup/MenuSeparator, Select, Dialog/DialogContent, Tooltip(+Provider), Toast

@@ -8,10 +8,10 @@ export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 export type ButtonSize = "sm" | "md";
 
 const BASE =
-  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-[7px] whitespace-nowrap rounded-control text-body font-medium select-none " +
-  "transition-[transform,background-color,border-color,color] duration-150 ease-out-strong active:scale-[0.97] " +
+  "inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.75 whitespace-nowrap rounded-control text-body font-medium select-none " +
+  "transition-[transform,background-color,border-color,color] duration-150 ease-out-strong active:scale-97 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent " +
-  "disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-[15px] [&_svg]:shrink-0";
+  "disabled:pointer-events-none disabled:opacity-50 [&_svg]:size-3.75 [&_svg]:shrink-0";
 
 const VARIANTS: Record<ButtonVariant, string> = {
   primary: "bg-accent-fill text-on-accent hover:bg-accent-fill/90",
@@ -21,8 +21,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
 };
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "h-[28px] px-[10px]",
-  md: "h-[30px] px-[12px]",
+  sm: "h-7 px-2.5",
+  md: "h-7.5 px-3",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -48,7 +48,7 @@ export function IconButton({ label, size = "md", type = "button", className, ...
       <button
         type={type}
         aria-label={label}
-        className={cx(BASE, VARIANTS.ghost, size === "sm" ? "size-[28px]" : "size-[32px]", className)}
+        className={cx(BASE, VARIANTS.ghost, size === "sm" ? "size-7" : "size-8", className)}
         {...rest}
       />
     </Tooltip>

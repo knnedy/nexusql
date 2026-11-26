@@ -15,7 +15,7 @@ export function Tooltip({ label, side = "top", children }: { label: ReactNode; s
       <Base.Trigger render={children} />
       <Base.Portal>
         <Base.Positioner side={side} sideOffset={6} className="z-50">
-          <Base.Popup className="origin-[var(--transform-origin)] rounded-[6px] bg-fg px-[8px] py-[4px] text-label text-ground shadow-card transition-[transform,opacity] duration-[125ms] ease-out-strong data-ending-style:scale-[0.97] data-ending-style:opacity-0 data-instant:transition-none data-starting-style:scale-[0.97] data-starting-style:opacity-0">
+          <Base.Popup className="origin-(--transform-origin) rounded-md bg-fg px-2 py-1 text-label text-ground shadow-card transition-[transform,opacity] duration-125 ease-out-strong data-ending-style:scale-97 data-ending-style:opacity-0 data-instant:transition-none data-starting-style:scale-97 data-starting-style:opacity-0">
             {label}
           </Base.Popup>
         </Base.Positioner>

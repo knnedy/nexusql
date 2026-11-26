@@ -197,7 +197,6 @@
   }
 
   html {
-    font-size: 14px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -207,6 +206,7 @@
     background-color: var(--surface-2);
     color: var(--text-primary);
     font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 14px;
     line-height: 1.5;
   }
 

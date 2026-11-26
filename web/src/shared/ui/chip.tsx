@@ -5,14 +5,14 @@ import { cx } from "@/shared/lib/cx";
 /** An applied filter: "column is value" with a remove button. */
 export function FilterChip({ children, onRemove, removeLabel, className }: { children: ReactNode; onRemove: () => void; removeLabel: string; className?: string }) {
   return (
-    <span className={cx("inline-flex h-[28px] items-center gap-[4px] rounded-full border border-accent-line bg-accent-tint pr-[3px] pl-[10px] text-label font-normal text-fg [&_b]:font-medium", className)}>
+    <span className={cx("inline-flex h-7 items-center gap-1 rounded-full border border-accent-line bg-accent-tint pr-0.75 pl-2.5 text-label font-normal text-fg [&_b]:font-medium", className)}>
       {children}
       <button
         type="button"
         aria-label={removeLabel}
         title={removeLabel}
         onClick={onRemove}
-        className="grid size-[22px] cursor-pointer place-items-center rounded-full text-fg-muted hover:bg-panel/60 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
+        className="grid size-5.5 cursor-pointer place-items-center rounded-full text-fg-muted hover:bg-panel/60 hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
         <X size={13} aria-hidden />
       </button>
     </span>
@@ -32,7 +32,7 @@ const TONES: Record<BadgeTone, string> = {
 /** A small label: key kinds (PK, FK, CHECK), states, counts. */
 export function Badge({ tone = "neutral", children, className }: { tone?: BadgeTone; children: ReactNode; className?: string }) {
   return (
-    <span className={cx("inline-flex h-[18px] items-center rounded-[4px] border px-[5px] text-caption font-semibold whitespace-nowrap", TONES[tone], className)}>
+    <span className={cx("inline-flex h-4.5 items-center rounded-sm border px-1.25 text-caption font-semibold whitespace-nowrap", TONES[tone], className)}>
       {children}
     </span>
   );

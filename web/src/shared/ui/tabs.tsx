@@ -40,7 +40,7 @@ export function Tabs({ label, items, value, onChange, idPrefix, className }: Tab
   }
 
   return (
-    <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className={cx("flex h-full items-stretch gap-[2px]", className)}>
+    <div role="tablist" aria-label={label} onKeyDown={onKeyDown} className={cx("flex h-full items-stretch gap-0.5", className)}>
       {items.map((t) => {
         const on = t.id === value;
         return (
@@ -58,8 +58,8 @@ export function Tabs({ label, items, value, onChange, idPrefix, className }: Tab
             tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.id)}
             className={cx(
-              "-mb-px inline-flex cursor-pointer items-center gap-[7px] border-b-2 px-[12px] text-body transition-colors duration-150",
-              "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent [&_svg]:size-[15px]",
+              "-mb-px inline-flex cursor-pointer items-center gap-1.75 border-b-2 px-3 text-body transition-colors duration-150",
+              "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent [&_svg]:size-3.75",
               on ? "border-accent font-medium text-fg" : "border-transparent text-fg-muted hover:text-fg",
             )}>
             {t.icon}
