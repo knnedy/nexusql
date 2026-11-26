@@ -21,7 +21,7 @@ func (s *Service) Schema(ctx context.Context, schema string) (*db.Schema, error)
 	if schema == "" {
 		return s.schemas.get(ctx, conn, true)
 	}
-	return conn.Impl.IntrospectSchema(ctx, schema)
+	return introspect(ctx, conn, schema)
 }
 
 // RowsQuery selects one page of a table.

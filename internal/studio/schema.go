@@ -23,11 +23,34 @@ func (c *schemaCache) get(ctx context.Context, conn *db.Connection, force bool) 
 	if !force && c.conn == conn && c.schema != nil {
 		return c.schema, nil
 	}
-	sch, err := conn.Impl.IntrospectSchema(ctx, conn.Impl.DefaultSchema())
+	sch, err := introspect(ctx, conn, conn.Impl.DefaultSchema())
 	if err != nil {
 		return nil, err
 	}
 	c.conn, c.schema = conn, sch
+	return sch, nil
+}
+
+// introspect reads a schema without migration-tool bookkeeping tables (goose,
+// Flyway, Prisma...): the studio never shows them; console SQL still reaches them.
+func introspect(ctx context.Context, conn *db.Connection, name string) (*db.Schema, error) {
+	sch, err := conn.Impl.IntrospectSchema(ctx, name)
+	if err != nil {
+		return nil, err
+	}
+	tables := sch.Tables[:0:0]
+	for _, t := range sch.Tables {
+		if db.IsUserTable(t.Name) {
+			tables = append(tables, t)
+		}
+	}
+	relations := sch.Relations[:0:0]
+	for _, r := range sch.Relations {
+		if db.IsUserTable(r.SourceTable) && db.IsUserTable(r.TargetTable) {
+			relations = append(relations, r)
+		}
+	}
+	sch.Tables, sch.Relations = tables, relations
 	return sch, nil
 }
 

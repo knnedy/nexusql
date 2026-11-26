@@ -558,3 +558,35 @@ func TestConnectNew(t *testing.T) {
 		}
 	})
 }
+
+func TestMigrationToolTablesAreHidden(t *testing.T) {
+	s := connected(t)
+	ctx := context.Background()
+	for _, q := range []string{
+		`CREATE TABLE goose_db_version (id INTEGER PRIMARY KEY, version_id INTEGER NOT NULL)`,
+		`INSERT INTO goose_db_version (version_id) VALUES (1)`,
+	} {
+		if _, err := s.Query(ctx, q, true); err != nil {
+			t.Fatalf("%s: %v", q, err)
+		}
+	}
+
+	sch, err := s.Schema(ctx, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, tb := range sch.Tables {
+		names = append(names, tb.Name)
+	}
+	if len(names) != 1 || names[0] != "users" {
+		t.Fatalf("schema tables = %v, want only users", names)
+	}
+	if _, err := s.Rows(ctx, studio.RowsQuery{Table: "goose_db_version", Limit: 10}); !errors.Is(err, studio.ErrInvalid) {
+		t.Fatalf("rows of goose_db_version: err = %v, want ErrInvalid", err)
+	}
+	res, err := s.Query(ctx, "SELECT version_id FROM goose_db_version", false)
+	if err != nil || len(res.Rows) != 1 {
+		t.Fatalf("console read: %+v err=%v, want one row", res, err)
+	}
+}

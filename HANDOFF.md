@@ -120,6 +120,9 @@ Plan:
   labels readable, one "N links" connector per group pair). 8c: centre the selected table
   left of the details card, light neighbours and dim the rest, restyle minimap/controls
   (zoom %, Fit schema), then web-design-guidelines review of the diagram.
+  fix(studio): migration-tool tables (db.IsUserTable: goose_db_version, schema_migrations,
+  flyway, prisma, sqlx) are dropped at studio introspection (studio/schema.go introspect),
+  so sidebar, diagram, data, search, seed and rows never see them; console SQL still can.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
   web-design-guidelines review, e2e updated in the same commit. Encrypted credentials
   move to their own branch after the rebuild.
