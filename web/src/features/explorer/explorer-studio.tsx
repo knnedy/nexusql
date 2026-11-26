@@ -2,7 +2,9 @@
 
 import { useState, useMemo, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { IconButton } from "@/shared/ui/button";
+import { Select } from "@/shared/ui/select";
 import { useSchema } from "@/shared/hooks/use-schema";
 import {
   useTableRows,
@@ -22,7 +24,6 @@ import DataGrid, {
 import { editKey } from "@/features/explorer/lib/row-key";
 import { isUnchanged } from "@/features/explorer/lib/cell";
 import {
-  describeFilter,
   parseFilters,
   serializeFilters,
   type RowFilter,
@@ -42,65 +43,33 @@ interface PaginationProps {
   onPageSizeChange: (size: number) => void;
 }
 
-function Pagination({
-  page,
-  pageSize,
-  total,
-  hasMore,
-  onPageChange,
-  onPageSizeChange,
-}: PaginationProps) {
-  const totalPages = total === undefined ? null : Math.max(1, Math.ceil(total / pageSize));
+function Pagination({ page, pageSize, total, hasMore, onPageChange, onPageSizeChange }: PaginationProps) {
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = total === undefined ? page * pageSize : Math.min(page * pageSize, total);
-
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 border-t border-node-border/60 dark:border-node-border/40 bg-node-bg/95 dark:bg-node-bg/98 shrink-0">
-      <div className="flex items-center gap-2">
-        <span className="text-[11px] text-text-tertiary font-mono">
-          Rows per page
+    <div className="flex h-10 shrink-0 items-center gap-3 border-t border-line bg-panel px-4 text-label text-fg-muted">
+      <span aria-hidden>Rows per page</span>
+      <Select
+        aria-label="Rows per page"
+        items={PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
+        value={String(pageSize)}
+        onValueChange={(v) => onPageSizeChange(Number(v))}
+        className="h-7 min-w-16 text-label tabular-nums"
+      />
+      <div className="flex-1" />
+      {/* An empty result has no range worth reading. */}
+      {total !== 0 && (
+        <span className="tabular-nums">
+          {from.toLocaleString()}–{to.toLocaleString()} of {total?.toLocaleString() ?? "…"}
         </span>
-        <select
-          value={pageSize}
-          onChange={(e) => {
-            onPageSizeChange(Number(e.target.value));
-            onPageChange(1);
-          }}
-          className="h-7 rounded-md border border-node-border/60 dark:border-node-border/40 bg-node-bg text-text-secondary text-[11px] font-mono px-2 outline-none cursor-pointer">
-          {PAGE_SIZE_OPTIONS.map((size) => (
-            <option key={size} value={size}>
-              {size}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex items-center gap-3">
-        <span className="text-[11px] text-text-tertiary font-mono tabular-nums">
-          {from}–{to} of {total?.toLocaleString() ?? "…"}
-        </span>
-
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => onPageChange(page - 1)}
-            disabled={page <= 1}
-            aria-label="Previous page"
-            className="flex items-center justify-center w-7 h-7 rounded-md border border-node-border/60 dark:border-node-border/40 bg-transparent text-text-secondary hover:text-text-primary hover:bg-node-border/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronLeft size={13} aria-hidden />
-          </button>
-
-          <span className="text-[11px] font-mono text-text-secondary tabular-nums px-2">
-            {page} / {totalPages ?? "…"}
-          </span>
-
-          <button
-            onClick={() => onPageChange(page + 1)}
-            disabled={!hasMore}
-            aria-label="Next page"
-            className="flex items-center justify-center w-7 h-7 rounded-md border border-node-border/60 dark:border-node-border/40 bg-transparent text-text-secondary hover:text-text-primary hover:bg-node-border/20 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
-            <ChevronRight size={13} aria-hidden />
-          </button>
-        </div>
+      )}
+      <div className="flex items-center gap-0.5">
+        <IconButton label="Previous page" size="sm" onClick={() => onPageChange(page - 1)} disabled={page <= 1}>
+          <ChevronLeft aria-hidden />
+        </IconButton>
+        <IconButton label="Next page" size="sm" onClick={() => onPageChange(page + 1)} disabled={!hasMore}>
+          <ChevronRight aria-hidden />
+        </IconButton>
       </div>
     </div>
   );
@@ -129,7 +98,8 @@ function ExplorerInner() {
   const filtersKey = serializeFilters(filters); // drops what the URL held but could not be read
 
   const [searchValue, setSearchValue] = useState(urlSearch);
-  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
+  const sizeParam = Number(searchParams.get("size"));
+  const pageSize = PAGE_SIZE_OPTIONS.includes(sizeParam) ? sizeParam : DEFAULT_PAGE_SIZE;
   const [columnVisibility, setColumnVisibility] = useState<
     Record<string, boolean>
   >({});
@@ -318,13 +288,13 @@ function ExplorerInner() {
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-canvas-bg">
+    <div className="flex h-full w-full flex-col bg-panel">
       <ExplorerToolbar
-        tableSelected={!!selectedTable}
         searchValue={searchValue}
         onSearchChange={handleSearchChange}
         onRefresh={handleRefresh}
         isRefreshing={isFetching}
+        total={total}
         columns={selectedTableFields.map((f) => f.name)}
         columnVisibility={columnVisibility}
         onColumnVisibilityChange={setColumnVisibility}
@@ -339,78 +309,35 @@ function ExplorerInner() {
         onSaveChanges={handleSaveChanges}
         onDiscardChanges={handleDiscardChanges}
       />
-
-      {filters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 px-4 py-2 border-b border-node-border/60 dark:border-node-border/40 bg-teal/5 dark:bg-teal/10 shrink-0">
-          {filters.map((f, i) => (
-            <span
-              key={i}
-              className="inline-flex items-center gap-1 h-6 pl-2 pr-0.5 rounded-md border border-teal/30 bg-node-bg/80 text-[11px] font-mono text-teal">
-              {describeFilter(f)}
-              <button
-                aria-label={`Remove filter ${describeFilter(f)}`}
-                onClick={() => handleFiltersChange(filters.filter((_, j) => j !== i))}
-                className="flex items-center justify-center w-5 h-5 rounded border-none bg-transparent text-teal/70 hover:text-text-primary cursor-pointer transition-[color,transform] duration-150 active:scale-[0.97]">
-                <X size={11} aria-hidden />
-              </button>
-            </span>
-          ))}
-          <button
-            onClick={() => handleFiltersChange([])}
-            className="h-6 px-1.5 text-[11px] font-medium text-text-tertiary hover:text-text-primary transition-colors border-none bg-transparent cursor-pointer">
-            Clear filters
-          </button>
-        </div>
-      )}
-
-      <div className="flex flex-1 overflow-hidden">
-
-        <div className="relative flex flex-col flex-1 overflow-hidden">
-          {selectedTable ? (
-            <>
-              <DataGrid
-                tableName={selectedTable}
-                columns={rowsData?.columns ?? []}
-                fields={selectedTableFields}
-                enums={schema?.enums ?? []}
-                relations={schema?.relations ?? []}
-                rows={rowsData?.rows ?? []}
-                isLoading={isLoading}
-                isError={isError}
-                errorMessage={tableRowsResult.error?.message}
-                isFiltered={!!debouncedSearch || filters.length > 0}
-                sortCol={sortCol}
-                sortDir={sortDir}
-                onSort={handleSort}
-                pendingEdits={pendingEdits}
-                onCellEdit={handleCellEdit}
-                onNavigateFk={handleNavigateFk}
-                columnVisibility={columnVisibility}
-                onColumnVisibilityChange={setColumnVisibility}
-                readOnlyReason={
-                  readOnly
-                    ? "The connection is read-only. Switch it off in the SQL console to edit rows."
-                    : null
-                }
-              />
-              <Pagination
-                page={page}
-                pageSize={pageSize}
-                total={total}
-                hasMore={rowsData?.hasMore ?? false}
-                onPageChange={handlePageChange}
-                onPageSizeChange={setPageSize}
-              />
-            </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <span className="text-[12px] text-text-tertiary">
-                Select a table to preview its data.
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      <DataGrid
+        tableName={selectedTable ?? ""}
+        columns={rowsData?.columns ?? []}
+        fields={selectedTableFields}
+        enums={schema?.enums ?? []}
+        relations={schema?.relations ?? []}
+        rows={rowsData?.rows ?? []}
+        isLoading={isLoading}
+        isError={isError}
+        errorMessage={tableRowsResult.error?.message}
+        isFiltered={!!debouncedSearch || filters.length > 0}
+        sortCol={sortCol}
+        sortDir={sortDir}
+        onSort={handleSort}
+        pendingEdits={pendingEdits}
+        onCellEdit={handleCellEdit}
+        onNavigateFk={handleNavigateFk}
+        columnVisibility={columnVisibility}
+        onColumnVisibilityChange={setColumnVisibility}
+        readOnlyReason={readOnly ? "The connection is read-only. Turn off Read-only in the top bar to edit rows." : null}
+      />
+      <Pagination
+        page={page}
+        pageSize={pageSize}
+        total={total}
+        hasMore={rowsData?.hasMore ?? false}
+        onPageChange={handlePageChange}
+        onPageSizeChange={(n) => updateParams({ size: n === DEFAULT_PAGE_SIZE ? null : n, page: null })}
+      />
     </div>
   );
 }

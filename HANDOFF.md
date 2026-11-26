@@ -95,6 +95,11 @@ Plan:
   Diagram/Data, menu Rename/Delete (delete confirms in a Dialog), helpers in
   projects/lib/project-list.ts. DESIGN.md gained Display 24px for these page titles only.
   Top bar logo renders at 44px (icon.png has 17% padding).
+  Step 9 (done): data view rebuilt on the comp. Toolbar holds search, filter chips, the
+  Filter popover (Base UI Popover), row count, Columns (MenuCheckboxItem), refresh, CSV,
+  and the save bar while edits are pending. Headers show type, PK and FK target; FK cells
+  in relation colour with a go-to arrow; enums as dots; size= in the URL. No "+ Row":
+  the backend has no insert yet. Column resize is mouse-only.
   Known: a table chosen from outside is centred in the whole stage, partly under the
   card; fix with the diagram work (step 8). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
@@ -759,8 +764,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 ## Next 3 steps
 
 1. Group C in progress. Step 7 done: connect (/) and projects (/projects) rebuilt as
-   two pages (user rejected merging them; comp .impeccable/mocks/home.html). Next: step 8
-   diagram (show a comp first), then 9-13. Pending: row-count estimates (own commit),
+   two pages (user rejected merging them; comp .impeccable/mocks/home.html). Step 9 data
+   done next (user asked to finish data before the diagram). Next: step 8 diagram (show a
+   comp first), then 10-13. Pending: row-count estimates (own commit),
    web-design-guidelines review of the workspace and home screens.
 2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 3. Step 7: home (projects + connect) on the new primitives.

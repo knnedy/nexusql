@@ -62,8 +62,8 @@ test("hiding a column removes it from the grid", async ({ page }) => {
   await openPets(page);
   await expect(header(page, "nick")).toHaveCount(1);
   await page.getByRole("button", { name: "Columns" }).click();
-  await page.getByRole("button", { name: "nick", exact: true }).click();
-  await page.getByRole("button", { name: /Columns/ }).click(); // close the menu
+  await page.getByRole("menuitemcheckbox", { name: "nick", exact: true }).click();
+  await page.keyboard.press("Escape");
   await expect(header(page, "nick")).toHaveCount(0);
   await expect(page.getByText("rexy", { exact: true })).toBeHidden();
   await expect(page.getByText("Rex", { exact: true })).toBeVisible();
@@ -83,7 +83,7 @@ test("dragging a header edge resizes its column", async ({ page }) => {
 });
 
 async function addFilter(page: Page, column: string, op: string, value?: string) {
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Filters" });
   const columns = dialog.getByLabel("Filter column");
   await columns.last().selectOption(column);
@@ -113,7 +113,7 @@ test("is one of picks from a column's allowed values", async ({ page }) => {
     INSERT INTO sizes (s) VALUES ('small'), ('large'), ('small')`);
   await page.getByRole("tab", { name: "Data" }).click();
   await page.getByRole("button", { name: /sizes/ }).click();
-  await page.getByRole("button", { name: "Filters" }).click();
+  await page.getByRole("button", { name: "Filter", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Filters" });
   await dialog.getByLabel("Filter column").selectOption("s");
   await dialog.getByLabel("Filter operator").selectOption({ label: "is one of" });
@@ -174,4 +174,17 @@ test("a read-only connection makes the grid read-only", async ({ page }) => {
   const inputs = await page.getByRole("textbox").count(); // search and the like
   await page.getByText("Rex", { exact: true }).dblclick();
   await expect(page.getByRole("textbox")).toHaveCount(inputs);
+});
+
+test("rows per page lives in the URL and survives a reload", async ({ page }) => {
+  await connectSqlite(page, `CREATE TABLE big (id INTEGER PRIMARY KEY, label TEXT NOT NULL);
+    WITH RECURSIVE n(i) AS (SELECT 1 UNION ALL SELECT i + 1 FROM n WHERE i < 60)
+    INSERT INTO big (label) SELECT 'row ' || i FROM n`);
+  await page.getByRole("tab", { name: "Data" }).click();
+  await page.getByRole("button", { name: /big/ }).click();
+  await page.getByRole("combobox", { name: "Rows per page" }).click();
+  await page.getByRole("option", { name: "25", exact: true }).click();
+  await expect(page).toHaveURL(/size=25/);
+  await page.reload();
+  await expect(page.getByText("1–25 of 60")).toBeVisible();
 });
