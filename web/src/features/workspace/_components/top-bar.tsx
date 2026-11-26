@@ -69,7 +69,8 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
 
   return (
     <header className="col-span-2 flex h-13 items-center gap-3 border-b border-line bg-panel pr-3 pl-3.5">
-      <Image src={icon} alt="NexusQL" width={28} height={28} className="shrink-0" priority />
+      {/* The icon file has 17% clear padding; the negative margin takes it back. */}
+      <Image src={icon} alt="NexusQL" width={44} height={44} className="-mx-2 shrink-0" priority />
       <Menu.Root>
         <Menu.Trigger className="flex h-8.5 cursor-pointer items-center gap-2 rounded-control px-2.5 hover:bg-sunk focus-visible:outline-2 focus-visible:outline-accent data-popup-open:bg-sunk">
           <span className="text-title font-semibold">{projectName}</span>
