@@ -6,6 +6,7 @@ import { ChevronDown, FolderOpen, Search, Unplug } from "lucide-react";
 import icon from "@/app/icon.png";
 import { useDisconnect } from "@/features/studio/hooks/use-disconnect";
 import { cx } from "@/shared/lib/cx";
+import { useMounted } from "@/shared/hooks/use-mounted";
 import { useReadOnly } from "@/shared/hooks/use-read-only";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
@@ -48,9 +49,11 @@ function AccessSwitch() {
 export function TopBar({ onSearch }: { onSearch: () => void }) {
   const router = useRouter();
   const disconnect = useDisconnect();
+  // The session lives in sessionStorage, which the server never sees.
+  const mounted = useMounted();
   const projectName = useStudioStore((s) => s.projectName);
   const provider = useStudioStore((s) => s.provider);
-  const providerLabel = PROVIDERS.find((p) => p.id === provider)?.label ?? provider;
+  const providerLabel = mounted ? (PROVIDERS.find((p) => p.id === provider)?.label ?? provider) : "";
 
   return (
     <header className="col-span-2 flex h-13 items-center gap-3 border-b border-line bg-panel pr-3 pl-3.5">
@@ -58,7 +61,7 @@ export function TopBar({ onSearch }: { onSearch: () => void }) {
       <Image src={icon} alt="NexusQL" width={44} height={44} className="-mx-2 shrink-0" priority />
       <Menu.Root>
         <Menu.Trigger className="flex h-8.5 cursor-pointer items-center gap-2 rounded-control px-2.5 hover:bg-sunk focus-visible:outline-2 focus-visible:outline-accent data-popup-open:bg-sunk">
-          <span className="text-title font-semibold">{projectName}</span>
+          <span className="text-title font-semibold">{mounted ? projectName : ""}</span>
           <span className="text-label text-fg-subtle">{providerLabel}</span>
           <ChevronDown aria-hidden className="size-3.75 text-fg-subtle" />
         </Menu.Trigger>

@@ -125,7 +125,11 @@ Plan:
   with an "N links" chip (keys tier only); routeLinks drops connectors that would cross a
   third group. Hub/cross chips stay buttons in keys cards. fitView padding 8%. Two canvas
   e2e tests run at 2560x1600 so the schema fits above blocks detail; new e2e for zoom
-  detail (mutation-checked). 8c: centre the selected table
+  detail (mutation-checked).
+  fix(workspace): the top bar rendered the sessionStorage project name/provider during
+  hydration (dev server only: the static export suspends the workspace); now gated on
+  shared/hooks/use-mounted.ts (theme button uses it too). Verified on the dev overlay.
+  8c: centre the selected table
   left of the details card, light neighbours and dim the rest, restyle minimap/controls
   (zoom %, Fit schema), then web-design-guidelines review of the diagram.
   fix(studio): migration-tool tables (db.IsUserTable: goose_db_version, schema_migrations,
