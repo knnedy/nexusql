@@ -5,7 +5,7 @@ import type { RelationEdgeData } from "@/features/canvas/types";
 import { generateSchema } from "@/test/schema-gen";
 import { buildCanvasGraph } from "./canvas-utils";
 import { getNodeHeight, keyFields, keysCardHeight, NODE_WIDTH, tableBoxHeight } from "./card";
-import { connector, detailAt, groupLinks, routeLinks } from "./overview";
+import { connector, detailAt, firstView, groupLinks, routeLinks } from "./overview";
 
 const f = (name: string, key: "PK" | "FK" | "" = ""): Field =>
   ({ name, type: "integer", nullable: false, isPrimaryKey: key === "PK", isForeignKey: key === "FK" }) as Field;
@@ -104,5 +104,34 @@ describe("routed group links", () => {
   it("draws links between neighbours and drops one that would cross a third group", () => {
     const lines = routeLinks([link("top", "mid"), link("mid", "low"), link("low", "top")], boxes);
     expect(lines.map((l) => `${l.a}-${l.b}`)).toEqual(["top-mid", "mid-low"]);
+  });
+});
+
+describe("first view", () => {
+  const pane = { w: 1000, h: 800 };
+
+  it("fits the whole schema when it reads at that zoom", () => {
+    // 920 x 736 of room: a 1000 x 600 schema fits at 0.92, centred.
+    const v = firstView({ x: 0, y: 0, w: 1000, h: 600 }, pane, 12);
+    expect(v.zoom).toBeCloseTo(0.92);
+    expect(v.x).toBeCloseTo(40);
+    expect(v.y).toBeCloseTo(124);
+  });
+
+  it("never opens a schema of up to 50 tables below a readable zoom: its top-left corner instead", () => {
+    const v = firstView({ x: 100, y: 50, w: 4000, h: 3000 }, pane, 50);
+    expect(v).toEqual({ zoom: 0.55, x: 40 - 100 * 0.55, y: 32 - 50 * 0.55 });
+  });
+
+  it("leaves room above for the canvas toolbar when it opens on the corner", () => {
+    expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 20, 64).y).toBe(64);
+  });
+
+  it("fits a larger schema whole, however small", () => {
+    expect(firstView({ x: 0, y: 0, w: 9200, h: 7360 }, pane, 51).zoom).toBeCloseTo(0.1);
+  });
+
+  it("does not blow a tiny schema up past 100%", () => {
+    expect(firstView({ x: 0, y: 0, w: 200, h: 100 }, pane, 2).zoom).toBe(1);
   });
 });

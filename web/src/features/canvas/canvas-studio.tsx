@@ -34,7 +34,7 @@ import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import GroupNode from "@/features/canvas/_components/group-node";
 import { GroupOverlay } from "@/features/canvas/_components/group-overlay";
-import type { GroupLink } from "@/features/canvas/lib/overview";
+import { firstView, type GroupLink } from "@/features/canvas/lib/overview";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
 import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
@@ -44,6 +44,8 @@ import { studioSession } from "@/shared/lib/session-storage";
 import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode, groupNode: GroupNode };
+// The floating toolbar's bottom edge, from the top of the canvas.
+const TOOLBAR_CLEARANCE = 64;
 type CanvasNode = Node<TableNodeData> | Node<GroupNodeData>;
 
 // Regions sit behind their tables and let clicks and drags through to the canvas.
@@ -94,6 +96,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   const { getViewport, setViewport, getNodes, getNodesBounds, fitView } = useReactFlow();
   // Set when the selection came from a click here, so the view does not jump.
   const clickedRef = useRef<string | null>(null);
+  const viewSetRef = useRef(false);
   const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
@@ -122,6 +125,17 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
       setGraphReady(true);
     });
   }, [schema, provider, setNodes, setEdges]);
+
+  // The opening view, once. Regions cover every table, so their bounds need no measuring.
+  useEffect(() => {
+    const pane = canvasWrapperRef.current;
+    if (!graphReady || viewSetRef.current || !pane || !overview.groups.length) return;
+    viewSetRef.current = true;
+    const b = getNodesBounds(overview.groups);
+    const tables = overview.groups.reduce((n, g) => n + g.data.count, 0);
+    const room = { w: pane.clientWidth, h: pane.clientHeight };
+    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, TOOLBAR_CLEARANCE));
+  }, [graphReady, overview, getNodesBounds, setViewport]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
 
@@ -303,9 +317,6 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
-          fitView
-          // a share of the pane (numbers are pixels since v13)
-          fitViewOptions={{ padding: "8%", includeHiddenNodes: false }}
           forceColorMode={resolvedTheme === "light" ? "light" : "dark"} // follow the app theme, not the OS
           onlyRenderVisibleElements
           minZoom={0.02} // low enough that the first view fits a few hundred tables

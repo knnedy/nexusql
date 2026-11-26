@@ -84,3 +84,31 @@ function cuts(p: { x: number; y: number }, q: { x: number; y: number }, r: Box):
   const [x0, x1, y0, y1] = [Math.min(p.x, q.x), Math.max(p.x, q.x), Math.min(p.y, q.y), Math.max(p.y, q.y)];
   return x0 < r.x + r.w && x1 > r.x && y0 < r.y + r.h && y1 > r.y;
 }
+
+// Up to this many tables, the first view always shows names and keys (the user's cap).
+export const FIT_ALL_ABOVE = 50;
+// Keys cards read comfortably from here.
+export const READABLE_ZOOM = 0.55;
+// The margin around the schema, as a share of the pane on each side.
+const PAD = 0.04;
+
+/** Where the diagram opens: the whole schema, unless that would leave a small one unreadable. */
+export function firstView(
+  bounds: Box,
+  pane: { w: number; h: number },
+  tables: number,
+  /** Pixels kept clear above the corner view, for controls floating there. */
+  top = 0,
+): { x: number; y: number; zoom: number } {
+  const [padX, padY] = [pane.w * PAD, pane.h * PAD];
+  const fit = Math.min(1, (pane.w - 2 * padX) / bounds.w, (pane.h - 2 * padY) / bounds.h);
+  if (fit < READABLE_ZOOM && tables <= FIT_ALL_ABOVE) {
+    // The largest group packs first, top-left: open there.
+    return { zoom: READABLE_ZOOM, x: padX - bounds.x * READABLE_ZOOM, y: Math.max(padY, top) - bounds.y * READABLE_ZOOM };
+  }
+  return {
+    zoom: fit,
+    x: (pane.w - bounds.w * fit) / 2 - bounds.x * fit,
+    y: (pane.h - bounds.h * fit) / 2 - bounds.y * fit,
+  };
+}

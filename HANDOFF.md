@@ -129,6 +129,10 @@ Plan:
   fix(workspace): the top bar rendered the sessionStorage project name/provider during
   hydration (dev server only: the static export suspends the workspace); now gated on
   shared/hooks/use-mounted.ts (theme button uses it too). Verified on the dev overlay.
+  First view cap (user 2026-11-27: only groups at first glance looks broken): overview.ts
+  firstView. Up to 50 tables (FIT_ALL_ABOVE) the diagram never opens below 0.55: whole
+  schema if it fits at that zoom, else its top-left corner (largest group) clear of the
+  toolbar. Above 50 it fits whole (map). Replaces React Flow's fitView prop; runs once.
   8c: centre the selected table
   left of the details card, light neighbours and dim the rest, restyle minimap/controls
   (zoom %, Fit schema), then web-design-guidelines review of the diagram.
