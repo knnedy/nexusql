@@ -1,2 +1,2 @@
-export { default as ExportPreviewDrawer } from "./_components/export-preview-drawer";
+export { ExportView } from "./_components/export-view";
 export { FormatIcon, formatTint } from "./_components/format-icon";

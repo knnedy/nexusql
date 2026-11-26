@@ -5,6 +5,7 @@ describe("parseView", () => {
   it("opens the diagram unless the URL names another known view", () => {
     expect(parseView(null)).toBe("diagram");
     expect(parseView("data")).toBe("data");
+    expect(parseView("export")).toBe("export");
     expect(parseView("nonsense")).toBe("diagram");
   });
 });

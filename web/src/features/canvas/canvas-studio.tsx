@@ -25,19 +25,17 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useTheme } from "next-themes";
 import { toPng } from "html-to-image";
-import { SlidersHorizontal } from "lucide-react";
-import { buildCanvasGraph } from "@/features/canvas/lib/canvas-utils";
+import { ImageDown, LayoutGrid } from "lucide-react";
+import { buildCanvasGraph, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
+import { IconButton } from "@/shared/ui/button";
+import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
-import CanvasSidebar from "@/features/canvas/_components/canvas-sidebar";
-import { ExportPreviewDrawer } from "@/features/export";
 import InspectorPanel from "@/features/canvas/_components/inspector-panel";
-import { SqlConsoleModal } from "@/features/console";
 import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { Relation } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
-import { SeedDataModal } from "@/features/seed";
 import { studioSession } from "@/shared/lib/session-storage";
 import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
@@ -74,14 +72,9 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
     Edge<RelationEdgeData>
   >([]);
   const [graphReady, setGraphReady] = useState(false);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeExport, setActiveExport] = useState<string | null>(null);
-  const [seedOpen, setSeedOpen] = useState(false);
-  const [sqlConsoleOpen, setSqlConsoleOpen] = useState(false);
   const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
     null,
   );
-  const [pngDataUrl, setPngDataUrl] = useState<string | null>(null);
   const [isGeneratingPng, setIsGeneratingPng] = useState(false);
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
@@ -150,19 +143,18 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
     onSelectTable(null);
   }, [onSelectTable]);
 
-  const handleLayoutApply = useCallback(
-    (laid: Node<TableNodeData>[], routed: Edge<RelationEdgeData>[]) => {
-      setNodes(laid);
-      setEdges(routed);
-    },
-    [setNodes, setEdges],
-  );
+  const toast = useToast();
+  const handleAutoLayout = useCallback(async () => {
+    if (!schema) return;
+    const laid = await reapplyLayout(schema, provider);
+    setNodes(laid.nodes);
+    setEdges(laid.edges);
+  }, [schema, provider, setNodes, setEdges]);
 
   const handleGeneratePng = useCallback(async () => {
     if (!canvasWrapperRef.current) return;
 
     setIsGeneratingPng(true);
-    setPngDataUrl(null);
 
     const wrapper = canvasWrapperRef.current;
     const previousViewport = getViewport();
@@ -220,16 +212,20 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
         },
       });
 
-      setPngDataUrl(dataUrl);
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = "schema.png";
+      link.click();
     } catch (err) {
       console.error("PNG export failed:", err);
+      toast({ title: "Could not save the image", description: String(err), tone: "danger" });
     } finally {
       wrapper.style.width = previousStyle.width;
       wrapper.style.height = previousStyle.height;
       setViewport(previousViewport, { duration: 0 });
       setIsGeneratingPng(false);
     }
-  }, [getViewport, setViewport, getNodes, getNodesBounds]);
+  }, [getViewport, setViewport, getNodes, getNodesBounds, toast]);
 
   if (isLoading || !graphReady) {
     return (
@@ -256,42 +252,14 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      <button
-        onClick={() => setSidebarOpen(true)}
-        className="absolute top-4 left-4 z-10 flex items-center justify-center w-9 h-9 rounded-xl bg-surface-1 border-[0.5px] border-border shadow-[0_2px_8px_rgba(0,0,0,0.08)] dark:shadow-[0_2px_8px_rgba(0,0,0,0.4)] text-text-secondary hover:text-text-primary hover:bg-surface-2 transition-colors cursor-pointer"
-        aria-label="Open sidebar">
-        <SlidersHorizontal size={15} aria-hidden />
-      </button>
-
-      <CanvasSidebar
-        open={sidebarOpen}
-        onClose={() => {
-          setSidebarOpen(false);
-          setActiveExport(null);
-        }}
-        onLayoutApply={handleLayoutApply}
-        onSelectExport={(type) => setActiveExport(type)}
-        activeExport={activeExport}
-        onOpenSqlConsole={() => setSqlConsoleOpen(true)}
-        onOpenSeedGenerator={() => setSeedOpen(true)}
-      />
-
-      <ExportPreviewDrawer
-        key={activeExport}
-        type={activeExport}
-        sidebarOpen={sidebarOpen}
-        onClose={() => setActiveExport(null)}
-        pngDataUrl={pngDataUrl}
-        isGeneratingPng={isGeneratingPng}
-        onGeneratePng={handleGeneratePng}
-      />
-
-      <SqlConsoleModal
-        open={sqlConsoleOpen}
-        onClose={() => setSqlConsoleOpen(false)}
-      />
-
-      <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
+      <div data-export-exclude="true" className="absolute top-3 left-3 z-10 flex gap-0.5 rounded-card border border-line bg-panel p-0.5 shadow-card">
+        <IconButton label="Auto-layout" onClick={handleAutoLayout}>
+          <LayoutGrid aria-hidden />
+        </IconButton>
+        <IconButton label="Save as PNG" onClick={handleGeneratePng} disabled={isGeneratingPng}>
+          <ImageDown aria-hidden />
+        </IconButton>
+      </div>
 
       <div ref={canvasWrapperRef} className="absolute inset-0">
         <ReactFlow

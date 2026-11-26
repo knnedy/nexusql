@@ -2,10 +2,14 @@
 
 import { Suspense, useCallback, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Network, Table2 } from "lucide-react";
+import { FileCode2, Network, Sprout, SquareTerminal, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
+import { SqlConsoleModal } from "@/features/console";
+import { ExportView } from "@/features/export";
+import { SeedDataModal } from "@/features/seed";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { cx } from "@/shared/lib/cx";
+import { Button } from "@/shared/ui/button";
 import { TabPanel, Tabs } from "@/shared/ui/tabs";
 import { ToastProvider } from "@/shared/ui/toast";
 import { TooltipProvider } from "@/shared/ui/tooltip";
@@ -17,6 +21,7 @@ import { nextSearch, parseView, selectTableUpdates, type Updates } from "./lib/w
 const VIEW_TABS = [
   { id: "diagram", label: "Diagram", icon: <Network aria-hidden /> },
   { id: "data", label: "Data", icon: <Table2 aria-hidden /> },
+  { id: "export", label: "Export", icon: <FileCode2 aria-hidden /> },
 ];
 const TABS_ID = "workspace-view";
 
@@ -40,6 +45,8 @@ function WorkspaceInner() {
   const table = params.get("table");
   const { data: schema } = useSchema();
   const [collapsed, setCollapsed] = useState(false);
+  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [seedOpen, setSeedOpen] = useState(false);
 
   const go = useCallback(
     (updates: Updates) => router.replace(`/studio/?${nextSearch(params, updates)}`, { scroll: false }),
@@ -61,13 +68,29 @@ function WorkspaceInner() {
         onSelect={selectTable}
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
+        footer={
+          <>
+            <Button variant="ghost" className="justify-start" onClick={() => setConsoleOpen(true)}>
+              <SquareTerminal aria-hidden />
+              SQL console
+            </Button>
+            <Button variant="ghost" className="justify-start" onClick={() => setSeedOpen(true)}>
+              <Sprout aria-hidden />
+              Seed data
+            </Button>
+          </>
+        }
       />
       <div className="flex items-stretch gap-3.5 border-b border-line bg-panel px-4">
         <Tabs label="View" idPrefix={TABS_ID} items={VIEW_TABS} value={view} onChange={(v) => go({ view: v })} />
       </div>
       <TabPanel idPrefix={TABS_ID} id={view} className="relative min-h-0 overflow-hidden">
-        {view === "diagram" ? <CanvasStudio selectedTable={table} onSelectTable={selectTable} /> : <DataView table={table} />}
+        {view === "diagram" && <CanvasStudio selectedTable={table} onSelectTable={selectTable} />}
+        {view === "data" && <DataView table={table} />}
+        {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
       </TabPanel>
+      <SqlConsoleModal open={consoleOpen} onClose={() => setConsoleOpen(false)} />
+      <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
     </div>
   );
 }

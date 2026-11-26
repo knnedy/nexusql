@@ -36,8 +36,7 @@ test("edges follow the layout's routes, and a dragged table falls back until re-
   await page.mouse.up();
   await expect(page.locator('[data-routed="false"]')).toHaveCount(1);
 
-  await page.getByRole("button", { name: "Open sidebar" }).click();
-  await page.getByRole("button", { name: /Auto-layout/ }).click();
+  await page.getByRole("button", { name: "Auto-layout" }).click();
   await expect(page.locator('[data-routed="true"]')).toHaveCount(6);
 });
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, PanelLeftClose, PanelLeftOpen, Search, Table2 } from "lucide-react";
 import { cx } from "@/shared/lib/cx";
 import type { Relation, Table } from "@/shared/types/schema";
@@ -15,6 +15,8 @@ interface TablesSidebarProps {
   onSelect: (table: string) => void;
   collapsed: boolean;
   onToggle: () => void;
+  /** Tools pinned under the list. */
+  footer?: ReactNode;
 }
 
 const ROW =
@@ -22,7 +24,7 @@ const ROW =
   "hover:bg-sunk focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent";
 
 /** Every table, led by those linked to the selected one; filter with the field at the top. */
-export function TablesSidebar({ tables, relations, selected, onSelect, collapsed, onToggle }: TablesSidebarProps) {
+export function TablesSidebar({ tables, relations, selected, onSelect, collapsed, onToggle, footer }: TablesSidebarProps) {
   const [query, setQuery] = useState("");
   const q = query.trim().toLowerCase();
   const match = (name: string) => !q || name.toLowerCase().includes(q);
@@ -103,6 +105,7 @@ export function TablesSidebar({ tables, relations, selected, onSelect, collapsed
           )}
         </section>
       </nav>
+      {footer && <div className="flex flex-col gap-0.5 border-t border-line p-2">{footer}</div>}
     </aside>
   );
 }

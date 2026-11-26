@@ -1,4 +1,4 @@
-export const VIEWS = ["diagram", "data"] as const;
+export const VIEWS = ["diagram", "data", "export"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The view the URL asks for; the diagram when it names none we know. */

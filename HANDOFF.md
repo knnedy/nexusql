@@ -70,8 +70,11 @@ Plan:
   tables A-Z, collapse; Diagram/Data tabs). URL holds view and table (plus the data
   params); the diagram follows ?table= and pans to it. /studio/canvas and /studio/explorer
   redirect. e2e: helpers reload after setup SQL (the workspace loads the schema first).
-  Next: 5b canvas sidebar tools move (Export view, Seed in sidebar, Auto-layout on the
-  diagram), 5c SQL dock, 5d details card + trail. Row counts in the sidebar need server
+  5b (done): canvas sidebar and export drawer gone. Export is a workspace view
+  (?view=export&format=id; formats grouped Diagrams / SQL / ORMs and types / Other);
+  Auto-layout and Save as PNG sit on the diagram; SQL console and Seed data are in the
+  tables sidebar footer (the console modal stays until 5c).
+  Next: 5c SQL dock, 5d details card + trail. Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
   diagram clustering (step 8); the comp's group names were invented.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
