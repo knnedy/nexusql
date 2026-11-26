@@ -7,27 +7,17 @@ import type { Edge, Node } from "@xyflow/react";
 import { SchemaResponse } from "@/shared/types/schema";
 import { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { CASCADE_WEIGHT, groupTables, type Link, type TableGroup } from "./groups";
+import { groupLinks, type GroupLink } from "./overview";
 import { DatabaseProvider } from "@/shared/types/provider";
 
 // The table node renders at exactly these sizes, so layout and handles agree.
-export const NODE_WIDTH = 240;
-export const NODE_BORDER = 1;
-export const NODE_HEADER = 34;
-export const NODE_ROW = 26;
-export const NODE_PAD_BOTTOM = 0;
+import { handleOffsetY, NODE_WIDTH, tableBoxHeight } from "./card";
+export { getNodeHeight, handleOffsetY, NODE_BORDER, NODE_HEADER, NODE_PAD_BOTTOM, NODE_ROW, NODE_WIDTH } from "./card";
 
 // Room inside a group's region: the label sits in the top band.
-export const GROUP_LABEL = 56;
+export const GROUP_LABEL = 64;
 const GROUP_PAD = 28;
 
-export function getNodeHeight(fieldCount: number): number {
-  return 2 * NODE_BORDER + NODE_HEADER + (fieldCount || 0) * NODE_ROW + NODE_PAD_BOTTOM;
-}
-
-/** A field's handle centre, from the node's top edge. */
-export function handleOffsetY(index: number): number {
-  return NODE_BORDER + NODE_HEADER + index * NODE_ROW + NODE_ROW / 2;
-}
 
 // Inside a group keys flow right to left: a table sits right of what it points to,
 // so the most-linked table lands in the middle. Lines between groups end in chips.
@@ -187,7 +177,7 @@ function buildElkGraph(schema: SchemaResponse, hubs: Set<string>, groups: TableG
   const tableNode = (table: (typeof safeTables)[number]): ElkNode => ({
     id: table.name,
     width: NODE_WIDTH,
-    height: getNodeHeight(table.fields?.length || 0),
+    height: tableBoxHeight(table.fields ?? [], [...(referenced.get(table.name) ?? [])]),
     ports: buildPorts(table.fields, table.name, referenced.get(table.name) ?? new Set()),
     layoutOptions: { "elk.portConstraints": "FIXED_POS" },
   });
@@ -233,6 +223,8 @@ export interface CanvasGraph {
   edges: Edge<RelationEdgeData>[];
   /** One region per group, drawn behind its tables. */
   groups: Node<GroupNodeData>[];
+  /** Zoomed out, one connector per pair of linked groups. */
+  links: GroupLink[];
 }
 
 export async function buildCanvasGraph(
@@ -327,13 +319,14 @@ export async function buildCanvasGraph(
       };
     });
 
-    return { nodes, edges, groups: groupNodes };
+    const tableGroup = new Map(nodes.map((n) => [n.id, n.data.group!]));
+    return { nodes, edges, groups: groupNodes, links: groupLinks(edges, (t) => tableGroup.get(t) ?? "") };
   } catch (layoutError) {
     console.error(
       "[NexusQL] Critical error computing canvas layout calculations:",
       layoutError,
     );
-    return { nodes: [], edges: [], groups: [] };
+    return { nodes: [], edges: [], groups: [], links: [] };
   }
 }
 

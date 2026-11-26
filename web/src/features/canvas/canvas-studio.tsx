@@ -33,6 +33,8 @@ import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import GroupNode from "@/features/canvas/_components/group-node";
+import { GroupOverlay } from "@/features/canvas/_components/group-overlay";
+import type { GroupLink } from "@/features/canvas/lib/overview";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
 import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
@@ -82,6 +84,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     Edge<RelationEdgeData>
   >([]);
   const [graphReady, setGraphReady] = useState(false);
+  const [overview, setOverview] = useState<{ groups: Node<GroupNodeData>[]; links: GroupLink[] }>({ groups: [], links: [] });
   const [selectedRelation, setSelectedRelation] = useState<Relation | null>(
     null,
   );
@@ -112,9 +115,10 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
 
   useEffect(() => {
     if (!schema) return;
-    buildCanvasGraph(schema, provider).then(({ nodes, edges, groups }) => {
+    buildCanvasGraph(schema, provider).then(({ nodes, edges, groups, links }) => {
       setNodes(withRegions(groups, nodes));
       setEdges(edges);
+      setOverview({ groups, links });
       setGraphReady(true);
     });
   }, [schema, provider, setNodes, setEdges]);
@@ -160,6 +164,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     const laid = await reapplyLayout(schema, provider);
     setNodes(withRegions(laid.groups, laid.nodes));
     setEdges(laid.edges);
+    setOverview({ groups: laid.groups, links: laid.links });
   }, [schema, provider, setNodes, setEdges]);
 
   const handleGeneratePng = useCallback(async () => {
@@ -299,13 +304,14 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
-          // v12's 0.38 padding: numbers are pixels since v13, so give the same share
-          fitViewOptions={{ padding: "14%", includeHiddenNodes: false }}
+          // a share of the pane (numbers are pixels since v13)
+          fitViewOptions={{ padding: "8%", includeHiddenNodes: false }}
           forceColorMode={resolvedTheme === "light" ? "light" : "dark"} // follow the app theme, not the OS
           onlyRenderVisibleElements
           minZoom={0.02} // low enough that the first view fits a few hundred tables
           maxZoom={2}
           proOptions={{ hideAttribution: true }}>
+          <GroupOverlay groups={overview.groups} links={overview.links} />
           <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="var(--nx-grid-dot)" bgColor="var(--nx-ground)" />
           <MiniMap
             position="bottom-left"

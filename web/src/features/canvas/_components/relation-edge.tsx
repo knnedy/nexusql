@@ -11,6 +11,7 @@ import {
 import { RelationEdgeData } from "@/features/canvas/types";
 import { routedPath } from "@/features/canvas/lib/edge-path";
 import { useEdgeFocus } from "@/features/canvas/lib/focus-store";
+import { useDetail } from "@/features/canvas/lib/use-detail";
 
 function RelationEdge({
   id,
@@ -27,9 +28,11 @@ function RelationEdge({
 }: EdgeProps<Edge<RelationEdgeData>>) {
   const [hovered, setHovered] = useState(false);
   const focus = useEdgeFocus(source, target);
+  const full = useDetail() === "full";
 
   // ELK's route avoids tables; a dragged table falls back to a direct step until re-layout.
-  const routed = routedPath(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }, 12);
+  // Zoomed out, lines join key rows of the smaller cards, which the route does not know.
+  const routed = full && routedPath(data?.points, { x: sourceX, y: sourceY }, { x: targetX, y: targetY }, 12);
   const [edgePath, labelX, labelY] = routed
     ? [routed.path, routed.label.x, routed.label.y]
     : getSmoothStepPath({

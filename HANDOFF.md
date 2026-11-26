@@ -116,8 +116,16 @@ Plan:
   rounded-card); new --radius-region token; old React Flow handle/edge CSS overrides
   removed (they moved handles to the wrong side). e2e selects .react-flow__node-tableNode.
   Fit area vs the old layout: 400 tables 11.0k x 11.4k (was 14.5k x 18.2k).
-  Next 8b: zoomed-out level of detail (keys cards counter-scaled below zoom 0.8, group
-  labels readable, one "N links" connector per group pair). 8c: centre the selected table
+  8b done: level of detail by zoom (lib/overview.ts detailAt): full >= 0.75, keys >= 0.3,
+  blocks below. Keys card = the comp's 168px card scaled to the 240 box (lib/card.ts,
+  sizes moved there); the layout reserves max(full, keys) height. Lines use ELK routes
+  only at full detail, else smooth steps between key rows (updateNodeInternals on switch).
+  GroupOverlay (ViewportPortal, above nodes): group name pills at constant screen size
+  (inside the 64px band while cards show text), dashed connector per linked group pair
+  with an "N links" chip (keys tier only); routeLinks drops connectors that would cross a
+  third group. Hub/cross chips stay buttons in keys cards. fitView padding 8%. Two canvas
+  e2e tests run at 2560x1600 so the schema fits above blocks detail; new e2e for zoom
+  detail (mutation-checked). 8c: centre the selected table
   left of the details card, light neighbours and dim the rest, restyle minimap/controls
   (zoom %, Fit schema), then web-design-guidelines review of the diagram.
   fix(studio): migration-tool tables (db.IsUserTable: goose_db_version, schema_migrations,
@@ -782,11 +790,10 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Step 8b: diagram level of detail when zoomed out, plus group-to-group connectors.
-2. Step 8c: selection centring beside the details card, neighbour highlight, minimap and
-   controls restyle; web-design-guidelines review of the diagram.
-3. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first. Pending:
-   row-count estimates (own commit), guidelines review of the workspace screens.
+1. Step 8c: selection centring beside the details card, neighbour highlight, minimap and
+   controls restyle (zoom %, Fit schema); web-design-guidelines review of the diagram.
+2. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first.
+3. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

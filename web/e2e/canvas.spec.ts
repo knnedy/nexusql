@@ -21,6 +21,8 @@ const SHOP = `CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT);
   CREATE TABLE refunds (id INTEGER PRIMARY KEY, item_id INTEGER REFERENCES items (id))`;
 
 test("edges follow the layout's routes, and a dragged table falls back until re-layout", async ({ page }) => {
+  // Routes are drawn at full detail: a pane large enough to fit the schema at that zoom.
+  await page.setViewportSize({ width: 2560, height: 1600 });
   await connectSqlite(page, SHOP);
   await page.reload();
   const edges = page.locator(".react-flow__edge");
@@ -40,6 +42,31 @@ test("edges follow the layout's routes, and a dragged table falls back until re-
   await expect(page.locator('[data-routed="true"]')).toHaveCount(6);
 });
 
+test("zoomed out, a card keeps only its keys; zoomed in, every column", async ({ page }) => {
+  await connectSqlite(page, SHOP);
+  await page.reload();
+  const orders = page.locator('.react-flow__node[data-id="orders"]');
+  await expect(orders).toBeVisible();
+  const wheel = async (dy: number) => {
+    const b = (await orders.boundingBox())!;
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+    await page.mouse.wheel(0, dy);
+  };
+
+  await expect(async () => {
+    await wheel(150);
+    await expect(orders.getByText("+ 1 more")).toBeVisible({ timeout: 300 });
+  }).toPass();
+  await expect(orders.getByText("total")).toHaveCount(0);
+  await expect(orders.getByText("user_id")).toBeVisible();
+
+  await expect(async () => {
+    await wheel(-150);
+    await expect(orders.getByText("total")).toBeVisible({ timeout: 300 });
+  }).toPass();
+  await expect(orders.getByText("+ 1 more")).toHaveCount(0);
+});
+
 // Forty tables that all reference users (a hub), and every odd one its neighbour.
 const HUB = [
   "CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT)",
@@ -50,6 +77,8 @@ const HUB = [
 ].join(";\n");
 
 test("lines into a hub table show as chips until either end is in focus", async ({ page }) => {
+  // Chips need readable cards: a pane that fits the schema above blocks detail.
+  await page.setViewportSize({ width: 2560, height: 1600 });
   await connectSqlite(page, HUB);
   await page.reload();
   const a1 = page.locator('.react-flow__node[data-id="a1"]');
