@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Check, MoreHorizontal, Network, Pencil, Plus, Search, Table2, Trash2, X } from "lucide-react";
 import { AppBar } from "@/components/app-bar";
 import { LocalNotes } from "@/components/local-notes";
@@ -149,8 +149,18 @@ function ProjectRow({ project, connected, onDelete }: { project: Project; connec
 export default function ProjectsView() {
   const { data, isLoading } = useProjects();
   const remove = useDeleteProject();
-  const [search, setSearch] = useState("");
-  const [provider, setProvider] = useState<ProviderFilter>("all");
+  const router = useRouter();
+  const params = useSearchParams();
+  // The filter lives in the URL, so a reload or a shared link keeps it.
+  const [search, setSearch] = useState(params.get("q") ?? "");
+  const db = params.get("db");
+  const provider: ProviderFilter = FILTERS.some((f) => f.id === db) ? (db as ProviderFilter) : "all";
+  function setUrl(q: string, next: ProviderFilter) {
+    const sp = new URLSearchParams();
+    if (q.trim()) sp.set("q", q);
+    if (next !== "all") sp.set("db", next);
+    router.replace(`/projects/${sp.size ? `?${sp}` : ""}`, { scroll: false });
+  }
   const [deleting, setDeleting] = useState<Project | null>(null);
   const filterRef = useRef<HTMLInputElement>(null);
   const all = useMemo(() => data?.projects ?? [], [data]);
@@ -174,11 +184,11 @@ export default function ProjectsView() {
     <TooltipProvider>
       <div className="min-h-screen bg-ground text-body text-fg">
         <AppBar />
-        <main className="mx-auto w-full max-w-220 px-4 pt-9 pb-16 sm:px-8">
+        <main id="main" className="mx-auto w-full max-w-220 px-4 pt-9 pb-16 sm:px-8">
           <section aria-labelledby="projects-title" className="min-w-0">
             <div className="mb-4.5 flex flex-wrap items-end gap-3">
               <div className="flex-1">
-                <h1 id="projects-title" className="text-display font-semibold tracking-tight">
+                <h1 id="projects-title" className="text-display font-semibold tracking-tight text-balance">
                   Projects
                   {all.length > 0 && <span className="ml-2 text-subheading font-medium text-fg-subtle tabular-nums">{all.length}</span>}
                 </h1>
@@ -199,7 +209,10 @@ export default function ProjectsView() {
                   aria-label="Filter projects"
                   placeholder="Filter by name or address"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
+                  onChange={(e) => {
+                    setSearch(e.target.value);
+                    setUrl(e.target.value, provider);
+                  }}
                   leading={<Search aria-hidden />}
                   trailing={<Kbd>/</Kbd>}
                   wrapperClassName="w-full max-w-85 bg-panel"
@@ -210,7 +223,7 @@ export default function ProjectsView() {
                       key={f.id}
                       type="button"
                       aria-pressed={provider === f.id}
-                      onClick={() => setProvider(f.id)}
+                      onClick={() => setUrl(search, f.id)}
                       className="inline-flex h-6.5 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-label font-medium text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent aria-pressed:bg-panel aria-pressed:text-fg aria-pressed:shadow-sm">
                       {f.label}
                       <span className="font-normal text-fg-subtle tabular-nums">{counts[f.id]}</span>

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { QueryProvider } from "@/providers/query-provider";
@@ -16,8 +16,15 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "NexusQL",
-  description:
-    "A local-first database entity and relationship visualizer. Connect any PostgreSQL or SQLite database and instantly generate an interactive ERD canvas.",
+  description: "A local-first SQL data studio for PostgreSQL, MySQL and SQLite: diagram, data, SQL and schema exports.",
+};
+
+// Matches the page ground in each theme.
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f7f6f2" },
+    { media: "(prefers-color-scheme: dark)", color: "#0f1112" },
+  ],
 };
 
 export default function RootLayout({

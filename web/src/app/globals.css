@@ -398,3 +398,7 @@
   .trail-line { transform-origin: left; animation: trail-grow 240ms var(--ease-out-strong) both; }
 }
 @keyframes trail-grow { from { transform: scaleX(0.2); opacity: 0; } }
+
+/* Native scrollbars and form controls follow the theme. */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState, type ReactNode } from "react";
+import { useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, FolderOpen, Link2, Loader2 } from "lucide-react";
 import { AppBar } from "@/components/app-bar";
@@ -33,7 +33,7 @@ function Field({ label, error, hint, children }: { label: string; error?: string
       </label>
       {children({ id, describedBy: error || hint ? note : undefined })}
       {error ? (
-        <p id={note} className="mt-1.5 text-label text-danger">
+        <p id={note} aria-live="polite" className="mt-1.5 text-label text-danger">
           {error}
         </p>
       ) : (
@@ -53,6 +53,8 @@ export default function ConnectView() {
   const [uri, setUri] = useState("");
   const [errors, setErrors] = useState<ConnectionErrors>({});
   const [createNew, setCreateNew] = useState(false);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const uriRef = useRef<HTMLInputElement>(null);
   const connect = useConnect();
   const { data, isLoading } = useProjects();
   const projects = data?.projects ?? [];
@@ -70,7 +72,10 @@ export default function ConnectView() {
     e.preventDefault();
     const found = validateConnection({ name, uri, provider });
     setErrors(found);
-    if (found.name || found.uri) return;
+    if (found.name || found.uri) {
+      (found.name ? nameRef : uriRef).current?.focus();
+      return;
+    }
     studioSession.setProjectName(name.trim());
     connect.mutate({ uri, provider, name: name.trim(), ...(provider === "sqlite" && createNew && { create: true }) });
   }
@@ -91,8 +96,8 @@ export default function ConnectView() {
           )}
         </AppBar>
 
-        <main className="mx-auto w-full max-w-115 px-4 pt-16 pb-16">
-          <h1 className="text-display font-semibold tracking-tight">{firstRun ? "Connect a database" : "New connection"}</h1>
+        <main id="main" className="mx-auto w-full max-w-115 px-4 pt-16 pb-16">
+          <h1 className="text-display font-semibold tracking-tight text-balance">{firstRun ? "Connect a database" : "New connection"}</h1>
           <p className="mt-2 mb-6 max-w-100 text-title text-fg-muted">
             Paste a connection string. NexusQL reads the schema and draws how the tables relate; nothing leaves this machine.
           </p>
@@ -127,11 +132,14 @@ export default function ConnectView() {
             <Field label="Project name" error={errors.name}>
               {({ id, describedBy }) => (
                 <Input
+                  ref={nameRef}
                   id={id}
+                  name="project-name"
+                  autoComplete="off"
                   aria-describedby={describedBy}
                   aria-invalid={!!errors.name}
                   wrapperClassName="h-8.5"
-                  placeholder="shop_dev"
+                  placeholder="shop_dev…"
                   value={name}
                   onChange={(e) => {
                     setName(e.target.value);
@@ -144,13 +152,15 @@ export default function ConnectView() {
             <Field label="Connection URI" error={errors.uri} hint={<>Often in your app&apos;s <code className="font-mono text-caption">.env</code> as <code className="font-mono text-caption">DATABASE_URL</code>.</>}>
               {({ id, describedBy }) => (
                 <Input
+                  ref={uriRef}
                   id={id}
+                  name="connection-uri"
                   aria-describedby={describedBy}
                   aria-invalid={!!errors.uri}
                   wrapperClassName="h-8.5"
                   className="font-mono text-label"
                   leading={<Link2 aria-hidden />}
-                  placeholder={meta.uriPlaceholder}
+                  placeholder={`${meta.uriPlaceholder}…`}
                   spellCheck={false}
                   autoComplete="off"
                   value={uri}

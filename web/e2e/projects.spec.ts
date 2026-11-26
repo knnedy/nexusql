@@ -27,3 +27,13 @@ test("a project can be renamed, opened at its data, and deleted after confirming
   await page.getByRole("button", { name: "Delete project" }).click();
   await expect(list.getByText(`${name} renamed`)).toHaveCount(0);
 });
+
+test("the projects filter lives in the URL and survives a reload", async ({ page }) => {
+  await connectSqlite(page);
+  await page.goto("/projects");
+  await page.getByRole("group", { name: "Database" }).getByRole("button", { name: /MySQL/ }).click();
+  await expect(page).toHaveURL(/db=mysql/);
+  await page.reload();
+  await expect(page.getByText(/No project matches among MySQL projects/)).toBeVisible();
+  await expect(page.getByRole("group", { name: "Database" }).getByRole("button", { name: /MySQL/ })).toHaveAttribute("aria-pressed", "true");
+});
