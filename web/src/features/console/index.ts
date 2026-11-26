@@ -1,1 +1,1 @@
-export { default as SqlConsoleModal } from "./_components/sql-console-modal";
+export { SqlDock } from "./_components/sql-dock";

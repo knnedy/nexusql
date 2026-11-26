@@ -36,7 +36,7 @@ export function TablesSidebar({ tables, relations, selected, onSelect, collapsed
 
   if (collapsed) {
     return (
-      <aside aria-label="Tables" className="row-span-2 flex flex-col items-center border-r border-line-strong bg-panel pt-2">
+      <aside aria-label="Tables" className="row-span-3 flex flex-col items-center border-r border-line-strong bg-panel pt-2">
         <IconButton label="Show tables" onClick={onToggle}>
           <PanelLeftOpen aria-hidden />
         </IconButton>
@@ -45,7 +45,7 @@ export function TablesSidebar({ tables, relations, selected, onSelect, collapsed
   }
 
   return (
-    <aside aria-label="Tables" className="row-span-2 flex min-h-0 flex-col border-r border-line-strong bg-panel">
+    <aside aria-label="Tables" className="row-span-3 flex min-h-0 flex-col border-r border-line-strong bg-panel">
       <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line pr-2 pl-4">
         <span className="text-body font-semibold">Tables</span>
         <span className="text-label text-fg-subtle tabular-nums">{tables.length}</span>

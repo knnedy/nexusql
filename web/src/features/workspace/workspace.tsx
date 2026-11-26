@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileCode2, Network, Sprout, SquareTerminal, Table2 } from "lucide-react";
+import { FileCode2, Network, Sprout, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
-import { SqlConsoleModal } from "@/features/console";
+import { SqlDock } from "@/features/console";
 import { ExportView } from "@/features/export";
 import { SeedDataModal } from "@/features/seed";
 import { useSchema } from "@/shared/hooks/use-schema";
@@ -45,19 +45,29 @@ function WorkspaceInner() {
   const table = params.get("table");
   const { data: schema } = useSchema();
   const [collapsed, setCollapsed] = useState(false);
-  const [consoleOpen, setConsoleOpen] = useState(false);
+  const [dockOpen, setDockOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
 
   const go = useCallback(
     (updates: Updates) => router.replace(`/studio/?${nextSearch(params, updates)}`, { scroll: false }),
     [router, params],
   );
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setDockOpen((o) => !o);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
   const selectTable = useCallback((name: string | null) => go(name ? selectTableUpdates(name) : { table: null }), [go]);
 
   return (
     <div
       className={cx(
-        "grid h-screen grid-rows-[auto_3rem_minmax(0,1fr)] bg-ground text-body text-fg",
+        "grid h-screen grid-rows-[auto_3rem_minmax(0,1fr)_auto] bg-ground text-body text-fg",
         collapsed ? "grid-cols-[3.25rem_minmax(0,1fr)]" : "grid-cols-[16.5rem_minmax(0,1fr)]",
       )}>
       <TopBar />
@@ -69,16 +79,10 @@ function WorkspaceInner() {
         collapsed={collapsed}
         onToggle={() => setCollapsed((c) => !c)}
         footer={
-          <>
-            <Button variant="ghost" className="justify-start" onClick={() => setConsoleOpen(true)}>
-              <SquareTerminal aria-hidden />
-              SQL console
-            </Button>
-            <Button variant="ghost" className="justify-start" onClick={() => setSeedOpen(true)}>
-              <Sprout aria-hidden />
-              Seed data
-            </Button>
-          </>
+          <Button variant="ghost" className="justify-start" onClick={() => setSeedOpen(true)}>
+            <Sprout aria-hidden />
+            Seed data
+          </Button>
         }
       />
       <div className="flex items-stretch gap-3.5 border-b border-line bg-panel px-4">
@@ -89,7 +93,7 @@ function WorkspaceInner() {
         {view === "data" && <DataView table={table} />}
         {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
       </TabPanel>
-      <SqlConsoleModal open={consoleOpen} onClose={() => setConsoleOpen(false)} />
+      <SqlDock open={dockOpen} onOpenChange={setDockOpen} />
       <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
     </div>
   );

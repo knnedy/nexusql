@@ -74,7 +74,11 @@ Plan:
   (?view=export&format=id; formats grouped Diagrams / SQL / ORMs and types / Other);
   Auto-layout and Save as PNG sit on the diagram; SQL console and Seed data are in the
   tables sidebar footer (the console modal stays until 5c).
-  Next: 5c SQL dock, 5d details card + trail. Row counts in the sidebar need server
+  5c (done): SQL console is a dock under the stage (features/console SqlDock; Ctrl+J
+  toggles; collapsed bar keeps the last query and its summary; History is a Menu; the
+  read-only toggle left the console since the top bar owns it). Prism colours in
+  globals.css (.sql-code) on --nx tokens.
+  Next: 5d details card + trail. Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
   diagram clustering (step 8); the comp's group names were invented.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
