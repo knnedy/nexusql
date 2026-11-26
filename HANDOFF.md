@@ -80,8 +80,12 @@ Plan:
   globals.css (.sql-code) on --nx tokens.
   5d-1 (done): relationship trail in the context bar (workspace/lib/trail.ts: back along
   it, onward by a link drops what came after, anything else starts over; follows ?table=).
-  Next: 5d-2 floating details card replacing canvas InspectorPanel (facts, relationships
-  that select, keys and checks, DDL, Open data; Details toggle in the context bar). Row counts in the sidebar need server
+  5d-2 (done): canvas InspectorPanel replaced by a floating DetailsCard (facts, links
+  both ways that select, columns, keys and checks, Show DDL, Open data; relationships
+  show both ends). Details toggle in the context bar on the diagram. linkedTables moved
+  to shared/lib. Minimap moved bottom-left. Step 5 done.
+  Known: a table chosen from outside is centred in the whole stage, partly under the
+  card; fix with the diagram work (step 8). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
   diagram clustering (step 8); the comp's group names were invented.
 - Gate per step: screenshots both themes, impeccable detect on live pages,
@@ -743,7 +747,8 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. UI rebuild step 5b-5d (see above), then row-count estimates.
+1. UI rebuild step 6: Ctrl+K search panel, shortcuts (Ctrl+B sidebar, / filter); then
+   row-count estimates. Group B ends after step 6: summary first.
 2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 3. Step 7: home (projects + connect) on the new primitives.
 

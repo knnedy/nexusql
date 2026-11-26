@@ -6,7 +6,7 @@ import { cx } from "@/shared/lib/cx";
 import type { Relation, Table } from "@/shared/types/schema";
 import { IconButton } from "@/shared/ui/button";
 import { Input } from "@/shared/ui/input";
-import { linkedTables } from "../lib/linked-tables";
+import { linkedTables } from "@/shared/lib/linked-tables";
 
 interface TablesSidebarProps {
   tables: Table[];

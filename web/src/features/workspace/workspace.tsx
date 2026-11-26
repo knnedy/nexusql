@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileCode2, Network, Sprout, Table2 } from "lucide-react";
+import { FileCode2, Network, PanelRight, Sprout, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
 import { SqlDock } from "@/features/console";
 import { ExportView } from "@/features/export";
@@ -49,6 +49,7 @@ function WorkspaceInner() {
   const [collapsed, setCollapsed] = useState(false);
   const [dockOpen, setDockOpen] = useState(false);
   const [seedOpen, setSeedOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(true);
   const relations = schema?.relations ?? [];
   // The trail follows the URL's table, however it was chosen.
   const [trail, setTrail] = useState(EMPTY_TRAIL);
@@ -98,9 +99,23 @@ function WorkspaceInner() {
       <div className="flex min-w-0 items-stretch gap-3.5 border-b border-line bg-panel px-4">
         <RelationshipTrail trail={trail} relations={relations} onSelect={selectTable} />
         <Tabs label="View" idPrefix={TABS_ID} items={VIEW_TABS} value={view} onChange={(v) => go({ view: v })} />
+        {view === "diagram" && (
+          <Button size="sm" variant="ghost" className="ml-auto self-center aria-pressed:bg-sunk aria-pressed:text-fg" aria-pressed={detailsOpen} onClick={() => setDetailsOpen((o) => !o)}>
+            <PanelRight aria-hidden />
+            Details
+          </Button>
+        )}
       </div>
       <TabPanel idPrefix={TABS_ID} id={view} className="relative min-h-0 overflow-hidden">
-        {view === "diagram" && <CanvasStudio selectedTable={table} onSelectTable={selectTable} />}
+        {view === "diagram" && (
+          <CanvasStudio
+            selectedTable={table}
+            onSelectTable={selectTable}
+            detailsOpen={detailsOpen}
+            onCloseDetails={() => setDetailsOpen(false)}
+            onOpenData={(name) => go({ ...selectTableUpdates(name), view: "data" })}
+          />
+        )}
         {view === "data" && <DataView table={table} />}
         {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
       </TabPanel>

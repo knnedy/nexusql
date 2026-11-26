@@ -32,7 +32,7 @@ import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
-import InspectorPanel from "@/features/canvas/_components/inspector-panel";
+import { DetailsCard } from "@/features/canvas/_components/details-card";
 import { RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { Relation } from "@/shared/types/schema";
 import { DatabaseProvider } from "@/shared/types/provider";
@@ -54,6 +54,9 @@ interface CanvasStudioProps {
   /** The workspace's selected table; the diagram follows it. */
   selectedTable: string | null;
   onSelectTable: (table: string | null) => void;
+  detailsOpen: boolean;
+  onCloseDetails: () => void;
+  onOpenData: (table: string) => void;
 }
 
 export default function CanvasStudio(props: CanvasStudioProps) {
@@ -64,7 +67,7 @@ export default function CanvasStudio(props: CanvasStudioProps) {
   );
 }
 
-function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudioProps) {
+function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, onCloseDetails, onOpenData }: CanvasStudioProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState<Node<TableNodeData>>(
     [],
   );
@@ -261,6 +264,21 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
         </IconButton>
       </div>
 
+      {detailsOpen && (
+        <DetailsCard
+          table={selectedRelation ? null : selectedTable}
+          relation={selectedRelation}
+          tables={schema?.tables ?? []}
+          relations={schema?.relations ?? []}
+          onSelectTable={(name) => {
+            setSelectedRelation(null);
+            onSelectTable(name);
+          }}
+          onOpenData={onOpenData}
+          onClose={onCloseDetails}
+        />
+      )}
+
       <div ref={canvasWrapperRef} className="absolute inset-0">
         <ReactFlow
           nodes={nodes}
@@ -288,11 +306,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable }: CanvasStudi
             size={1}
             color="var(--canvas-dot)"
           />
-          <InspectorPanel
-            table={selectedRelation ? null : selectedTable}
-            relation={selectedRelation}
-          />
           <MiniMap
+            position="bottom-left"
             nodeColor={() => getCssVar("--minimap-node")}
             maskColor={getCssVar("--minimap-mask")}
             style={{

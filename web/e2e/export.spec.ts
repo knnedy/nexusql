@@ -13,22 +13,21 @@ test("lists the server's export formats and renders the chosen one", async ({ pa
   expect((await download).suggestedFilename()).toBe("schema.ts");
 });
 
-test("the inspector shows the server's DDL for the selected table", async ({ page }) => {
+test("the details card shows the server's DDL for the selected table", async ({ page }) => {
   await connectSqlite(page, "CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");
   await page.reload();
   await page.getByText("pets", { exact: true }).first().click();
-  await page.getByRole("button", { name: "DDL", exact: true }).click();
+  await page.getByRole("button", { name: "Show DDL" }).click();
   await expect(page.getByText(/"id" INTEGER PRIMARY KEY AUTOINCREMENT/)).toBeVisible();
 });
 
-test("the inspector lists the keys, indexes and checks the database has", async ({ page }) => {
+test("the details card lists the keys, indexes and checks the database has", async ({ page }) => {
   await connectSqlite(page, `CREATE TABLE owners (id INTEGER PRIMARY KEY);
     CREATE TABLE pets (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id) ON DELETE CASCADE,
       tag TEXT UNIQUE, age INTEGER CONSTRAINT age_ok CHECK (age >= 0));
     CREATE INDEX pets_age_idx ON pets (age)`);
   await page.reload();
   await page.getByText("pets", { exact: true }).first().click();
-  await page.getByRole("button", { name: "Indexes", exact: true }).click();
   await expect(page.getByText("(owner_id) → owners (id) · ON DELETE CASCADE")).toBeVisible();
   await expect(page.getByText("(tag)", { exact: true })).toBeVisible();
   await expect(page.getByText("pets_age_idx")).toBeVisible();

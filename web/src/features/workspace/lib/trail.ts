@@ -1,5 +1,5 @@
 import type { Relation } from "@/shared/types/schema";
-import { linkedTables } from "./linked-tables";
+import { linkedTables } from "@/shared/lib/linked-tables";
 
 /** The tables reached by following links, and which of them is current. */
 export interface Trail {
