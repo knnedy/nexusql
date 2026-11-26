@@ -1,380 +1,279 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  Database,
-  Trash2,
-  Pencil,
-  Check,
-  X,
-  Clock,
-  ArrowLeft,
-  Loader2,
-  FolderOpen,
-  Search,
-  ServerCrash,
-  LayoutGrid,
-  Table2,
-} from "lucide-react";
-import TopNav from "@/components/top-nav";
-import ProviderBadge from "@/components/provider-badge";
-import {
-  useProjects,
-  useDeleteProject,
-  useRenameProject,
-} from "@/shared/hooks/use-projects";
-import { useConnect } from "@/features/connect";
-import { formatRelativeTime } from "@/shared/lib/utils";
-import { DatabaseProvider } from "@/shared/types/provider";
-import { Project } from "@/shared/types/project";
+import { Check, MoreHorizontal, Network, Pencil, Plus, Search, Table2, Trash2, X } from "lucide-react";
+import { AppBar } from "@/components/app-bar";
+import { LocalNotes } from "@/components/local-notes";
+import { useConnect } from "@/features/connect/hooks/use-connect";
+import { useDeleteProject, useProjects, useRenameProject } from "@/shared/hooks/use-projects";
+import { cx } from "@/shared/lib/cx";
 import { studioSession } from "@/shared/lib/session-storage";
+import { formatRelativeTime } from "@/shared/lib/utils";
+import type { Project } from "@/shared/types/project";
+import { PROVIDERS } from "@/shared/types/provider";
+import { Button, IconButton } from "@/shared/ui/button";
+import { Dialog, DialogContent } from "@/shared/ui/dialog";
+import { EmptyState } from "@/shared/ui/empty-state";
+import { Input } from "@/shared/ui/input";
+import { Kbd } from "@/shared/ui/kbd";
+import { Menu, MenuContent, MenuItem, MenuSeparator } from "@/shared/ui/menu";
+import { ProviderMark } from "@/shared/ui/provider-mark";
+import { Skeleton } from "@/shared/ui/surface";
+import { TooltipProvider } from "@/shared/ui/tooltip";
+import { countByProvider, visibleProjects, type ProviderFilter } from "./lib/project-list";
 
-const PROVIDER_FILTERS: { label: string; value: DatabaseProvider | "all" }[] = [
-  { label: "All", value: "all" },
-  { label: "PostgreSQL", value: "postgres" },
-  { label: "MySQL", value: "mysql" },
-  { label: "SQLite", value: "sqlite" },
-];
+const FILTERS: { id: ProviderFilter; label: string }[] = [{ id: "all", label: "All" }, ...PROVIDERS.map((p) => ({ id: p.id, label: p.label }))];
+const label = (p: Project) => PROVIDERS.find((x) => x.id === p.provider)?.label ?? p.provider;
 
-function EmptyState({ hasFilter }: { hasFilter: boolean }) {
-  const router = useRouter();
-  return (
-    <div className="flex flex-col items-center justify-center gap-5 py-28 text-center rounded-2xl border border-border bg-surface-1">
-      <div className="w-14 h-14 rounded-2xl bg-surface-2 border border-border flex items-center justify-center">
-        {hasFilter ? (
-          <ServerCrash size={24} className="text-text-tertiary" />
-        ) : (
-          <FolderOpen size={24} className="text-text-tertiary" />
-        )}
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[15px] font-semibold text-text-primary">
-          {hasFilter ? "No matching projects found" : "No projects yet"}
-        </span>
-        <span className="text-[13px] text-text-tertiary max-w-62.5 leading-relaxed">
-          {hasFilter
-            ? "Try adjusting your search terms or provider filters to find what you're looking for."
-            : "Connect your first database to start exploring and visualizing your schema."}
-        </span>
-      </div>
-      {!hasFilter && (
-        <button
-          onClick={() => router.push("/")}
-          className="mt-2 flex items-center gap-2 px-5 py-2.5 rounded-lg text-[13px] font-semibold bg-coral text-white hover:bg-coral-hover transition-colors cursor-pointer border-none active:scale-95">
-          <Database size={14} />
-          Connect database
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ProjectRow({
-  project,
-  isConnected,
-}: {
-  project: Project;
-  isConnected: boolean;
-}) {
+function ProjectRow({ project, connected, onDelete }: { project: Project; connected: boolean; onDelete: (p: Project) => void }) {
   const router = useRouter();
   const connect = useConnect();
-  const deleteProject = useDeleteProject();
-  const renameProject = useRenameProject();
-
+  const rename = useRenameProject();
   const [editing, setEditing] = useState(false);
-  const [nameInput, setNameInput] = useState(project.name);
+  const [draft, setDraft] = useState(project.name);
 
-  function handleOpen(mode: "canvas" | "explorer") {
-    connect.mutate(
-      { projectId: project.id, name: project.name },
-      {
-        onSuccess: () => {
-          router.push(
-            mode === "explorer" ? "/studio/?view=data" : "/studio/?view=diagram",
-          );
-        },
-      },
-    );
+  function open(view: "diagram" | "data") {
+    connect.mutate({ projectId: project.id, name: project.name }, { onSuccess: () => router.push(`/studio/?view=${view}`) });
   }
-
-  function handleDelete(e: React.MouseEvent) {
-    e.stopPropagation();
-    deleteProject.mutate(project.id);
-  }
-
-  function handleRenameSubmit(e: React.MouseEvent | React.KeyboardEvent) {
-    e.stopPropagation();
-    if (!nameInput.trim() || nameInput === project.name) {
+  function save() {
+    const next = draft.trim();
+    if (!next || next === project.name) {
       setEditing(false);
-      setNameInput(project.name);
+      setDraft(project.name);
       return;
     }
-    renameProject.mutate(
-      { id: project.id, name: nameInput.trim() },
-      { onSuccess: () => setEditing(false) },
-    );
-  }
-
-  function handleRenameCancel(e: React.MouseEvent) {
-    e.stopPropagation();
-    setEditing(false);
-    setNameInput(project.name);
+    rename.mutate({ id: project.id, name: next }, { onSuccess: () => setEditing(false) });
   }
 
   return (
-    <div
-      onClick={() => handleOpen("canvas")}
-      className="group relative flex flex-col sm:flex-row sm:items-center gap-4 px-5 py-4 bg-surface-1 hover:bg-surface-2 border-b border-border last:border-b-0 transition-colors cursor-pointer overflow-hidden">
-      {/* Icon */}
-      <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0 bg-surface-2 border border-border">
-        <Database size={16} className="text-coral" />
-      </div>
+    <li
+      className={cx(
+        "group relative grid min-h-16 grid-cols-[2.25rem_minmax(0,1fr)_6rem_6rem] items-center gap-3.5 border-t border-line pr-3 pl-3.5 first:border-t-0 focus-within:bg-sunk hover:bg-sunk",
+        connected && "shadow-[inset_3px_0_0_var(--nx-relation-line)]",
+      )}>
+      <span className="grid size-9 place-items-center rounded-card border border-line bg-sunk">
+        <ProviderMark provider={project.provider} size={20} />
+      </span>
 
-      {/* Main Content */}
-      <div className="flex flex-col gap-1.5 flex-1 min-w-0">
+      <div className="min-w-0">
         {editing ? (
-          <div
-            className="flex items-center gap-2"
-            onClick={(e) => e.stopPropagation()}>
-            <input
+          <div className="flex items-center gap-1">
+            <Input
+              aria-label="Project name"
               autoFocus
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === "Enter") handleRenameSubmit(e);
+                if (e.key === "Enter") save();
                 if (e.key === "Escape") {
                   setEditing(false);
-                  setNameInput(project.name);
+                  setDraft(project.name);
                 }
               }}
-              className="text-[14px] font-semibold text-text-primary bg-surface-3 border border-coral/40 rounded-lg px-2.5 py-1 outline-none focus:border-coral focus:ring-1 focus:ring-coral/20 transition-all w-56"
+              wrapperClassName="h-7.5 max-w-72"
             />
-            <div className="flex items-center gap-1 bg-surface-3 border border-border rounded-lg p-0.5">
-              <button
-                onClick={handleRenameSubmit}
-                disabled={renameProject.isPending}
-                className="flex items-center justify-center w-7 h-7 rounded-md text-teal hover:bg-teal/10 transition-colors cursor-pointer border-none bg-transparent">
-                {renameProject.isPending ? (
-                  <Loader2 size={13} className="animate-spin" />
-                ) : (
-                  <Check size={14} />
-                )}
-              </button>
-              <button
-                onClick={handleRenameCancel}
-                className="flex items-center justify-center w-7 h-7 rounded-md text-text-tertiary hover:bg-border/50 hover:text-text-primary transition-colors cursor-pointer border-none bg-transparent">
-                <X size={14} />
-              </button>
-            </div>
+            <IconButton label="Save name" size="sm" onClick={save} disabled={rename.isPending}>
+              <Check aria-hidden />
+            </IconButton>
+            <IconButton
+              label="Cancel"
+              size="sm"
+              onClick={() => {
+                setEditing(false);
+                setDraft(project.name);
+              }}>
+              <X aria-hidden />
+            </IconButton>
           </div>
         ) : (
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-[14px] font-semibold text-text-primary truncate">
-              {project.name}
-            </span>
-            {isConnected && (
-              <div className="flex items-center gap-1.5 bg-teal/10 dark:bg-teal/15 border border-teal/20 px-2 py-0.5 rounded-md shrink-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-                <span className="text-[9px] font-bold text-teal tracking-wider uppercase">
-                  Active
+          // The name opens the diagram; the row's other buttons sit outside it.
+          <button
+            type="button"
+            onClick={() => open("diagram")}
+            className="block max-w-full cursor-pointer text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent after:absolute after:inset-0">
+            <span className="flex items-center gap-2">
+              <span className="truncate text-title font-semibold">{project.name}</span>
+              {connected && (
+                <span className="inline-flex h-5 shrink-0 items-center gap-1.25 rounded-full bg-relation-tint px-1.75 text-caption font-medium text-relation">
+                  <span aria-hidden className="size-1.5 rounded-full bg-relation-line" />
+                  Connected
                 </span>
-              </div>
-            )}
-          </div>
+              )}
+            </span>
+            <span className="mt-0.5 block truncate font-mono text-label text-fg-subtle">{project.displayUri}</span>
+          </button>
         )}
-
-        {/* URI, masked by the server */}
-        <span className="text-[12px] text-text-tertiary font-mono truncate max-w-75 sm:max-w-100">
-          {project.displayUri}
-        </span>
       </div>
 
-      {/* Metadata & Desktop Actions */}
-      <div className="flex items-center justify-between sm:justify-end gap-6 sm:w-72 shrink-0 mt-2 sm:mt-0">
-        {/* Metadata (Fades out on hover to make room for actions) */}
-        <div className="flex items-center gap-4 transition-all duration-200 sm:group-hover:opacity-0 sm:group-hover:translate-x-4">
-          <ProviderBadge provider={project.provider} />
-          <span className="flex items-center gap-1.5 text-[11px] text-text-tertiary font-medium">
-            <Clock size={12} />
-            {formatRelativeTime(project.lastOpenedAt)}
-          </span>
-        </div>
+      <span className="text-label text-fg-muted">{label(project)}</span>
+      <span className="text-label text-fg-subtle">{formatRelativeTime(project.lastOpenedAt)}</span>
 
-        {/* Action Buttons (Slide in on hover) */}
-        <div
-          className="flex sm:absolute sm:right-5 items-center gap-1.5 sm:opacity-0 sm:translate-x-4 sm:group-hover:opacity-100 sm:group-hover:translate-x-0 transition-all duration-200"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center bg-surface-3 border border-border rounded-lg p-0.5">
-            <button
-              title="Rename project"
-              onClick={(e) => {
-                e.stopPropagation();
-                setEditing(true);
-              }}
-              className="flex items-center justify-center w-8 h-8 rounded-md text-text-tertiary hover:text-text-primary hover:bg-surface-1 transition-colors cursor-pointer border-none bg-transparent">
-              <Pencil size={14} />
-            </button>
-            <div className="w-px h-4 bg-border mx-0.5" />
-            <button
-              title="Delete project"
-              onClick={handleDelete}
-              disabled={deleteProject.isPending}
-              className="flex items-center justify-center w-8 h-8 rounded-md text-text-tertiary hover:text-coral hover:bg-coral/10 transition-colors cursor-pointer border-none bg-transparent">
-              {deleteProject.isPending ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
-            </button>
-          </div>
-
-          <div className="flex items-center gap-1 ml-1">
-            <button
-              title="Open in Explorer"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpen("explorer");
-              }}
-              disabled={connect.isPending}
-              className="flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-semibold text-text-primary bg-surface-3 border border-border hover:bg-surface-1 transition-colors cursor-pointer disabled:opacity-60">
-              <Table2 size={13} />
-              Explorer
-            </button>
-            <button
-              title="Open in Canvas"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleOpen("canvas");
-              }}
-              disabled={connect.isPending}
-              className="flex items-center gap-1.5 px-3 h-9 rounded-lg text-[12px] font-bold text-white bg-coral hover:bg-coral-hover transition-colors cursor-pointer border-none disabled:opacity-60 active:scale-95">
-              {connect.isPending ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <>
-                  <LayoutGrid size={13} />
-                  Canvas
-                </>
-              )}
-            </button>
-          </div>
-        </div>
+      {/* Over the database and date columns, shown on hover or focus. */}
+      <div className="absolute top-1/2 right-3 z-10 flex -translate-y-1/2 items-center gap-1 bg-sunk pl-3 opacity-0 transition-opacity duration-150 group-focus-within:opacity-100 group-hover:opacity-100 has-data-popup-open:opacity-100">
+        <Button size="sm" variant="ghost" onClick={() => open("diagram")} disabled={connect.isPending}>
+          <Network aria-hidden />
+          Diagram
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => open("data")} disabled={connect.isPending}>
+          <Table2 aria-hidden />
+          Data
+        </Button>
+        <Menu.Root>
+          <Menu.Trigger
+            aria-label={`More for ${project.name}`}
+            className="grid size-7 cursor-pointer place-items-center rounded-control text-fg-muted hover:bg-sunk hover:text-fg focus-visible:outline-2 focus-visible:outline-accent data-popup-open:bg-sunk">
+            <MoreHorizontal aria-hidden className="size-3.75" />
+          </Menu.Trigger>
+          <MenuContent align="end">
+            <MenuItem icon={<Pencil aria-hidden />} onClick={() => setEditing(true)}>
+              Rename
+            </MenuItem>
+            <MenuSeparator />
+            <MenuItem danger icon={<Trash2 aria-hidden />} onClick={() => onDelete(project)}>
+              Delete…
+            </MenuItem>
+          </MenuContent>
+        </Menu.Root>
       </div>
-    </div>
+      {connect.isError && (
+        <p role="alert" className="col-span-full -mt-1 mb-2.5 text-label text-danger">
+          {connect.error instanceof Error ? connect.error.message : "Could not open this project."}
+        </p>
+      )}
+    </li>
   );
 }
 
 export default function ProjectsView() {
-  const router = useRouter();
   const { data, isLoading } = useProjects();
+  const remove = useDeleteProject();
   const [search, setSearch] = useState("");
-  const [providerFilter, setProviderFilter] = useState<
-    DatabaseProvider | "all"
-  >("all");
+  const [provider, setProvider] = useState<ProviderFilter>("all");
+  const [deleting, setDeleting] = useState<Project | null>(null);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const all = useMemo(() => data?.projects ?? [], [data]);
+  const shown = useMemo(() => visibleProjects(all, search, provider), [all, search, provider]);
+  const counts = countByProvider(all);
+  const connectedId = studioSession.projectId();
 
-  const connectedProjectId = studioSession.projectId();
-
-  const projects = useMemo(() => {
-    let list = [...(data?.projects ?? [])].sort(
-      (a, b) =>
-        new Date(b.lastOpenedAt).getTime() - new Date(a.lastOpenedAt).getTime(),
-    );
-
-    if (providerFilter !== "all") {
-      list = list.filter((p) => p.provider === providerFilter);
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement;
+      if (e.key === "/" && !["INPUT", "TEXTAREA"].includes(t.tagName)) {
+        e.preventDefault();
+        filterRef.current?.focus();
+      }
     }
-
-    if (search.trim()) {
-      const needle = search.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.name.toLowerCase().includes(needle) ||
-          p.displayUri.toLowerCase().includes(needle),
-      );
-    }
-
-    return list;
-  }, [data, search, providerFilter]);
-
-  const hasFilter = !!search.trim() || providerFilter !== "all";
-  const totalCount = data?.projects?.length ?? 0;
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   return (
-    <>
-      <TopNav />
-      <main className="flex flex-col items-center min-h-screen pt-24 pb-16 px-4 sm:px-6 bg-surface-2 selection:bg-coral/20">
-        <div className="w-full max-w-200 flex flex-col gap-8">
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => router.push("/")}
-              className="flex items-center justify-center w-10 h-10 rounded-xl text-text-secondary hover:text-text-primary hover:bg-surface-3 border border-transparent hover:border-border transition-all cursor-pointer bg-transparent">
-              <ArrowLeft size={18} />
-            </button>
-            <div className="flex flex-col">
-              <h1 className="text-[18px] font-semibold text-text-primary tracking-tight">
-                Projects
-              </h1>
-              <span className="text-[12px] text-text-tertiary">
-                Manage {totalCount} saved connection
-                {totalCount === 1 ? "" : "s"}
-              </span>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="flex items-center gap-2.5 flex-1 h-10 px-3.5 rounded-xl border border-border bg-surface-1 focus-within:border-coral/50 focus-within:ring-2 focus-within:ring-coral/10 transition-all">
-              <Search size={14} className="text-text-tertiary shrink-0" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search projects or URIs…"
-                className="flex-1 bg-transparent border-none outline-none text-[13px] font-mono text-text-primary placeholder:text-text-tertiary/70"
-              />
+    <TooltipProvider>
+      <div className="min-h-screen bg-ground text-body text-fg">
+        <AppBar />
+        <main className="mx-auto w-full max-w-220 px-4 pt-9 pb-16 sm:px-8">
+          <section aria-labelledby="projects-title" className="min-w-0">
+            <div className="mb-4.5 flex flex-wrap items-end gap-3">
+              <div className="flex-1">
+                <h1 id="projects-title" className="text-display font-semibold tracking-tight">
+                  Projects
+                  {all.length > 0 && <span className="ml-2 text-subheading font-medium text-fg-subtle tabular-nums">{all.length}</span>}
+                </h1>
+                <p className="mt-1 text-body text-fg-muted">Saved connections. Pick one to open its diagram.</p>
+              </div>
+              <Link
+                href="/"
+                className="inline-flex h-7.5 items-center gap-1.75 rounded-control bg-accent-fill px-3 text-body font-medium text-on-accent transition-transform duration-150 ease-out-strong hover:bg-accent-fill/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:scale-97">
+                <Plus aria-hidden className="size-3.75" />
+                New connection
+              </Link>
             </div>
 
-            <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-surface-1 overflow-x-auto no-scrollbar">
-              {PROVIDER_FILTERS.map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setProviderFilter(f.value)}
-                  className={`px-3 py-1.5 rounded-lg text-[12px] font-semibold whitespace-nowrap transition-colors cursor-pointer border-none ${
-                    providerFilter === f.value
-                      ? "bg-surface-3 text-text-primary"
-                      : "bg-transparent text-text-tertiary hover:text-text-secondary hover:bg-surface-2"
-                  }`}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Data List */}
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-32 gap-3 text-text-tertiary">
-              <Loader2 size={24} className="animate-spin text-coral" />
-              <span className="text-[13px] font-medium">
-                Loading workspace…
-              </span>
-            </div>
-          ) : projects.length === 0 ? (
-            <EmptyState hasFilter={hasFilter} />
-          ) : (
-            <div className="rounded-2xl overflow-hidden border border-border bg-surface-1">
-              {projects.map((project) => (
-                <ProjectRow
-                  key={project.id}
-                  project={project}
-                  isConnected={project.id === connectedProjectId}
+            {all.length > 0 && (
+              <div className="mb-3 flex flex-wrap items-center gap-2.5">
+                <Input
+                  ref={filterRef}
+                  aria-label="Filter projects"
+                  placeholder="Filter by name or address"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  leading={<Search aria-hidden />}
+                  trailing={<Kbd>/</Kbd>}
+                  wrapperClassName="w-full max-w-85 bg-panel"
                 />
-              ))}
-            </div>
-          )}
-        </div>
-      </main>
-    </>
+                <div role="group" aria-label="Database" className="inline-flex gap-0.5 rounded-card border border-line bg-sunk p-0.5">
+                  {FILTERS.map((f) => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      aria-pressed={provider === f.id}
+                      onClick={() => setProvider(f.id)}
+                      className="inline-flex h-6.5 cursor-pointer items-center gap-1.5 rounded-md px-2.5 text-label font-medium text-fg-muted hover:text-fg focus-visible:outline-2 focus-visible:outline-accent aria-pressed:bg-panel aria-pressed:text-fg aria-pressed:shadow-sm">
+                      {f.label}
+                      <span className="font-normal text-fg-subtle tabular-nums">{counts[f.id]}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {isLoading ? (
+              <div className="grid gap-2">
+                <Skeleton className="h-16" />
+                <Skeleton className="h-16" />
+              </div>
+            ) : all.length === 0 ? (
+              <EmptyState
+                className="rounded-panel border border-dashed border-line-strong py-14"
+                title="No projects yet"
+                action={
+                  <Link href="/" className="text-body font-medium text-accent hover:underline">
+                    Connect a database
+                  </Link>
+                }>
+                A project is a saved connection. Connect once and it appears here.
+              </EmptyState>
+            ) : shown.length === 0 ? (
+              <p className="rounded-panel border border-line bg-panel px-4 py-8 text-center text-body text-fg-subtle">
+                No project matches{search.trim() ? ` “${search.trim()}”` : ""}
+                {provider !== "all" ? ` among ${FILTERS.find((f) => f.id === provider)?.label} projects` : ""}.
+              </p>
+            ) : (
+              <>
+                <ul aria-label="Projects" className="overflow-hidden rounded-panel border border-line-strong bg-panel">
+                  {shown.map((p) => (
+                    <ProjectRow key={p.id} project={p} connected={p.id === connectedId} onDelete={setDeleting} />
+                  ))}
+                </ul>
+                <p className="mt-2.5 px-1 text-label text-fg-subtle">Most recently opened first.</p>
+              </>
+            )}
+          </section>
+
+          <LocalNotes />
+        </main>
+
+        <Dialog.Root open={!!deleting} onOpenChange={(o) => !o && setDeleting(null)}>
+          <DialogContent
+            title={`Delete ${deleting?.name ?? "project"}?`}
+            description="This removes the saved connection from NexusQL. The database and its data are not touched."
+            footer={
+              <>
+                <Dialog.Close render={<Button variant="secondary" />}>Cancel</Dialog.Close>
+                <Button
+                  variant="danger"
+                  disabled={remove.isPending}
+                  onClick={() => deleting && remove.mutate(deleting.id, { onSuccess: () => setDeleting(null) })}>
+                  Delete project
+                </Button>
+              </>
+            }
+          />
+        </Dialog.Root>
+      </div>
+    </TooltipProvider>
   );
 }

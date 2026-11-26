@@ -49,6 +49,12 @@ colors:
   dark-danger-tint: "#3b1715"
   dark-grid-dot: "#1f2327"
 typography:
+  display:
+    fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
+    fontSize: "24px"
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: "-0.015em"
   heading:
     fontFamily: "Geist, ui-sans-serif, system-ui, sans-serif"
     fontSize: "18px"
@@ -213,6 +219,7 @@ Warm paper and graphite neutrals with two semantic accents; colour is informatio
 **Character:** Geist carries every label and heading; Geist Mono is reserved for things that are literally code: identifiers, types, SQL, generated files, timestamps in grids.
 
 ### Hierarchy
+- **Display** (600, 24px, 1.2, -0.015em): the one page title on the connect and projects pages, outside the workspace. Never inside it.
 - **Heading** (600, 18px, 1.3, -0.01em): the details card title (the table name).
 - **Subheading** (600, 16px, 1.35): stat values in the details card.
 - **Title** (600, 14px, 1.4): project name, section titles, cluster labels on the diagram.
@@ -222,7 +229,7 @@ Warm paper and graphite neutrals with two semantic accents; colour is informatio
 - **Code** (Mono 13px, 1.6) and **Code small** (Mono 11px): SQL, generated files, column names and types.
 
 ### Named Rules
-**The Six Sizes Rule.** Text uses 11, 12, 13, 14, 16 or 18px. No arbitrary sizes.
+**The Six Sizes Rule.** Inside the workspace, text uses 11, 12, 13, 14, 16 or 18px. Display (24px) is the single exception, for page titles outside it. No arbitrary sizes.
 
 **The Honest Mono Rule.** Monospace only for code, identifiers and data. Never for labels or decoration.
 

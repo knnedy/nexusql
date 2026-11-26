@@ -7,7 +7,7 @@ import { expect, type Page } from "@playwright/test";
 export async function connectSqlite(page: Page, setupSql = ""): Promise<string> {
   const file = join(mkdtempSync(join(tmpdir(), "nexusql-db-")), "e2e.db");
   await page.goto("/");
-  await page.getByRole("button", { name: /SQLite/ }).click();
+  await page.getByRole("group", { name: "Database" }).getByRole("button", { name: "SQLite" }).click();
   await page.getByLabel("Project name").fill(`e2e ${Date.now()}`);
   await page.getByLabel("Connection URI").fill(`sqlite://${file}`);
   await page.getByLabel("Create a new database file").check();

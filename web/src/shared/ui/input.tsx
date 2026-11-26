@@ -16,7 +16,7 @@ export function Input({ leading, trailing, className, wrapperClassName, ...rest 
     <span
       className={cx(
         "flex h-8 items-center gap-2 rounded-control border border-line-strong bg-ground px-2.5 text-fg-subtle transition-[border-color,box-shadow] duration-150",
-        "focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-tint has-disabled:opacity-50 [&_svg]:size-3.75 [&_svg]:shrink-0",
+        "focus-within:border-accent focus-within:ring-3 focus-within:ring-accent-tint has-aria-invalid:border-danger has-disabled:opacity-50 [&_svg]:size-3.75 [&_svg]:shrink-0",
         wrapperClassName,
       )}>
       {leading}

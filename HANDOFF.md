@@ -88,6 +88,13 @@ Plan:
   start, substring, keywords; tables before columns; columns need a query), search box
   in the top bar, shortcuts in lib/shortcuts.ts (Ctrl/Cmd K, B, J; / unless typing).
   No open/close motion on the panel: keyboard-driven.
+  Step 7 (done): shared AppBar (components/app-bar.tsx), ThemeButton and ProviderMark in
+  shared/ui, LocalNotes (honest storage note). Connect: provider tiles, URI detection
+  and validation in connect/lib/connection-form.ts, SQLite create-only-when-asked kept,
+  recent projects, examples on first run. Projects: filter (/), provider counts, hover
+  Diagram/Data, menu Rename/Delete (delete confirms in a Dialog), helpers in
+  projects/lib/project-list.ts. DESIGN.md gained Display 24px for these page titles only.
+  Top bar logo renders at 44px (icon.png has 17% padding).
   Known: a table chosen from outside is centred in the whole stage, partly under the
   card; fix with the diagram work (step 8). Row counts in the sidebar need server
   estimates (pg reltuples, MySQL TABLE_ROWS, SQLite count): own commit. Groups wait for
@@ -751,9 +758,10 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group B done (steps 5-6). Summary to the user, then ask before group C. Pending
-   inside B's scope: row-count estimates (own commit), web-design-guidelines review of
-   the workspace screen.
+1. Group C in progress. Step 7 done: connect (/) and projects (/projects) rebuilt as
+   two pages (user rejected merging them; comp .impeccable/mocks/home.html). Next: step 8
+   diagram (show a comp first), then 9-13. Pending: row-count estimates (own commit),
+   web-design-guidelines review of the workspace and home screens.
 2. Step 6: Ctrl+K search panel and keyboard map (Ctrl+B, Ctrl+J, /).
 3. Step 7: home (projects + connect) on the new primitives.
 

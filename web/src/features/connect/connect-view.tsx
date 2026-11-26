@@ -1,283 +1,237 @@
 "use client";
 
-import { useState } from "react";
-import {
-  HardDrive,
-  Loader2,
-  ArrowRight,
-  ShieldAlert,
-  Link as LinkIcon,
-  FolderDot,
-} from "lucide-react";
-import TopNav from "@/components/top-nav";
-import RecentProjects from "@/features/connect/_components/recent-projects";
-import { useConnect } from "@/features/connect/hooks/use-connect";
-import {
-  DatabaseProvider,
-  ProviderMeta,
-  PROVIDERS,
-} from "@/shared/types/provider";
+import { useId, useState, type ReactNode } from "react";
+import Link from "next/link";
+import { ArrowRight, FolderOpen, Link2, Loader2 } from "lucide-react";
+import { AppBar } from "@/components/app-bar";
+import { LocalNotes } from "@/components/local-notes";
+import { useProjects } from "@/shared/hooks/use-projects";
+import { cx } from "@/shared/lib/cx";
 import { studioSession } from "@/shared/lib/session-storage";
+import { formatRelativeTime } from "@/shared/lib/utils";
+import { PROVIDERS, type DatabaseProvider } from "@/shared/types/provider";
+import { Button } from "@/shared/ui/button";
+import { Input } from "@/shared/ui/input";
+import { ProviderMark } from "@/shared/ui/provider-mark";
+import { TooltipProvider } from "@/shared/ui/tooltip";
+import { useConnect } from "./hooks/use-connect";
+import { detectProvider, validateConnection, type ConnectionErrors } from "./lib/connection-form";
 
-function ProviderTab({
-  provider,
-  selected,
-  onSelect,
-}: {
-  provider: ProviderMeta;
-  selected: boolean;
-  onSelect: () => void;
-}) {
+const EXAMPLES: { label: string; provider: DatabaseProvider; uri: string }[] = [
+  { label: "Postgres in Docker", provider: "postgres", uri: "postgres://postgres:postgres@localhost:5432/postgres" },
+  { label: "MySQL on this machine", provider: "mysql", uri: "mysql://root:password@127.0.0.1:3306/app" },
+  { label: "SQLite file", provider: "sqlite", uri: "sqlite:///absolute/path/to/app.db" },
+];
+
+function Field({ label, error, hint, children }: { label: string; error?: string; hint?: ReactNode; children: (ids: { id: string; describedBy?: string }) => ReactNode }) {
+  const id = useId();
+  const note = `${id}-note`;
   return (
-    <button
-      onClick={onSelect}
-      className={`flex-1 flex flex-col items-center gap-1 rounded-md py-2 px-2 transition-colors cursor-pointer outline-none ${
-        selected
-          ? "bg-surface-1 text-coral shadow-sm"
-          : "text-text-tertiary hover:text-text-secondary"
-      }`}>
-      <span className="text-[12.5px] font-medium">{provider.label}</span>
-      <span className="text-[10px] font-mono leading-none">
-        {provider.uriPrefixes[0]}
-      </span>
-    </button>
+    <div>
+      <label htmlFor={id} className="mb-1.5 block text-label font-medium text-fg-muted">
+        {label}
+      </label>
+      {children({ id, describedBy: error || hint ? note : undefined })}
+      {error ? (
+        <p id={note} className="mt-1.5 text-label text-danger">
+          {error}
+        </p>
+      ) : (
+        hint && (
+          <p id={note} className="mt-1.5 text-label text-fg-subtle">
+            {hint}
+          </p>
+        )
+      )}
+    </div>
   );
 }
 
 export default function ConnectView() {
-  const [selectedProvider, setSelectedProvider] =
-    useState<DatabaseProvider>("postgres");
-  const [projectName, setProjectName] = useState("");
+  const [provider, setProvider] = useState<DatabaseProvider>("postgres");
+  const [name, setName] = useState("");
   const [uri, setUri] = useState("");
-  const [projectNameError, setProjectNameError] = useState<string | null>(null);
-  const [uriError, setUriError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<ConnectionErrors>({});
   const [createNew, setCreateNew] = useState(false);
-
   const connect = useConnect();
-  const activeProvider = PROVIDERS.find((p) => p.id === selectedProvider)!;
+  const { data, isLoading } = useProjects();
+  const projects = data?.projects ?? [];
+  const recent = [...projects].sort((a, b) => Date.parse(b.lastOpenedAt) - Date.parse(a.lastOpenedAt)).slice(0, 3);
+  const meta = PROVIDERS.find((p) => p.id === provider)!;
 
-  function handleProjectNameChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setProjectName(e.target.value);
-    setProjectNameError(null);
-  }
-
-  function handleUriChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const value = e.target.value;
+  function changeUri(value: string) {
     setUri(value);
-    setUriError(null);
-
-    const detectedProvider = PROVIDERS.find((p) =>
-      p.uriPrefixes.some((prefix) => value.startsWith(prefix)),
-    );
-
-    if (detectedProvider && detectedProvider.id !== selectedProvider) {
-      setSelectedProvider(detectedProvider.id);
-    }
+    setErrors((e) => ({ ...e, uri: undefined }));
+    const detected = detectProvider(value);
+    if (detected) setProvider(detected);
   }
 
-  function validateProjectName(value: string): boolean {
-    if (!value.trim()) {
-      setProjectNameError("Project name is required");
-      return false;
-    }
-    setProjectNameError(null);
-    return true;
+  function submit(e: React.FormEvent) {
+    e.preventDefault();
+    const found = validateConnection({ name, uri, provider });
+    setErrors(found);
+    if (found.name || found.uri) return;
+    studioSession.setProjectName(name.trim());
+    connect.mutate({ uri, provider, name: name.trim(), ...(provider === "sqlite" && createNew && { create: true }) });
   }
 
-  function validateUri(value: string): boolean {
-    if (!value.trim()) {
-      setUriError("Connection URI is required");
-      return false;
-    }
-
-    const valid = activeProvider.uriPrefixes.some((prefix) =>
-      value.startsWith(prefix),
-    );
-    if (!valid) {
-      setUriError(
-        `URI must start with ${activeProvider.uriPrefixes.join(" or ")}`,
-      );
-      return false;
-    }
-    setUriError(null);
-    return true;
-  }
-
-  function handleConnect() {
-    const isNameValid = validateProjectName(projectName);
-    const isUriValid = validateUri(uri);
-
-    if (!isNameValid || !isUriValid) return;
-
-    studioSession.setProjectName(projectName.trim());
-
-    connect.mutate({
-      uri,
-      provider: selectedProvider,
-      name: projectName.trim(),
-      ...(selectedProvider === "sqlite" && createNew && { create: true }),
-    });
-  }
+  const firstRun = !isLoading && projects.length === 0;
 
   return (
-    <>
-      <TopNav />
-      <main className="flex flex-col items-center min-h-screen pt-24 pb-16 px-4 bg-canvas-bg selection:bg-coral/20">
-        <div className="w-full max-w-110 flex flex-col gap-7">
-          {/* Header */}
-          <div className="flex flex-col gap-1">
-            <h1 className="text-[16px] font-semibold text-text-primary tracking-tight">
-              New connection
-            </h1>
-            <p className="text-[12.5px] text-text-secondary">
-              Paste a connection string to explore its schema.
-            </p>
-          </div>
+    <TooltipProvider>
+      <div className="min-h-screen bg-ground text-body text-fg">
+        <AppBar>
+          {projects.length > 0 && (
+            <Link
+              href="/projects"
+              className="inline-flex h-7.5 items-center gap-1.75 rounded-control px-3 text-body font-medium text-fg-muted hover:bg-sunk hover:text-fg focus-visible:outline-2 focus-visible:outline-accent">
+              <FolderOpen aria-hidden className="size-3.75" />
+              Projects
+            </Link>
+          )}
+        </AppBar>
 
-          {/* Main Panel */}
-          <div className="rounded-xl p-5 flex flex-col gap-5 bg-surface-1 border border-border shadow-sm">
-            {/* Provider Selection */}
-            <div className="flex items-center gap-1 p-1 rounded-lg bg-surface-2 border border-border">
-              {PROVIDERS.map((p) => (
-                <ProviderTab
-                  key={p.id}
-                  provider={p}
-                  selected={selectedProvider === p.id}
-                  onSelect={() => {
-                    setSelectedProvider(p.id);
-                    setUriError(null);
+        <main className="mx-auto w-full max-w-115 px-4 pt-16 pb-16">
+          <h1 className="text-display font-semibold tracking-tight">{firstRun ? "Connect a database" : "New connection"}</h1>
+          <p className="mt-2 mb-6 max-w-100 text-title text-fg-muted">
+            Paste a connection string. NexusQL reads the schema and draws how the tables relate; nothing leaves this machine.
+          </p>
+
+          <form noValidate onSubmit={submit} aria-label="New connection" className="grid gap-4 rounded-panel border border-line-strong bg-panel p-4.5 shadow-card">
+            <div>
+              <p className="mb-1.5 text-label font-medium text-fg-muted" id="database-label">
+                Database
+              </p>
+              <div role="group" aria-labelledby="database-label" className="grid grid-cols-3 gap-1.5">
+                {PROVIDERS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    aria-pressed={provider === p.id}
+                    onClick={() => {
+                      setProvider(p.id);
+                      setErrors((e) => ({ ...e, uri: undefined }));
+                    }}
+                    className={cx(
+                      "flex cursor-pointer flex-col items-start gap-2 rounded-card border px-2.5 pt-2.5 pb-2 text-left transition-[border-color,background-color,transform] duration-150 ease-out-strong active:scale-97",
+                      "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
+                      provider === p.id ? "border-accent-line bg-accent-tint ring-1 ring-accent-line" : "border-line hover:border-line-strong",
+                    )}>
+                    <ProviderMark provider={p.id} size={20} />
+                    <span className="text-label font-semibold">{p.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Field label="Project name" error={errors.name}>
+              {({ id, describedBy }) => (
+                <Input
+                  id={id}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.name}
+                  wrapperClassName="h-8.5"
+                  placeholder="shop_dev"
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setErrors((er) => ({ ...er, name: undefined }));
                   }}
                 />
-              ))}
-            </div>
-
-            {/* Inputs */}
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="project-name"
-                  className="text-[12px] font-medium text-text-secondary flex items-center justify-between">
-                  Project name
-                  {projectNameError && (
-                    <span className="text-red-500 flex items-center gap-1 text-[11px]">
-                      <ShieldAlert size={10} /> Required
-                    </span>
-                  )}
-                </label>
-                <div className="relative flex items-center">
-                  <FolderDot
-                    size={14}
-                    className={`absolute left-3 transition-colors ${projectNameError ? "text-red-500" : "text-text-tertiary"}`}
-                  />
-                  <input
-                    id="project-name"
-                    type="text"
-                    placeholder="e.g. Production DB"
-                    value={projectName}
-                    onChange={handleProjectNameChange}
-                    onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none transition-colors border ${
-                      projectNameError
-                        ? "bg-red-500/5 border-red-500 text-red-500 placeholder:text-red-500/50 focus:ring-2 focus:ring-red-500/10"
-                        : "bg-surface-2 border-border text-text-primary placeholder:text-text-tertiary focus:bg-surface-1 focus:border-coral focus:ring-2 focus:ring-coral/10"
-                    }`}
-                  />
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-1.5">
-                <label
-                  htmlFor="uri"
-                  className="text-[12px] font-medium text-text-secondary flex items-center justify-between">
-                  Connection URI
-                  {uriError && (
-                    <span className="text-red-500 flex items-center gap-1 text-[11px]">
-                      <ShieldAlert size={10} /> Invalid URI
-                    </span>
-                  )}
-                </label>
-                <div className="relative flex items-center">
-                  <LinkIcon
-                    size={14}
-                    className={`absolute left-3 transition-colors ${uriError ? "text-red-500" : "text-text-tertiary"}`}
-                  />
-                  <input
-                    id="uri"
-                    type="text"
-                    placeholder={activeProvider.uriPlaceholder}
-                    value={uri}
-                    onChange={handleUriChange}
-                    onKeyDown={(e) => e.key === "Enter" && handleConnect()}
-                    className={`w-full h-9 rounded-lg pl-8 pr-3 text-[13px] outline-none font-mono transition-colors border ${
-                      uriError
-                        ? "bg-red-500/5 border-red-500 text-red-500 placeholder:text-red-500/50 focus:ring-2 focus:ring-red-500/10"
-                        : "bg-surface-2 border-border text-text-primary placeholder:text-text-tertiary/70 focus:bg-surface-1 focus:border-coral focus:ring-2 focus:ring-coral/10"
-                    }`}
-                  />
-                </div>
-              </div>
-
-              {/* Opening never creates a file, so a mistyped path cannot start an empty database. */}
-              {selectedProvider === "sqlite" && (
-                <label className="flex items-start gap-2.5 cursor-pointer select-none group">
-                  <input
-                    type="checkbox"
-                    checked={createNew}
-                    onChange={(e) => setCreateNew(e.target.checked)}
-                    className="mt-0.5 size-3.5 shrink-0 cursor-pointer accent-coral"
-                  />
-                  <span className="flex flex-col gap-0.5">
-                    <span className="text-[12px] font-medium text-text-primary">
-                      Create a new database file
-                    </span>
-                    <span className="text-[11px] text-text-tertiary">
-                      Starts an empty database at this path. Leave unticked to open an existing file.
-                    </span>
-                  </span>
-                </label>
               )}
-            </div>
+            </Field>
 
-            {/* Error Message */}
-            {connect.isError && (
-              <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-red-500/10 border border-red-500/20 text-red-500 text-[12px]">
-                <ShieldAlert size={14} className="shrink-0" />
-                <span className="truncate">
-                  {connect.error instanceof Error
-                    ? connect.error.message
-                    : "Connection failed."}
+            <Field label="Connection URI" error={errors.uri} hint={<>Often in your app&apos;s <code className="font-mono text-caption">.env</code> as <code className="font-mono text-caption">DATABASE_URL</code>.</>}>
+              {({ id, describedBy }) => (
+                <Input
+                  id={id}
+                  aria-describedby={describedBy}
+                  aria-invalid={!!errors.uri}
+                  wrapperClassName="h-8.5"
+                  className="font-mono text-label"
+                  leading={<Link2 aria-hidden />}
+                  placeholder={meta.uriPlaceholder}
+                  spellCheck={false}
+                  autoComplete="off"
+                  value={uri}
+                  onChange={(e) => changeUri(e.target.value)}
+                />
+              )}
+            </Field>
+
+            {provider === "sqlite" && (
+              // Opening never creates a file, so a mistyped path cannot start an empty database.
+              <label className="flex cursor-pointer items-start gap-2.5 text-body">
+                <input type="checkbox" checked={createNew} onChange={(e) => setCreateNew(e.target.checked)} className="mt-0.5 size-3.75 accent-(--nx-accent-fill)" />
+                <span>
+                  Create a new database file
+                  <span className="block text-label text-fg-subtle">Off: the file must already exist, so a typo can&apos;t start an empty database.</span>
                 </span>
-              </div>
+              </label>
             )}
 
-            {/* Action Button */}
-            <button
-              onClick={handleConnect}
-              disabled={connect.isPending || !uri.trim() || !projectName.trim()}
-              className="flex items-center justify-center gap-1.5 w-full h-9 rounded-lg text-[13px] font-medium text-white bg-coral hover:bg-coral-hover transition-colors disabled:opacity-60 disabled:cursor-not-allowed border-none active:scale-[0.98]">
-              {connect.isPending ? (
-                <>
-                  <Loader2 size={14} className="animate-spin" aria-hidden />
-                  Connecting…
-                </>
-              ) : (
-                <>
-                  Connect
-                  <ArrowRight size={14} aria-hidden />
-                </>
-              )}
-            </button>
-          </div>
+            {connect.isError && (
+              <p role="alert" className="rounded-control border border-danger/40 bg-danger-tint px-3 py-2 text-label text-danger">
+                {connect.error instanceof Error ? connect.error.message : "Could not connect."}
+              </p>
+            )}
 
-          <RecentProjects />
+            <Button type="submit" variant="primary" className="h-9 text-title" disabled={connect.isPending}>
+              {connect.isPending ? <Loader2 aria-hidden className="animate-spin" /> : null}
+              {connect.isPending ? "Connecting…" : "Connect"}
+              {!connect.isPending && <ArrowRight aria-hidden />}
+            </Button>
+          </form>
 
-          {/* Footer Note */}
-          <div className="flex items-center justify-center gap-1.5 pt-1 text-[11px] text-text-tertiary">
-            <HardDrive size={12} className="text-teal" />
-            Projects are stored locally on your machine
-          </div>
-        </div>
-      </main>
-    </>
+          {recent.length > 0 && (
+            <section aria-label="Recent projects" className="mt-6">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h2 className="text-label font-medium text-fg-subtle">Recent projects</h2>
+                <Link href="/projects" className="text-label font-medium text-accent hover:underline">
+                  All projects
+                </Link>
+              </div>
+              <ul className="overflow-hidden rounded-card border border-line bg-panel">
+                {recent.map((p) => (
+                  <li key={p.id} className="border-t border-line first:border-t-0">
+                    <button
+                      type="button"
+                      onClick={() => connect.mutate({ projectId: p.id, name: p.name })}
+                      className="grid w-full cursor-pointer grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-3 px-3 py-2.5 text-left hover:bg-sunk focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+                      <ProviderMark provider={p.provider} />
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium">{p.name}</span>
+                        <span className="block truncate font-mono text-caption text-fg-subtle">{p.displayUri}</span>
+                      </span>
+                      <span className="text-label text-fg-subtle">{formatRelativeTime(p.lastOpenedAt)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {firstRun && (
+            <section aria-label="Examples" className="mt-6">
+              <h2 className="mb-2 px-1 text-label font-medium text-fg-subtle">Examples to start from</h2>
+              <div className="grid gap-1.5">
+                {EXAMPLES.map((ex) => (
+                  <button
+                    key={ex.label}
+                    type="button"
+                    onClick={() => changeUri(ex.uri)}
+                    className="flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-card border border-dashed border-line-strong px-3 py-2 text-left hover:border-solid hover:bg-panel focus-visible:outline-2 focus-visible:outline-accent">
+                    <span className="w-36 shrink-0 text-label text-fg-muted">{ex.label}</span>
+                    <code className="min-w-0 truncate font-mono text-label">{ex.uri}</code>
+                  </button>
+                ))}
+              </div>
+            </section>
+          )}
+
+          <LocalNotes />
+        </main>
+      </div>
+    </TooltipProvider>
   );
 }

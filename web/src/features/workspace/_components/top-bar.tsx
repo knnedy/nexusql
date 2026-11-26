@@ -2,9 +2,7 @@
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useTheme } from "next-themes";
-import { useSyncExternalStore } from "react";
-import { ChevronDown, FolderOpen, Moon, Search, Sun, Unplug } from "lucide-react";
+import { ChevronDown, FolderOpen, Search, Unplug } from "lucide-react";
 import icon from "@/app/icon.png";
 import { useDisconnect } from "@/features/studio/hooks/use-disconnect";
 import { cx } from "@/shared/lib/cx";
@@ -12,11 +10,9 @@ import { useReadOnly } from "@/shared/hooks/use-read-only";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { useStudioStore } from "@/shared/store/studio-store";
 import { PROVIDERS } from "@/shared/types/provider";
-import { IconButton } from "@/shared/ui/button";
 import { Kbd } from "@/shared/ui/kbd";
 import { Menu, MenuContent, MenuItem, MenuSeparator } from "@/shared/ui/menu";
-
-const noop = () => () => {};
+import { ThemeButton } from "@/shared/ui/theme-button";
 
 function ConnectionStatus() {
   const { isSuccess, isError } = useSchema();
@@ -45,17 +41,6 @@ function AccessSwitch() {
         Read-write
       </button>
     </div>
-  );
-}
-
-function ThemeButton() {
-  const { resolvedTheme, setTheme } = useTheme();
-  const mounted = useSyncExternalStore(noop, () => true, () => false);
-  const dark = mounted && resolvedTheme === "dark";
-  return (
-    <IconButton label={dark ? "Switch to light theme" : "Switch to dark theme"} onClick={() => setTheme(dark ? "light" : "dark")}>
-      {dark ? <Sun aria-hidden /> : <Moon aria-hidden />}
-    </IconButton>
   );
 }
 
