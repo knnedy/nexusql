@@ -309,6 +309,30 @@ func TestExportFormatsAreListedAndRendered(t *testing.T) {
 	}
 }
 
+func TestExportOfChosenTables(t *testing.T) {
+	h := newAPI(t)
+	uri := dbtest.SQLiteFile(t, "some.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	call(h, "POST", "/query", `{"sql":"CREATE TABLE owners (id INTEGER PRIMARY KEY); CREATE TABLE vets (id INTEGER PRIMARY KEY); CREATE TABLE pets (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id), vet_id INTEGER REFERENCES vets (id))","confirmed":true}`)
+
+	w := call(h, "GET", "/export/sql?tables=pets&tables=owners", "")
+	var out struct{ Schema string }
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("export: %d %s", w.Code, w.Body)
+	}
+	if !strings.Contains(out.Schema, `CREATE TABLE "pets"`) || !strings.Contains(out.Schema, `CREATE TABLE "owners"`) {
+		t.Errorf("chosen tables missing:\n%s", out.Schema)
+	}
+	if strings.Contains(out.Schema, `"vets"`) {
+		t.Errorf("vets was not chosen, and pets' key to it should be a plain column:\n%s", out.Schema)
+	}
+	if w := call(h, "GET", "/export/sql?tables=pets&tables=nope", ""); w.Code != http.StatusBadRequest {
+		t.Errorf("unknown table: %d %s, want 400", w.Code, w.Body)
+	}
+}
+
 func TestTableDDL(t *testing.T) {
 	h := newAPI(t)
 	uri := dbtest.SQLiteFile(t, "ddl.db")

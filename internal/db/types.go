@@ -1,5 +1,10 @@
 package db
 
+import (
+	"errors"
+	"fmt"
+)
+
 type FieldType string
 
 const (
@@ -145,4 +150,54 @@ func (t Table) Field(name string) (Field, bool) {
 		}
 	}
 	return Field{}, false
+}
+
+// ErrUnknownTable is a table name the introspected schema does not have.
+var ErrUnknownTable = errors.New("unknown table")
+
+// Subset is the schema cut down to the named tables; nil or empty names keep it whole.
+func (s *Schema) Subset(names []string) (*Schema, error) {
+	if len(names) == 0 {
+		return s, nil
+	}
+	keep := make(map[string]bool, len(names))
+	for _, n := range names {
+		if _, ok := s.Table(n); !ok {
+			return nil, fmt.Errorf("%w: %q", ErrUnknownTable, n)
+		}
+		keep[n] = true
+	}
+	out := &Schema{}
+	keyed := map[string]map[string]bool{} // table -> columns still in a kept key
+	for _, r := range s.Relations {
+		if !keep[r.SourceTable] || !keep[r.TargetTable] {
+			continue
+		}
+		out.Relations = append(out.Relations, r)
+		if keyed[r.SourceTable] == nil {
+			keyed[r.SourceTable] = map[string]bool{}
+		}
+		for _, c := range r.SourceFields {
+			keyed[r.SourceTable][c] = true
+		}
+	}
+	used := map[string]bool{}
+	for _, t := range s.Tables {
+		if !keep[t.Name] {
+			continue
+		}
+		t.Fields = append([]Field(nil), t.Fields...)
+		for i := range t.Fields {
+			// A key to a table left out becomes a plain column.
+			t.Fields[i].IsForeignKey = t.Fields[i].IsForeignKey && keyed[t.Name][t.Fields[i].Name]
+			used[string(t.Fields[i].Type)] = true
+		}
+		out.Tables = append(out.Tables, t)
+	}
+	for _, e := range s.Enums {
+		if used[e.Name] {
+			out.Enums = append(out.Enums, e)
+		}
+	}
+	return out, nil
 }

@@ -73,7 +73,7 @@ func TestOperationsWithoutConnection(t *testing.T) {
 		"UpdateRow":  func() error { return s.UpdateRow(ctx, studio.RowUpdate{Table: "users"}) },
 		"Query":      func() error { _, err := s.Query(ctx, "SELECT 1", false); return err },
 		"Seed":       func() error { _, err := s.Seed(ctx, seed.Options{RowsPerTable: 1}); return err },
-		"Export":     func() error { _, err := s.Export(ctx, "prisma"); return err },
+		"Export":     func() error { _, err := s.Export(ctx, "prisma", nil); return err },
 		"TableDDL":   func() error { _, err := s.TableDDL(ctx, "users"); return err },
 		"Disconnect": s.Disconnect,
 	}

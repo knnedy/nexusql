@@ -22,7 +22,7 @@ func (h *handler) handleExportFormats(w http.ResponseWriter, r *http.Request) {
 
 func (h *handler) handleExport(w http.ResponseWriter, r *http.Request) {
 	format := chi.URLParam(r, "format")
-	out, err := h.studio.Export(r.Context(), format)
+	out, err := h.studio.Export(r.Context(), format, r.URL.Query()["tables"])
 	if err != nil {
 		writeServiceError(w, err)
 		return

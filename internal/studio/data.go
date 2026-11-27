@@ -268,8 +268,9 @@ type ExportFormat = export.Format
 // ExportFormats lists the schema export formats.
 func (s *Service) ExportFormats() []ExportFormat { return export.Formats() }
 
-// Export renders the active connection's schema in the format with this id.
-func (s *Service) Export(ctx context.Context, format string) (string, error) {
+// Export renders the active connection's schema in the format with this id;
+// tables, when given, limits it to those, validated against the schema.
+func (s *Service) Export(ctx context.Context, format string, tables []string) (string, error) {
 	f, ok := export.Lookup(format)
 	if !ok {
 		return "", classed{ErrNotFound, fmt.Errorf("unknown export format %q", format)}
@@ -281,6 +282,9 @@ func (s *Service) Export(ctx context.Context, format string) (string, error) {
 	schema, err := s.schemas.get(ctx, conn, true)
 	if err != nil {
 		return "", err
+	}
+	if schema, err = schema.Subset(tables); err != nil {
+		return "", invalid(err)
 	}
 	dialect, err := db.ExporterFor(conn.Kind)
 	if err != nil {
