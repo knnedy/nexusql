@@ -824,7 +824,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group C steps 12-13 (export, seed), each comp first. Step 12 comp
+1. Group C step 13 (seed), comp first. Step 12 export done. Step 12 comp
    .impeccable/mocks/workspace-export.html approved 2026-11-28 with changes: PNG file named
    after the project (quizify-diagram.png, quizify-<table>.png for a scope). Structure
    sections now stack full width (user: side-by-side boxes left gaps). Backend: GET
@@ -837,7 +837,8 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    uncontrolled React Flow (controlled nodes never report measured, so
    useNodesInitialized stays false), captured via lib/capture.ts; options Group regions /
    Transparent background; names via shared/lib/image-name.ts (<project>-diagram.png,
-   -<table>.png, -<table>-and-linked.png), canvas Save as PNG too. Next: Structure "Copy as". Step 10 structure done
+   -<table>.png, -<table>-and-linked.png), canvas Save as PNG too. Structure "Copy as" done (header menu,
+   fetches export?tables=<table>). Step 12 complete. Next: step 13 seed flow, comp first. Step 10 structure done
    (comp .impeccable/mocks/workspace-structure.html approved 2026-11-28): Structure tab
    (view=structure), StructureView in features/workspace/_components; lib/structure.ts
    (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with

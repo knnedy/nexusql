@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Check, Copy, Table2, WrapText } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Check, ChevronDown, Copy, Table2, WrapText } from "lucide-react";
+import { FormatIcon } from "@/features/export";
 import { tableKeys } from "@/features/canvas/lib/table-keys";
-import { tableDdlQueryOptions } from "@/shared/hooks/use-export";
+import { exportFormatsQueryOptions, exportQueryOptions, tableDdlQueryOptions } from "@/shared/hooks/use-export";
+import { studioSession } from "@/shared/lib/session-storage";
+import { Menu, MenuContent, MenuItem } from "@/shared/ui/menu";
+import { useToast } from "@/shared/ui/toast";
 import { cx } from "@/shared/lib/cx";
 import type { Relation, Table } from "@/shared/types/schema";
 import { Button } from "@/shared/ui/button";
@@ -207,7 +211,7 @@ function TableStructure({ table, relations, onSelectTable, onOpenData, hrefFor }
             {table.fields.length} {table.fields.length === 1 ? "column" : "columns"}
           </p>
         </div>
-        <CopyButton text={ddl.data} label="Copy DDL" />
+        <CopyAs table={table.name} />
         <Button size="sm" onClick={() => onOpenData(table.name)}>
           <Table2 aria-hidden />
           Open data
@@ -352,5 +356,43 @@ function Links({ label, direction, relations, onSelectTable, hrefFor }: { label:
         );
       })}
     </div>
+  );
+}
+
+/** One table as code in any export format, straight to the clipboard. */
+function CopyAs({ table }: { table: string }) {
+  const client = useQueryClient();
+  const toast = useToast();
+  const { data: formats = [] } = useQuery(exportFormatsQueryOptions());
+  const provider = studioSession.provider() ?? "postgres";
+
+  async function copy(id: string, label: string) {
+    try {
+      const { schema } = await client.fetchQuery(exportQueryOptions(id, true, [table]));
+      await navigator.clipboard.writeText(schema);
+      toast({ title: `Copied ${table} as ${label}`, tone: "success" });
+    } catch (err) {
+      toast({ title: `Could not copy ${table} as ${label}`, description: err instanceof Error ? err.message : undefined, tone: "danger" });
+    }
+  }
+
+  return (
+    <Menu.Root>
+      <Menu.Trigger render={<Button size="sm" />} disabled={formats.length === 0}>
+        <Copy aria-hidden />
+        Copy as
+        <ChevronDown aria-hidden />
+      </Menu.Trigger>
+      <MenuContent align="end" className="w-60">
+        <p className="px-2 pt-1 pb-1.5 text-label text-fg-subtle">
+          Copy <span translate="no">{table}</span> as
+        </p>
+        {formats.map((f) => (
+          <MenuItem key={f.id} icon={<FormatIcon id={f.id} provider={provider} size={13} />} hint={f.filename.slice(f.filename.lastIndexOf("."))} onClick={() => void copy(f.id, f.label)}>
+            {f.label}
+          </MenuItem>
+        ))}
+      </MenuContent>
+    </Menu.Root>
   );
 }

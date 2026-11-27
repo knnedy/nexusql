@@ -41,3 +41,15 @@ test("structure lists every table, then shows a table's columns, rules, keys and
   await expect(page.getByRole("heading", { level: 2 })).toHaveText("customers");
   await expect(row("email")).toContainText("unique");
 });
+
+test("copies one table in any export format", async ({ page, context }) => {
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await connectSqlite(page, SHOP);
+  await page.goto("/studio/?view=structure&table=orders");
+  await page.getByRole("button", { name: "Copy as" }).click();
+  await page.getByRole("menuitem", { name: /Prisma schema/ }).click();
+  await expect(page.getByText("Copied orders as Prisma schema")).toBeVisible();
+  const copied = await page.evaluate(() => navigator.clipboard.readText());
+  expect(copied).toContain("model orders {");
+  expect(copied).not.toContain("model customers {");
+});
