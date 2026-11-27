@@ -144,7 +144,9 @@ Plan:
   that table; never pans past the schema's edges.
   Then (user: Quizify "looks good at 44%", zoom in for detail): opens on the WHOLE schema
   down to the keys level (0.3); only below that frames the largest group. The readout is
-  relative: the opening view reads 100% (zoomLabel). React Flow attribution kept (they ask
+  relative: the opening view reads 100% (zoomLabel).
+  A table already in the URL (?table=) when the diagram opens is lit but not flown to
+  (openedOnRef); it zoomed to real 100% (219%) after every reload. React Flow attribution kept (they ask
   non-Pro users to), top centre, styled as a quiet caption, excluded from PNG.
   8c done: a table chosen elsewhere is centred left of the details card at full detail
   (overview.ts centreBeside, CARD_SPACE 328, reduced motion = no animation). Card focus

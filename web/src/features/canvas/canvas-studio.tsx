@@ -117,6 +117,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   const viewSetRef = useRef(false);
   // The opening zoom, which the readout calls 100%.
   const [baseZoom, setBaseZoom] = useState(1);
+  // A table already chosen when the diagram opens is lit, not flown to.
+  const openedOnRef = useRef<string | null>(null);
   const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
@@ -164,7 +166,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     const view = firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, start || undefined);
     setViewport(view);
     setBaseZoom(view.zoom);
-  }, [graphReady, overview, getNodes, getNodesBounds, setViewport]);
+    openedOnRef.current = selectedName;
+  }, [graphReady, overview, getNodes, getNodesBounds, setViewport, selectedName]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
 
@@ -183,6 +186,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     const pane = canvasWrapperRef.current;
     if (!graphReady || !selectedName || !pane) return;
     if (clickedRef.current === selectedName) return;
+    if (openedOnRef.current === selectedName) return;
+    openedOnRef.current = null;
     const node = getNodes().find((n): n is Node<TableNodeData> => n.id === selectedName && n.type === "tableNode");
     if (!node) return;
     const box = { x: node.position.x, y: node.position.y, w: NODE_WIDTH, h: getNodeHeight(node.data.table.fields.length) };

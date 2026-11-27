@@ -146,3 +146,15 @@ test("the first view fits every table of a large schema", async ({ page }) => {
     return [boxes.length, inside.length];
   }).toEqual([400, 400]);
 });
+
+test("reopening with a table chosen keeps the whole schema in view", async ({ page }) => {
+  // Small enough that the whole schema opens below full-card zoom.
+  await page.setViewportSize({ width: 1000, height: 640 });
+  await connectSqlite(page, SHOP);
+  await page.getByRole("complementary", { name: "Tables" }).getByRole("button", { name: /^items/ }).click();
+  await expect(page).toHaveURL(/table=items/);
+  await page.reload();
+  await expect(page.locator('.react-flow__node[data-id="items"] [data-focus]')).toHaveAttribute("data-focus", "selected");
+  await page.waitForTimeout(800); // past the move a chosen table would make
+  await expect(page.locator("span", { hasText: /^Zoom \d+%$/ })).toHaveText("Zoom 100%");
+});
