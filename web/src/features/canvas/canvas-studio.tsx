@@ -18,25 +18,22 @@ import {
   useEdgesState,
   useReactFlow,
   useViewportStore,
-  type NodeTypes,
-  type EdgeTypes,
   type Node,
   type Edge,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useTheme } from "next-themes";
-import { toPng } from "html-to-image";
+import { capturePng, cssVar } from "@/features/canvas/lib/capture";
+import { imageName } from "@/shared/lib/image-name";
 import { Loader2, TriangleAlert } from "lucide-react";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { buildCanvasGraph, getNodeHeight, NODE_WIDTH, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { Button } from "@/shared/ui/button";
 import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
-import TableNode from "@/features/canvas/_components/table-node";
-import GroupNode from "@/features/canvas/_components/group-node";
 import { GroupOverlay } from "@/features/canvas/_components/group-overlay";
+import { edgeTypes, nodeTypes } from "@/features/canvas/_components/flow-types";
 import { centreBeside, firstView, zoomLabel, type GroupLink } from "@/features/canvas/lib/overview";
-import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
 import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
 import { Relation } from "@/shared/types/schema";
@@ -44,7 +41,6 @@ import { DatabaseProvider } from "@/shared/types/provider";
 import { studioSession } from "@/shared/lib/session-storage";
 import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
-const nodeTypes: NodeTypes = { tableNode: TableNode, groupNode: GroupNode };
 // The details card's width plus its margin and a gap: the stage left of it is what shows.
 const CARD_SPACE = 304 + 12 + 12;
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -71,13 +67,7 @@ const withRegions = (groups: Node<GroupNodeData>[], tables: Node<TableNodeData>[
   ...groups.map((g) => ({ ...g, style: { pointerEvents: "none" as const } })),
   ...tables,
 ];
-const edgeTypes: EdgeTypes = { relationEdge: RelationEdge };
 
-function getCssVar(name: string): string {
-  return getComputedStyle(document.documentElement)
-    .getPropertyValue(name)
-    .trim();
-}
 
 const emptySubscribe = () => () => {};
 
@@ -272,32 +262,11 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
 
       await new Promise((resolve) => setTimeout(resolve, 250));
 
-      const dataUrl = await toPng(wrapper, {
-        backgroundColor: getCssVar("--nx-ground"),
-        width: imageWidth,
-        height: imageHeight,
-        pixelRatio: 2,
-        filter: (node) => {
-          if (node instanceof HTMLElement) {
-            if (node.getAttribute("data-export-exclude") === "true") {
-              return false;
-            }
-            const cls = node.className;
-            if (typeof cls === "string") {
-              return (
-                !cls.includes("react-flow__minimap") &&
-                !cls.includes("react-flow__controls") &&
-                !cls.includes("react-flow__attribution")
-              );
-            }
-          }
-          return true;
-        },
-      });
+      const dataUrl = await capturePng(wrapper, { w: imageWidth, h: imageHeight }, cssVar("--nx-ground"));
 
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = "schema.png";
+      link.download = imageName(studioSession.projectName(), "all", null);
       link.click();
     } catch (err) {
       console.error("PNG export failed:", err);

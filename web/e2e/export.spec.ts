@@ -35,6 +35,24 @@ test("exports just the chosen table, or it and its linked tables", async ({ page
   await expect(include.getByRole("button", { name: "pets only" })).toHaveAttribute("aria-pressed", "true");
 });
 
+test("draws the diagram as a PNG named after the project", async ({ page }) => {
+  await connectSqlite(page, "CREATE TABLE owners (id INTEGER PRIMARY KEY); CREATE TABLE pets (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id))");
+  await page.goto("/studio/?view=export&table=pets");
+  await page.getByRole("button", { name: /Diagram image/ }).click();
+  const preview = page.getByRole("img", { name: "Diagram of 2 tables" });
+  await expect(preview).toBeVisible({ timeout: 20_000 });
+  expect(await preview.evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(400);
+  await expect(page.getByText(/2 tables · [\d,]+ × [\d,]+ px/)).toBeVisible();
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: /^Download .*-diagram\.png$/ }).click();
+  expect((await download).suggestedFilename()).toMatch(/^e2e-[\w-]+-diagram\.png$/);
+
+  await page.getByRole("group", { name: "Include" }).getByRole("button", { name: "pets only" }).click();
+  await expect(page.getByRole("img", { name: "Diagram of 1 table" })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole("heading", { name: /-pets\.png$/ })).toBeVisible();
+});
+
 test("the details card shows the server's DDL for the selected table", async ({ page }) => {
   await connectSqlite(page, "CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");
   await page.reload();

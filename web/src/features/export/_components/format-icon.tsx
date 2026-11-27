@@ -1,5 +1,5 @@
 import type { ReactNode, SVGProps } from "react";
-import { FileCode } from "lucide-react";
+import { FileCode, Image as ImageIcon } from "lucide-react";
 import {
   SiDrizzle,
   SiGo,
@@ -87,6 +87,10 @@ const MARKS: Record<string, Mark> = {
   dbml: {
     icon: (s) => <DbmlMark size={s} aria-hidden />,
     tint: "bg-blue-600/10 text-blue-700 dark:bg-blue-400/10 dark:text-blue-400",
+  },
+  png: {
+    icon: (s) => <ImageIcon size={s} aria-hidden />,
+    tint: "bg-accent-tint text-accent",
   },
   mermaid: {
     icon: (s) => <SiMermaid size={s} aria-hidden />,

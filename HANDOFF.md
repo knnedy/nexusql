@@ -832,9 +832,12 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    between kept tables only, keys to dropped tables become plain columns, unused enums
    dropped; unknown name is 400). Export view done: Include switch (URL include=table|linked,
    only with a known ?table=; export/lib/scope.ts), file name + table/line counts, Wrap
-   lines, CSS-counter line numbers. Next: Diagram image entry in Export (PNG capture now in
-   canvas-studio handleGeneratePng; name files <project>-diagram.png /
-   <project>-<table>.png, canvas Save as PNG too), then Structure "Copy as". Step 10 structure done
+   lines, CSS-counter line numbers. Diagram image done: local "png" format leads Diagrams;
+   canvas useDiagramImage lays out the (picked) schema and renders an off-screen,
+   uncontrolled React Flow (controlled nodes never report measured, so
+   useNodesInitialized stays false), captured via lib/capture.ts; options Group regions /
+   Transparent background; names via shared/lib/image-name.ts (<project>-diagram.png,
+   -<table>.png, -<table>-and-linked.png), canvas Save as PNG too. Next: Structure "Copy as". Step 10 structure done
    (comp .impeccable/mocks/workspace-structure.html approved 2026-11-28): Structure tab
    (view=structure), StructureView in features/workspace/_components; lib/structure.ts
    (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with

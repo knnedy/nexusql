@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
-import type { Relation } from "@/shared/types/schema";
-import { exportTables, linkedTables, parseInclude } from "./scope";
+import type { Relation, SchemaResponse } from "@/shared/types/schema";
+import { exportTables, linkedTables, parseInclude, pickTables } from "./scope";
 
 const rel = (sourceTable: string, targetTable: string) => ({ sourceTable, targetTable }) as Relation;
 const RELATIONS = [rel("pets", "owners"), rel("visits", "pets"), rel("pets", "owners"), rel("pets", "pets"), rel("vets", "clinics")];
@@ -23,4 +23,16 @@ it("exports every table unless one is chosen and the scope narrows to it", () =>
   expect(exportTables("linked", null, RELATIONS)).toEqual([]);
   expect(exportTables("table", "pets", RELATIONS)).toEqual(["pets"]);
   expect(exportTables("linked", "pets", RELATIONS)).toEqual(["owners", "pets", "visits"]);
+});
+
+it("cuts the schema down to the chosen tables and the keys between them", () => {
+  const schema = {
+    tables: ["owners", "pets", "visits"].map((name) => ({ name })),
+    relations: RELATIONS,
+    enums: [],
+  } as unknown as SchemaResponse;
+  const cut = pickTables(schema, ["pets", "owners"]);
+  expect(cut.tables.map((t) => t.name)).toEqual(["owners", "pets"]);
+  expect(cut.relations.map((r) => `${r.sourceTable}>${r.targetTable}`)).toEqual(["pets>owners", "pets>owners", "pets>pets"]);
+  expect(pickTables(schema, [])).toBe(schema);
 });

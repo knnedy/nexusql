@@ -1,7 +1,7 @@
 import type { ExportFormat } from "@/shared/types/health";
 
 const GROUPS: { label: string; ids: string[] }[] = [
-  { label: "Diagrams", ids: ["dbml", "mermaid"] },
+  { label: "Diagrams", ids: ["png", "dbml", "mermaid"] },
   { label: "SQL", ids: ["sql"] },
   { label: "ORMs and types", ids: ["prisma", "drizzle", "kysely", "sqlalchemy", "gorm", "typeorm", "sequelize"] },
 ];
