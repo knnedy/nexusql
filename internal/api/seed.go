@@ -71,3 +71,19 @@ func (h *handler) handleSeedSample(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, sample)
 }
+
+type seedPlanResponse struct {
+	Order []string `json:"order"`
+}
+
+func (h *handler) handleSeedPlan(w http.ResponseWriter, r *http.Request) {
+	order, err := h.studio.SeedOrder(r.Context())
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	if order == nil {
+		order = []string{}
+	}
+	writeJSON(w, http.StatusOK, seedPlanResponse{Order: order})
+}

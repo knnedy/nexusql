@@ -52,3 +52,9 @@ func Generate(schema *db.Schema, table string, n int, nullChance float64) (*Samp
 	}
 	return out, nil
 }
+
+// Order is the order Run inserts tables in: each after the tables it references.
+func Order(schema *db.Schema) ([]string, error) {
+	order, _, err := plan(schema)
+	return order, err
+}

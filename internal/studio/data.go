@@ -262,6 +262,23 @@ func (s *Service) Seed(ctx context.Context, opts seed.Options) (*seed.Result, er
 	return res, nil
 }
 
+// SeedOrder is the order a seed inserts the connection's tables in.
+func (s *Service) SeedOrder(ctx context.Context) ([]string, error) {
+	conn, err := s.conn()
+	if err != nil {
+		return nil, err
+	}
+	schema, err := s.schemas.get(ctx, conn, true)
+	if err != nil {
+		return nil, err
+	}
+	order, err := seed.Order(schema)
+	if err != nil {
+		return nil, invalid(err)
+	}
+	return order, nil
+}
+
 // SeedSample makes up to 20 rows of table as a seed would, without writing them.
 func (s *Service) SeedSample(ctx context.Context, table string, rows int, nullChance float64) (*seed.Sample, error) {
 	conn, err := s.conn()

@@ -273,7 +273,12 @@ func TestSeedChosenTablesAndSamples(t *testing.T) {
 	}
 	call(h, "POST", "/query", `{"sql":"CREATE TABLE owners (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL REFERENCES owners (id), name TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('cat', 'dog')))","confirmed":true}`)
 
-	w := call(h, "POST", "/seed/sample", `{"table":"pets","rows":3}`)
+	w := call(h, "GET", "/seed/plan", "")
+	if w.Code != http.StatusOK || strings.TrimSpace(w.Body.String()) != `{"order":["owners","pets"]}` {
+		t.Fatalf("plan: %d %s, want owners before pets", w.Code, w.Body)
+	}
+
+	w = call(h, "POST", "/seed/sample", `{"table":"pets","rows":3}`)
 	var sample struct {
 		Rows []map[string]*string `json:"rows"`
 		Refs map[string]string    `json:"refs"`

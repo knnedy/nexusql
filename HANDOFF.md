@@ -833,6 +833,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    1000 existing rows, read via FetchRows BEFORE the tx: SQLite's tx holds the only
    connection, reading inside deadlocks); POST /seed/sample -> seed.Generate (rows, refs,
    auto; nothing written). Conformance SeedChosenTables on all three dialects.
+   GET /seed/plan gives the server's insert order (no TS copy of the cycle breaking).
    Next: the dialog (features/seed), replacing seed-data-modal.tsx. Step 12 comp
    .impeccable/mocks/workspace-export.html approved 2026-11-28 with changes: PNG file named
    after the project (quizify-diagram.png, quizify-<table>.png for a scope). Structure
