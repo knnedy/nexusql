@@ -85,26 +85,29 @@ function cuts(p: { x: number; y: number }, q: { x: number; y: number }, r: Box):
   return x0 < r.x + r.w && x1 > r.x && y0 < r.y + r.h && y1 > r.y;
 }
 
-// Up to this many tables, the first view always shows names and keys (the user's cap).
+// Up to this many tables, the first view always shows a table's columns (the user's cap).
 export const FIT_ALL_ABOVE = 50;
-// Keys cards read comfortably from here.
-export const READABLE_ZOOM = 0.55;
+// Full cards, with every column, show from here (see detailAt).
+const FULL_ZOOM = KEYS_BELOW;
 // The margin around the schema, as a share of the pane on each side.
 const PAD = 0.04;
 
-/** Where the diagram opens: the whole schema, unless that would leave a small one unreadable. */
+/** Where the diagram opens: the whole schema if its columns read, else 100% on the given table. */
 export function firstView(
   bounds: Box,
   pane: { w: number; h: number },
   tables: number,
-  /** Pixels kept clear above the corner view, for controls floating there. */
+  /** The table to open on: the most-linked of the largest group. */
+  anchor?: Box,
+  /** Pixels kept clear above, for controls floating there. */
   top = 0,
 ): { x: number; y: number; zoom: number } {
   const [padX, padY] = [pane.w * PAD, pane.h * PAD];
   const fit = Math.min(1, (pane.w - 2 * padX) / bounds.w, (pane.h - 2 * padY) / bounds.h);
-  if (fit < READABLE_ZOOM && tables <= FIT_ALL_ABOVE) {
-    // The largest group packs first, top-left: open there.
-    return { zoom: READABLE_ZOOM, x: padX - bounds.x * READABLE_ZOOM, y: Math.max(padY, top) - bounds.y * READABLE_ZOOM };
+  if (fit < FULL_ZOOM && tables <= FIT_ALL_ABOVE && anchor) {
+    // Centred, unless that would tuck its header under the controls.
+    const y = Math.max(pane.h / 2 - (anchor.y + anchor.h / 2), Math.max(padY, top) - anchor.y);
+    return { zoom: 1, x: pane.w / 2 - (anchor.x + anchor.w / 2), y };
   }
   return {
     zoom: fit,

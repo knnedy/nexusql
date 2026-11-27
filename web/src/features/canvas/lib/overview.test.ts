@@ -118,17 +118,26 @@ describe("first view", () => {
     expect(v.y).toBeCloseTo(124);
   });
 
-  it("never opens a schema of up to 50 tables below a readable zoom: its top-left corner instead", () => {
-    const v = firstView({ x: 100, y: 50, w: 4000, h: 3000 }, pane, 50);
-    expect(v).toEqual({ zoom: 0.55, x: 40 - 100 * 0.55, y: 32 - 50 * 0.55 });
+  // The most-linked table of the largest group, 240 wide.
+  const hub = { x: 500, y: 300, w: 240, h: 400 };
+
+  it("opens a schema of up to 50 tables at 100% on its most-linked table when it does not fit with full cards", () => {
+    // Fits only at 0.6: keys cards, not columns. Centre the hub at 100% instead.
+    const v = firstView({ x: 0, y: 0, w: 1530, h: 1000 }, pane, 22, hub);
+    expect(v).toEqual({ zoom: 1, x: 500 - 620, y: 400 - 500 });
   });
 
-  it("leaves room above for the canvas toolbar when it opens on the corner", () => {
-    expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 20, 64).y).toBe(64);
+  it("keeps a tall table's header below the canvas toolbar", () => {
+    const tall = { ...hub, h: 900 };
+    expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 22, tall, 64).y).toBe(64 - 300);
+  });
+
+  it("fits the whole schema when there is no table to start on", () => {
+    expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 22).zoom).toBeCloseTo(0.23);
   });
 
   it("fits a larger schema whole, however small", () => {
-    expect(firstView({ x: 0, y: 0, w: 9200, h: 7360 }, pane, 51).zoom).toBeCloseTo(0.1);
+    expect(firstView({ x: 0, y: 0, w: 9200, h: 7360 }, pane, 51, hub).zoom).toBeCloseTo(0.1);
   });
 
   it("does not blow a tiny schema up past 100%", () => {

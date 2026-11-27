@@ -27,7 +27,7 @@ import { useTheme } from "next-themes";
 import { toPng } from "html-to-image";
 import { ImageDown, LayoutGrid, Loader2, TriangleAlert } from "lucide-react";
 import { EmptyState } from "@/shared/ui/empty-state";
-import { buildCanvasGraph, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
+import { buildCanvasGraph, getNodeHeight, NODE_WIDTH, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
 import { IconButton } from "@/shared/ui/button";
 import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
@@ -134,8 +134,12 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     const b = getNodesBounds(overview.groups);
     const tables = overview.groups.reduce((n, g) => n + g.data.count, 0);
     const room = { w: pane.clientWidth, h: pane.clientHeight };
-    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, TOOLBAR_CLEARANCE));
-  }, [graphReady, overview, getNodesBounds, setViewport]);
+    // A group is named after its most-linked table: open on the largest group's.
+    const largest = overview.groups.filter((g) => !g.data.unlinked).sort((x, y) => y.data.count - x.data.count)[0];
+    const hub = largest && getNodes().find((n): n is Node<TableNodeData> => n.id === largest.data.name && n.type === "tableNode");
+    const anchor = hub && { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) };
+    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, anchor || undefined, TOOLBAR_CLEARANCE));
+  }, [graphReady, overview, getNodes, getNodesBounds, setViewport]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
 
