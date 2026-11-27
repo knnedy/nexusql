@@ -266,42 +266,40 @@ function TableStructure({ table, relations, onSelectTable, onOpenData, hrefFor }
         </Box>
       </section>
 
-      <div className="mt-5 grid gap-4 lg:grid-cols-2">
-        <section aria-labelledby="structure-keys-indexes-and-checks">
-          <Heading title="Keys, indexes and checks" count={keys.length} />
-          <Box>
-            {keys.length === 0 ? (
-              <p className="px-3 py-2.5 text-label text-fg-subtle">No keys, indexes or checks.</p>
-            ) : (
-              <ul>
-                {keys.map((k, i) => (
-                  <li key={i} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-2.5 border-t border-line px-3 py-2.5 first:border-t-0">
-                    <span className="font-mono text-caption font-semibold tracking-wide text-fg-subtle">{k.kind === "PRIMARY KEY" ? "PRIMARY" : k.kind}</span>
-                    <span translate="no" className="min-w-0 font-mono text-label break-words text-fg">
-                      {k.detail}
-                      {k.name && <span className="block font-sans text-fg-subtle">{k.name}</span>}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Box>
-        </section>
+      <section aria-labelledby="structure-relationships" className="mt-5">
+        <Heading title="Relationships" count={out.length + into.length} />
+        <Box>
+          {out.length + into.length === 0 ? (
+            <p className="px-3 py-2.5 text-label text-fg-subtle">No foreign keys either way.</p>
+          ) : (
+            <>
+              <Links label="Points to" direction="out" relations={out} onSelectTable={onSelectTable} hrefFor={hrefFor} />
+              <Links label="Pointed to by" direction="in" relations={into} onSelectTable={onSelectTable} hrefFor={hrefFor} />
+            </>
+          )}
+        </Box>
+      </section>
 
-        <section aria-labelledby="structure-relationships">
-          <Heading title="Relationships" count={out.length + into.length} />
-          <Box>
-            {out.length + into.length === 0 ? (
-              <p className="px-3 py-2.5 text-label text-fg-subtle">No foreign keys either way.</p>
-            ) : (
-              <>
-                <Links label="Points to" direction="out" relations={out} onSelectTable={onSelectTable} hrefFor={hrefFor} />
-                <Links label="Pointed to by" direction="in" relations={into} onSelectTable={onSelectTable} hrefFor={hrefFor} />
-              </>
-            )}
-          </Box>
-        </section>
-      </div>
+      <section aria-labelledby="structure-keys-indexes-and-checks" className="mt-5">
+        <Heading title="Keys, indexes and checks" count={keys.length} />
+        <Box>
+          {keys.length === 0 ? (
+            <p className="px-3 py-2.5 text-label text-fg-subtle">No keys, indexes or checks.</p>
+          ) : (
+            <ul>
+              {keys.map((k, i) => (
+                <li key={i} className="grid grid-cols-[5.5rem_minmax(0,1fr)] items-baseline gap-2.5 border-t border-line px-3 py-2.5 first:border-t-0">
+                  <span className="font-mono text-caption font-semibold tracking-wide text-fg-subtle">{k.kind === "PRIMARY KEY" ? "PRIMARY" : k.kind}</span>
+                  <span translate="no" className="min-w-0 font-mono text-label break-words text-fg">
+                    {k.detail}
+                    {k.name && <span className="block font-sans text-fg-subtle">{k.name}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Box>
+      </section>
 
       <section aria-labelledby="structure-create-statement" className="mt-5">
         <Box>
