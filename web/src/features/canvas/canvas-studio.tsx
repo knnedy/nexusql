@@ -358,7 +358,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           onlyRenderVisibleElements
           minZoom={0.02} // low enough that the first view fits a few hundred tables
           maxZoom={2}
-          proOptions={{ hideAttribution: true }}>
+          // React Flow asks non-Pro users to keep its attribution; top centre is clear of panels.
+          attributionPosition="top-center">
           <GroupOverlay groups={overview.groups} links={overview.links} />
           <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="var(--nx-grid-dot)" bgColor="var(--nx-ground)" />
           <MiniMap
