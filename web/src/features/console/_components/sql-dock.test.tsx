@@ -17,12 +17,12 @@ const pets: QueryResponse = { ...base, columns: ["name"], rows: [{ name: "Rex" }
 
 function Harness({ startOpen = true }: { startOpen?: boolean }) {
   const [open, setOpen] = useState(startOpen);
-  return <SqlDock open={open} onOpenChange={setOpen} />;
+  return <SqlDock open={open} onOpenChange={setOpen} tables={["pets", "owners"]} />;
 }
 
 function renderDock(startOpen = true) {
   const Wrapper = withClient(new QueryClient());
-  render(
+  return render(
     <Wrapper>
       <TooltipProvider>
         <Harness startOpen={startOpen} />
@@ -41,6 +41,7 @@ async function run(sql: string) {
 
 beforeEach(() => {
   vi.restoreAllMocks();
+  localStorage.clear();
   openProject("shop");
 });
 
@@ -50,7 +51,7 @@ it("runs on Ctrl+Enter and shows the rows with their count", async () => {
   await run("SELECT name FROM pets");
   expect(query).toHaveBeenCalledWith({ sql: "SELECT name FROM pets", confirmed: false });
   expect(await screen.findByRole("cell", { name: "Rex" })).toBeInTheDocument();
-  expect(screen.getByText(/2 rows/)).toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent(/2 rows/);
 });
 
 it("asks before a write and sends the confirmation when told to run it", async () => {
@@ -86,4 +87,54 @@ it("puts a query from History back in the editor", async () => {
   await userEvent.click(screen.getByRole("button", { name: /History/ }));
   await userEvent.click(await screen.findByRole("menuitem", { name: /SELECT name FROM pets/ }));
   await waitFor(() => expect(editor()).toHaveValue("SELECT name FROM pets"));
+});
+
+it("runs only the selected statement and says which lines it was", async () => {
+  const query = vi.spyOn(api, "query").mockResolvedValue(pets);
+  renderDock();
+  await userEvent.click(editor());
+  await userEvent.paste("SELECT 1;\nSELECT name FROM pets;");
+  const box = editor() as HTMLTextAreaElement;
+  box.setSelectionRange(10, box.value.length);
+  box.dispatchEvent(new Event("select", { bubbles: true }));
+  expect(await screen.findByRole("button", { name: /Run selection/ })).toBeInTheDocument();
+  await userEvent.keyboard("{Control>}{Enter}{/Control}");
+  expect(query).toHaveBeenCalledWith({ sql: "SELECT name FROM pets;", confirmed: false });
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("selection, line 2"));
+});
+
+it("names each result column's type", async () => {
+  vi.spyOn(api, "query").mockResolvedValue({ ...pets, columns: ["name", "age"], columnTypes: ["text", "int4"], rows: [{ name: "Rex", age: 3 }] });
+  renderDock();
+  await run("SELECT name, age FROM pets");
+  expect(await screen.findByRole("columnheader", { name: /age\s*int4/ })).toBeInTheDocument();
+});
+
+it("offers the table a misspelt name meant, and fixes the SQL", async () => {
+  vi.spyOn(api, "query").mockRejectedValue(new Error("no such table: pet"));
+  renderDock();
+  await run("SELECT name\nFROM pet");
+  expect(await screen.findByText(/Line 2/)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole("button", { name: "pets" }));
+  expect(editor()).toHaveValue("SELECT name\nFROM pets");
+});
+
+it("remembers the project's history after the dock is rebuilt", async () => {
+  vi.spyOn(api, "query").mockResolvedValue(pets);
+  const first = renderDock();
+  await run("SELECT name FROM pets");
+  await screen.findByRole("cell", { name: "Rex" });
+  first.unmount();
+  renderDock();
+  await userEvent.click(screen.getByRole("button", { name: /History/ }));
+  expect(await screen.findByRole("menuitem", { name: /SELECT name FROM pets/ })).toBeInTheDocument();
+});
+
+it("resizes from the keyboard on its top edge", async () => {
+  renderDock();
+  const edge = screen.getByRole("separator", { name: "Resize SQL" });
+  const before = Number(edge.getAttribute("aria-valuenow"));
+  edge.focus();
+  await userEvent.keyboard("{ArrowUp}");
+  expect(Number(edge.getAttribute("aria-valuenow"))).toBeGreaterThan(before);
 });

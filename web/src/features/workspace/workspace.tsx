@@ -60,6 +60,7 @@ function WorkspaceInner() {
   const filterRef = useRef<HTMLInputElement>(null);
   const { resolvedTheme, setTheme } = useTheme();
   const relations = schema?.relations ?? [];
+  const tableNames = useMemo(() => (schema?.tables ?? []).map((t) => t.name), [schema]);
   // The trail follows the URL's table, however it was chosen.
   const [trail, setTrail] = useState(EMPTY_TRAIL);
   const [trailFor, setTrailFor] = useState<string | null>(null);
@@ -174,7 +175,7 @@ function WorkspaceInner() {
         )}
         {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
       </TabPanel>
-      <SqlDock open={dockOpen} onOpenChange={setDockOpen} />
+      <SqlDock open={dockOpen} onOpenChange={setDockOpen} tables={tableNames} />
       <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
       <SearchPanel open={searchOpen} onOpenChange={setSearchOpen} items={searchItems} onRun={runSearch} />
     </div>

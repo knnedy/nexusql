@@ -824,7 +824,7 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group C steps 11-13 (SQL dock, export, seed), each comp first. Step 10 structure done
+1. Group C steps 12-13 (export, seed), each comp first. Step 10 structure done
    (comp .impeccable/mocks/workspace-structure.html approved 2026-11-28): Structure tab
    (view=structure), StructureView in features/workspace/_components; lib/structure.ts
    (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with
@@ -834,9 +834,16 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    maximize, line numbers, run selection, typed result header, right-aligned numbers, error
    line + near-miss table suggestion, persisted per-project history). Backend first: query
    results carry columnTypes (QueryResult.ColumnTypes; pg names by OID via pgtype.Map, so
-   int4/text; enums read ""), conformance-tested on all three dialects.
-2. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
-3. After group C: stop and summarize for the user.
+   int4/text; enums read ""), conformance-tested on all three dialects. Dock done: console/lib/console.ts
+   (toRun, nearMiss only weighs words from the SQL that ran, errorLine, isNumeric,
+   clampHeight, load/saveHistory per project in localStorage), sql-dock.tsx (separator
+   resize: drag/keys/double-click, maximize, gutter, Run selection, typed headers).
+2. PERF (found 2026-11-28, pre-existing, fails e2e "first view fits every table of a large
+   schema" under load at 835d3e9 too): 400 tables take ~21s from schema to first card in the
+   prod build (layout alone ~2.5s in Node). Dev CPU profile: React Flow NodeWrapper/
+   NodeRenderer re-render all nodes repeatedly while measuring, MiniMap nodes ~8s,
+   GroupOverlay ~3.4s. Harness: d18-harness/big.spec.ts (prod) and big-dev.spec.ts (dev).
+3. Pending: row-count estimates (own commit). After group C: stop and summarize.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

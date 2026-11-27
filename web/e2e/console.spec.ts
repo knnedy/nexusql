@@ -7,7 +7,21 @@ test("runs a query from the SQL console", async ({ page }) => {
   const editor = page.getByPlaceholder("SELECT * FROM users LIMIT 10;");
   await editor.fill("SELECT name FROM pets ORDER BY id");
   await editor.press("Control+Enter");
-  await expect(page.getByText("2 rows")).toBeVisible();
+  await expect(page.getByRole("region", { name: "SQL" }).getByRole("status")).toContainText("2 rows");
+  await expect(page.getByRole("cell", { name: "Rex" })).toBeVisible();
+});
+
+test("names each column's type, and fixes a misspelt table from the error", async ({ page }) => {
+  await connectSqlite(page, "CREATE TABLE pets (id INTEGER PRIMARY KEY, name TEXT); INSERT INTO pets (name) VALUES ('Rex')");
+  await page.getByRole("button", { name: "Expand SQL" }).click();
+  const editor = page.getByPlaceholder("SELECT * FROM users LIMIT 10;");
+  await editor.fill("SELECT id, name\nFROM pet");
+  await editor.press("Control+Enter");
+  await expect(page.getByText("Line 2.")).toBeVisible();
+  await page.getByRole("region", { name: "SQL" }).getByRole("button", { name: "pets" }).click();
+  await expect(editor).toHaveValue("SELECT id, name\nFROM pets");
+  await editor.press("Control+Enter");
+  await expect(page.getByRole("columnheader", { name: /id\s*integer/ })).toBeVisible();
   await expect(page.getByRole("cell", { name: "Rex" })).toBeVisible();
 });
 
