@@ -23,6 +23,17 @@ func testQuery(t *testing.T, h Harness) {
 		}
 	})
 
+	t.Run("names each column's type as the database reports it", func(t *testing.T) {
+		res, err := Script(ctx, p, "SELECT id, email FROM users ORDER BY id", 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(res.ColumnTypes) != 2 || !strings.Contains(res.ColumnTypes[0], "int") ||
+			!(strings.Contains(res.ColumnTypes[1], "text") || strings.Contains(res.ColumnTypes[1], "char")) {
+			t.Fatalf("column types %q, want an integer then a text type, lower case", res.ColumnTypes)
+		}
+	})
+
 	t.Run("caps rows without rewriting the SQL", func(t *testing.T) {
 		for _, c := range []struct {
 			sql       string

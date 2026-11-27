@@ -201,11 +201,15 @@ func TestQueryResultsAlwaysCarryArrays(t *testing.T) {
 	for _, sql := range []string{"CREATE TABLE t (x INT)", "SELECT x FROM t", "BEGIN; COMMIT"} {
 		w := call(h, "POST", "/query", `{"sql":"`+sql+`","confirmed":true}`)
 		var res struct {
-			Columns []string         `json:"columns"`
-			Rows    []map[string]any `json:"rows"`
+			Columns     []string         `json:"columns"`
+			ColumnTypes []string         `json:"columnTypes"`
+			Rows        []map[string]any `json:"rows"`
 		}
-		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil || res.Columns == nil || res.Rows == nil {
-			t.Errorf("%q: %d %s: columns and rows must be arrays, never null", sql, w.Code, w.Body)
+		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil || res.Columns == nil || res.ColumnTypes == nil || res.Rows == nil {
+			t.Errorf("%q: %d %s: columns, their types and rows must be arrays, never null", sql, w.Code, w.Body)
+		}
+		if sql == "SELECT x FROM t" && (len(res.ColumnTypes) != 1 || res.ColumnTypes[0] != "int") {
+			t.Errorf("column types %q, want [int]", res.ColumnTypes)
 		}
 	}
 }

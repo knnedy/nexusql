@@ -57,6 +57,7 @@ type SeedTx interface {
 // QueryResult is the outcome of console SQL.
 type QueryResult struct {
 	Columns      []string
+	ColumnTypes  []string // per column, as the database names it, lower case; "" if unknown
 	Rows         []map[string]any
 	RowsAffected int64
 	IsWrite      bool

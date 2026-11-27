@@ -11,6 +11,7 @@ type queryRequest struct {
 
 type queryResponse struct {
 	Columns              []string         `json:"columns"`
+	ColumnTypes          []string         `json:"columnTypes"`
 	Rows                 []map[string]any `json:"rows"`
 	RowsAffected         int64            `json:"rowsAffected"`
 	IsWrite              bool             `json:"isWrite"`
@@ -35,11 +36,15 @@ func (h *handler) handleQuery(w http.ResponseWriter, r *http.Request) {
 	if res.Columns == nil {
 		res.Columns = []string{}
 	}
+	if res.ColumnTypes == nil {
+		res.ColumnTypes = []string{}
+	}
 	if res.Rows == nil {
 		res.Rows = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, queryResponse{
 		Columns:              res.Columns,
+		ColumnTypes:          res.ColumnTypes,
 		Rows:                 res.Rows,
 		RowsAffected:         res.RowsAffected,
 		IsWrite:              res.IsWrite,

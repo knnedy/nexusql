@@ -10,7 +10,7 @@ import { TooltipProvider } from "@/shared/ui/tooltip";
 import { SqlDock } from "./sql-dock";
 
 const base: QueryResponse = {
-  columns: [], rows: [], rowsAffected: 0, isWrite: false,
+  columns: [], columnTypes: [], rows: [], rowsAffected: 0, isWrite: false,
   truncated: false, statements: 1, requiresConfirmation: false,
 };
 const pets: QueryResponse = { ...base, columns: ["name"], rows: [{ name: "Rex" }, { name: "Tom" }] };

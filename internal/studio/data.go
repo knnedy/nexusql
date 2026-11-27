@@ -196,6 +196,7 @@ func rowKey(t db.Table, key map[string]string) ([]db.KeyValue, error) {
 // QueryResult is the outcome of a console query.
 type QueryResult struct {
 	Columns              []string
+	ColumnTypes          []string // as the database names them; "" when unknown
 	Rows                 []map[string]any
 	RowsAffected         int64
 	IsWrite              bool
@@ -236,7 +237,7 @@ func (s *Service) Query(ctx context.Context, sql string, confirmed bool) (QueryR
 		return QueryResult{}, s.classify(qctx, err, invalid)
 	}
 	return QueryResult{
-		Columns: res.Columns, Rows: res.Rows, RowsAffected: res.RowsAffected,
+		Columns: res.Columns, ColumnTypes: res.ColumnTypes, Rows: res.Rows, RowsAffected: res.RowsAffected,
 		IsWrite: res.IsWrite, Truncated: res.Truncated, Statements: len(stmts),
 	}, nil
 }

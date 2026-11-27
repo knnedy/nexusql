@@ -159,7 +159,11 @@ func scanRowsCapped(rows *sql.Rows, maxRows int) (db.QueryResult, error) {
 	if err := rows.Err(); err != nil {
 		return db.QueryResult{}, err
 	}
-	return db.QueryResult{Columns: columns, Rows: result, Truncated: truncated}, nil
+	types := make([]string, len(declaredTypes))
+	for i, t := range declaredTypes {
+		types[i] = strings.ToLower(t)
+	}
+	return db.QueryResult{Columns: columns, ColumnTypes: types, Rows: result, Truncated: truncated}, nil
 }
 
 // normalizeValue makes a scanned value JSON-safe. SQLite types values, not

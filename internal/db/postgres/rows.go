@@ -84,6 +84,9 @@ func (p *provider) UpdateRow(ctx context.Context, t db.Table, key []db.KeyValue,
 	return nil
 }
 
+// typeNames names built-in types by OID; types it does not know (enums, domains) read "".
+var typeNames = pgtype.NewMap()
+
 // collect reads every row into column names and value maps, then closes rows.
 func collect(rows pgx.Rows) ([]string, []map[string]any, error) {
 	res, err := collectCapped(rows, 0, nil)
@@ -123,7 +126,13 @@ func collectCapped(rows pgx.Rows, maxRows int, stop context.CancelFunc) (db.Quer
 	if err := rows.Err(); err != nil && !truncated {
 		return db.QueryResult{}, err
 	}
-	return db.QueryResult{Columns: columns, Rows: result, Truncated: truncated}, nil
+	types := make([]string, len(fields))
+	for i, f := range fields {
+		if t, ok := typeNames.TypeForOID(f.DataTypeOID); ok {
+			types[i] = t.Name
+		}
+	}
+	return db.QueryResult{Columns: columns, ColumnTypes: types, Rows: result, Truncated: truncated}, nil
 }
 
 func normalizeValue(v any, oid uint32) any {

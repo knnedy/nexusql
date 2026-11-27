@@ -830,6 +830,11 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with
    the details card; no Group/Rows columns until groups move out of the canvas and row
    counts land. Guidelines review done (links with hrefs, translate="no", live "Copied").
+   Step 11 SQL dock: comp .impeccable/mocks/workspace-sql.html approved 2026-11-28 (resize +
+   maximize, line numbers, run selection, typed result header, right-aligned numbers, error
+   line + near-miss table suggestion, persisted per-project history). Backend first: query
+   results carry columnTypes (QueryResult.ColumnTypes; pg names by OID via pgtype.Map, so
+   int4/text; enums read ""), conformance-tested on all three dialects.
 2. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
 3. After group C: stop and summarize for the user.
 

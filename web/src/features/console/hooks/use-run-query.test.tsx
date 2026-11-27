@@ -8,7 +8,7 @@ import type { QueryResponse } from "@/shared/types/query";
 import { useRunQuery } from "./use-run-query";
 
 const write: QueryResponse = {
-  columns: [], rows: [], rowsAffected: 0, isWrite: true,
+  columns: [], columnTypes: [], rows: [], rowsAffected: 0, isWrite: true,
   truncated: false, statements: 1, requiresConfirmation: false,
 };
 

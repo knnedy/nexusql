@@ -10,6 +10,8 @@ export interface ReadOnlyState {
 
 export interface QueryResponse {
   columns: string[];
+  /** Per column, as the database names it (lower case); "" when it can't tell. */
+  columnTypes: string[];
   rows: Record<string, unknown>[];
   rowsAffected: number;
   isWrite: boolean;
