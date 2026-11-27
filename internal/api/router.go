@@ -64,6 +64,7 @@ func Router(svc *studio.Service, cfg Config) *chi.Mux {
 
 	// Seed data
 	r.Post("/seed", h.handleSeed)
+	r.Post("/seed/sample", h.handleSeedSample)
 
 	// Schema export
 	r.Get("/export", h.handleExportFormats)

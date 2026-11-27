@@ -265,6 +265,47 @@ func TestSeedReportsSkippedRows(t *testing.T) {
 	}
 }
 
+func TestSeedChosenTablesAndSamples(t *testing.T) {
+	h := newAPI(t)
+	uri := dbtest.SQLiteFile(t, "sample.db")
+	if w := call(h, "POST", "/connect", `{"uri":"`+uri+`","name":"s"}`); w.Code != http.StatusOK {
+		t.Fatalf("connect: %d %s", w.Code, w.Body)
+	}
+	call(h, "POST", "/query", `{"sql":"CREATE TABLE owners (id INTEGER PRIMARY KEY, name TEXT NOT NULL); CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, owner_id INTEGER NOT NULL REFERENCES owners (id), name TEXT NOT NULL, kind TEXT NOT NULL CHECK (kind IN ('cat', 'dog')))","confirmed":true}`)
+
+	w := call(h, "POST", "/seed/sample", `{"table":"pets","rows":3}`)
+	var sample struct {
+		Rows []map[string]*string `json:"rows"`
+		Refs map[string]string    `json:"refs"`
+		Auto []string             `json:"auto"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &sample); err != nil || w.Code != http.StatusOK {
+		t.Fatalf("sample: %d %s", w.Code, w.Body)
+	}
+	if len(sample.Rows) != 3 || sample.Refs["owner_id"] != "owners" || strings.Join(sample.Auto, ",") != "id" {
+		t.Fatalf("sample = %s, want 3 rows, owner_id -> owners, id automatic", w.Body)
+	}
+	for _, r := range sample.Rows {
+		if r["name"] == nil || *r["name"] == "" || r["kind"] == nil || (*r["kind"] != "cat" && *r["kind"] != "dog") {
+			t.Errorf("sample row %v: want a name and an allowed kind", r)
+		}
+		if _, ok := r["owner_id"]; ok {
+			t.Errorf("sample row %v: the key is only known once a parent row is picked", r)
+		}
+	}
+	if w := call(h, "POST", "/seed/sample", `{"table":"nope"}`); w.Code != http.StatusBadRequest {
+		t.Errorf("unknown table: %d %s, want 400", w.Code, w.Body)
+	}
+
+	w = call(h, "POST", "/seed", `{"nullChance":0,"tables":{"owners":2,"pets":5}}`)
+	if w.Code != http.StatusOK || !strings.Contains(w.Body.String(), `"pets":5`) || !strings.Contains(w.Body.String(), `"owners":2`) {
+		t.Fatalf("seed chosen tables: %d %s", w.Code, w.Body)
+	}
+	if w := call(h, "POST", "/seed", `{"tables":{"nope":1}}`); w.Code != http.StatusBadRequest {
+		t.Errorf("unknown table: %d %s, want 400", w.Code, w.Body)
+	}
+}
+
 func TestExportFormatsAreListedAndRendered(t *testing.T) {
 	h := newAPI(t)
 	w := call(h, "GET", "/export", "")

@@ -63,6 +63,46 @@ func testSeed(t *testing.T, h Harness) {
 	})
 }
 
+func testSeedChosenTables(t *testing.T, h Harness) {
+	ctx := context.Background()
+	p := setup(t, h)
+	schema, err := p.IntrospectSchema(ctx, p.DefaultSchema())
+	if err != nil {
+		t.Fatal(err)
+	}
+	count := func(table string) string {
+		t.Helper()
+		res, err := Script(ctx, p, "SELECT COUNT(*) AS n FROM "+table, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return str(res.Rows[0]["n"])
+	}
+	users := count("users")
+
+	res, err := seed.Run(ctx, p, schema, seed.Options{NullChance: 0.5, Tables: map[string]int{"posts": 4}})
+	if err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	if res.RowsInserted["posts"] != 4 || len(res.RowsInserted) != 1 {
+		t.Fatalf("RowsInserted = %v, want posts 4 only", res.RowsInserted)
+	}
+	if got := count("users"); got != users {
+		t.Errorf("users = %s, want %s: a table left out gets no rows", got, users)
+	}
+	orphans, err := Script(ctx, p, "SELECT COUNT(*) AS n FROM posts WHERE user_id NOT IN (SELECT id FROM users)", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := str(orphans.Rows[0]["n"]); got != "0" {
+		t.Errorf("orphaned posts = %s, want 0: keys to tables left out point at their existing rows", got)
+	}
+
+	if _, err := seed.Run(ctx, p, schema, seed.Options{Tables: map[string]int{"nope": 1}}); err == nil {
+		t.Error("unknown table: want an error")
+	}
+}
+
 var hexBytes = regexp.MustCompile(`^\\x[0-9a-f]{32}$`)
 
 func testSeedConstraints(t *testing.T, h Harness) {

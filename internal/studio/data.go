@@ -262,6 +262,27 @@ func (s *Service) Seed(ctx context.Context, opts seed.Options) (*seed.Result, er
 	return res, nil
 }
 
+// SeedSample makes up to 20 rows of table as a seed would, without writing them.
+func (s *Service) SeedSample(ctx context.Context, table string, rows int, nullChance float64) (*seed.Sample, error) {
+	conn, err := s.conn()
+	if err != nil {
+		return nil, err
+	}
+	t, err := s.table(ctx, conn, table)
+	if err != nil {
+		return nil, err
+	}
+	schema, err := s.schemas.get(ctx, conn, true)
+	if err != nil {
+		return nil, err
+	}
+	sample, err := seed.Generate(schema, t.Name, min(max(rows, 1), 20), nullChance)
+	if err != nil {
+		return nil, invalid(err)
+	}
+	return sample, nil
+}
+
 // ExportFormat describes one schema export format.
 type ExportFormat = export.Format
 

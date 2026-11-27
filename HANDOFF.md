@@ -824,7 +824,16 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group C step 13 (seed), comp first. Step 12 export done. Step 12 comp
+1. Group C step 13 (seed). Comp .impeccable/mocks/workspace-seed.html (v2) approved
+   2026-11-28 ("not bad, let's see it in action"; v1 rejected as not good enough): plan list
+   in insert order with per-table counts and ticks, live sample of the selected table,
+   one-transaction footer, wait state with Stop (abort the request), results with problems
+   explained. b171fc0 restyled scrollbars app-wide (transparent track, thin thumb).
+   Backend: seed.Options.Tables (per-table counts; keys to tables left out point at up to
+   1000 existing rows, read via FetchRows BEFORE the tx: SQLite's tx holds the only
+   connection, reading inside deadlocks); POST /seed/sample -> seed.Generate (rows, refs,
+   auto; nothing written). Conformance SeedChosenTables on all three dialects.
+   Next: the dialog (features/seed), replacing seed-data-modal.tsx. Step 12 comp
    .impeccable/mocks/workspace-export.html approved 2026-11-28 with changes: PNG file named
    after the project (quizify-diagram.png, quizify-<table>.png for a scope). Structure
    sections now stack full width (user: side-by-side boxes left gaps). Backend: GET

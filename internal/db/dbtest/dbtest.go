@@ -46,6 +46,7 @@ func Run(t *testing.T, h Harness) {
 	t.Run("Query", func(t *testing.T) { testQuery(t, h) })
 	t.Run("Seed", func(t *testing.T) { testSeed(t, h) })
 	t.Run("SeedConstraints", func(t *testing.T) { testSeedConstraints(t, h) })
+	t.Run("SeedChosenTables", func(t *testing.T) { testSeedChosenTables(t, h) })
 	t.Run("SeedLinks", func(t *testing.T) { testSeedLinks(t, h) })
 	t.Run("Export", func(t *testing.T) { testExport(t, h) })
 	t.Run("Quoting", func(t *testing.T) { testQuoting(t, h) })

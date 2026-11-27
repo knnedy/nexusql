@@ -15,6 +15,9 @@ import (
 type Options struct {
 	RowsPerTable int
 	NullChance   float64 // probability [0,1] a nullable, non-key column gets NULL
+	// Tables, when set, seeds only these, each with its own row count;
+	// keys to tables left out point at their existing rows.
+	Tables map[string]int
 }
 
 type Result struct {
@@ -30,8 +33,9 @@ const maxAttempts = 5
 // Run inserts fake rows into every table in foreign-key order, in one
 // transaction, with values sent as parameters and converted like cell edits.
 func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Options) (*Result, error) {
-	if opts.RowsPerTable <= 0 {
-		return nil, fmt.Errorf("rowsPerTable must be positive")
+	counts, err := rowCounts(schema, opts)
+	if err != nil {
+		return nil, err
 	}
 	order, links, err := plan(schema)
 	if err != nil {
@@ -46,6 +50,11 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 		enums[e.Name] = e
 	}
 
+	g := generator{links: links, enums: enums, nullChance: opts.NullChance, rows: map[string][]map[string]string{}, existing: map[string][]map[string]string{}}
+	// Before the transaction: SQLite's holds the only connection.
+	if err := g.loadParents(ctx, provider, tables, counts); err != nil {
+		return nil, err
+	}
 	tx, err := provider.BeginSeedTx(ctx)
 	if err != nil {
 		return nil, err
@@ -57,10 +66,9 @@ func Run(ctx context.Context, provider db.Provider, schema *db.Schema, opts Opti
 		}
 	}()
 
-	g := generator{links: links, enums: enums, nullChance: opts.NullChance, rows: map[string][]map[string]string{}}
 	result := &Result{RowsInserted: map[string]int{}, Skipped: map[string]int{}, Problems: map[string]string{}}
 	for _, name := range order {
-		for range opts.RowsPerTable {
+		for range counts[name] {
 			row, err := g.insertRow(ctx, tx, tables[name])
 			if ctx.Err() != nil {
 				return nil, ctx.Err()
@@ -95,6 +103,74 @@ type generator struct {
 	enums      map[string]db.EnumType
 	nullChance float64
 	rows       map[string][]map[string]string // table -> non-NULL values of each seeded row
+	existing   map[string][]map[string]string // tables left out -> key values of rows already there
+}
+
+// rowCounts is how many rows each table gets; tables not in it get none.
+func rowCounts(schema *db.Schema, opts Options) (map[string]int, error) {
+	counts := map[string]int{}
+	if opts.Tables == nil {
+		if opts.RowsPerTable <= 0 {
+			return nil, fmt.Errorf("rowsPerTable must be positive")
+		}
+		for _, t := range schema.Tables {
+			counts[t.Name] = opts.RowsPerTable
+		}
+		return counts, nil
+	}
+	for name, n := range opts.Tables {
+		if _, ok := schema.Table(name); !ok {
+			return nil, fmt.Errorf("unknown table %q", name)
+		}
+		if n < 0 {
+			return nil, fmt.Errorf("%s: row count must not be negative", name)
+		}
+		if n > 0 {
+			counts[name] = n
+		}
+	}
+	if len(counts) == 0 {
+		return nil, fmt.Errorf("no tables to seed")
+	}
+	return counts, nil
+}
+
+// parentSample bounds how many existing rows of a table left out keys may point at.
+const parentSample = 1000
+
+// loadParents reads the keys of existing rows in tables this run leaves out
+// but seeded tables reference, so new rows can point at them.
+func (g *generator) loadParents(ctx context.Context, provider db.Provider, tables map[string]db.Table, counts map[string]int) error {
+	for source := range counts {
+		for _, l := range g.links[source] {
+			if counts[l.TargetTable] > 0 || g.existing[l.TargetTable] != nil {
+				continue
+			}
+			_, rows, err := provider.FetchRows(ctx, db.RowsRequest{Table: tables[l.TargetTable], Limit: parentSample})
+			if err != nil {
+				return fmt.Errorf("reading %s for %s to reference: %w", l.TargetTable, source, err)
+			}
+			g.existing[l.TargetTable] = []map[string]string{}
+			for _, r := range rows {
+				row := map[string]string{}
+				for k, v := range r {
+					if v != nil {
+						row[k] = text(v)
+					}
+				}
+				g.existing[l.TargetTable] = append(g.existing[l.TargetTable], row)
+			}
+		}
+	}
+	return nil
+}
+
+// text is a fetched value as the text a cell edit would send.
+func text(v any) string {
+	if b, ok := v.([]byte); ok {
+		return string(b)
+	}
+	return fmt.Sprint(v)
 }
 
 // insertRow inserts one row, regenerating it when the database rejects it,
@@ -256,8 +332,12 @@ func (g *generator) backfill(ctx context.Context, tx db.SeedTx, table db.Table) 
 // pick returns a random seeded row of table with every one of fields set,
 // other than row skip when another exists; nil when there is none.
 func (g *generator) pick(table string, fields []string, skip int) map[string]string {
+	rows := g.rows[table]
+	if len(rows) == 0 {
+		rows = g.existing[table]
+	}
 	var ok []int
-	for i, row := range g.rows[table] {
+	for i, row := range rows {
 		if !slices.ContainsFunc(fields, func(f string) bool { _, set := row[f]; return !set }) {
 			ok = append(ok, i)
 		}
@@ -268,7 +348,7 @@ func (g *generator) pick(table string, fields []string, skip int) map[string]str
 	if len(ok) == 0 {
 		return nil
 	}
-	return g.rows[table][ok[mrand.Intn(len(ok))]]
+	return rows[ok[mrand.Intn(len(ok))]]
 }
 
 // own returns the row's own values for fields, when it has them all.
