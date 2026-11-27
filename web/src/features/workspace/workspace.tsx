@@ -7,7 +7,7 @@ import { FileCode2, ListTree, Network, PanelRight, Sprout, Table2 } from "lucide
 import { CanvasStudio } from "@/features/canvas";
 import { SqlDock } from "@/features/console";
 import { ExportView, parseInclude } from "@/features/export";
-import { SeedDataModal } from "@/features/seed";
+import { SeedDialog } from "@/features/seed";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { cx } from "@/shared/lib/cx";
 import { Button } from "@/shared/ui/button";
@@ -185,7 +185,13 @@ function WorkspaceInner() {
         )}
       </TabPanel>
       <SqlDock open={dockOpen} onOpenChange={setDockOpen} tables={tableNames} />
-      <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />
+      <SeedDialog
+        open={seedOpen}
+        onClose={() => setSeedOpen(false)}
+        schema={schema}
+        table={table}
+        onOpenData={(name) => go({ ...selectTableUpdates(name), view: "data" })}
+      />
       <SearchPanel open={searchOpen} onOpenChange={setSearchOpen} items={searchItems} onRun={runSearch} />
     </div>
   );

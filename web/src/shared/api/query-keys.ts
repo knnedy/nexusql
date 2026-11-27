@@ -18,6 +18,8 @@ export const queryKeys = {
   schema: () => [...scope(), "schema"] as const,
   // Under schema, so whatever refreshes the schema refreshes the DDL too.
   tableDdl: (table: string) => [...scope(), "schema", "ddl", table] as const,
+  seedPlan: () => [...scope(), "schema", "seed-plan"] as const,
+  seedSample: (table: string, rows: number, nullChance: number, round: number) => [...scope(), "schema", "seed-sample", table, rows, nullChance, round] as const,
   rows: () => [...scope(), "rows"] as const,
   tableRows: (table: string) => [...scope(), "rows", table] as const,
   export: (target: string | null, tables: readonly string[] = []) => [...scope(), "export", target, ...tables] as const,

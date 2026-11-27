@@ -21,7 +21,7 @@ import {
   UpdateRowResponse,
 } from "@/shared/types/rows";
 import { SchemaResponse } from "@/shared/types/schema";
-import { SeedRequest, SeedResponse } from "@/shared/types/seed";
+import type { SeedRequest, SeedResponse, SeedSample } from "@/shared/types/seed";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
@@ -154,11 +154,20 @@ export const api = {
     },
   },
 
-  seed(body: SeedRequest): Promise<SeedResponse> {
+  seed(body: SeedRequest, signal?: AbortSignal): Promise<SeedResponse> {
     return request<SeedResponse>("/api/seed", {
       method: "POST",
       body: JSON.stringify(body),
+      signal,
     });
+  },
+
+  seedPlan(): Promise<{ order: string[] }> {
+    return request<{ order: string[] }>("/api/seed/plan");
+  },
+
+  seedSample(body: { table: string; rows: number; nullChance: number }): Promise<SeedSample> {
+    return request<SeedSample>("/api/seed/sample", { method: "POST", body: JSON.stringify(body) });
   },
 
   projects: {
