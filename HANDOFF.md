@@ -830,8 +830,11 @@ shrunken full tables; judge on realistic schemas side by side with the user.
    sections now stack full width (user: side-by-side boxes left gaps). Backend: GET
    /export/{format}?tables=a&tables=b renders just those (db.Schema.Subset: relations
    between kept tables only, keys to dropped tables become plain columns, unused enums
-   dropped; unknown name is 400). Next: the Export view (Include switch, wrap, counts,
-   Diagram image entry), then Structure "Copy as". Step 10 structure done
+   dropped; unknown name is 400). Export view done: Include switch (URL include=table|linked,
+   only with a known ?table=; export/lib/scope.ts), file name + table/line counts, Wrap
+   lines, CSS-counter line numbers. Next: Diagram image entry in Export (PNG capture now in
+   canvas-studio handleGeneratePng; name files <project>-diagram.png /
+   <project>-<table>.png, canvas Save as PNG too), then Structure "Copy as". Step 10 structure done
    (comp .impeccable/mocks/workspace-structure.html approved 2026-11-28): Structure tab
    (view=structure), StructureView in features/workspace/_components; lib/structure.ts
    (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with

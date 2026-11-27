@@ -204,8 +204,10 @@ export const api = {
       return request<ExportFormatsResponse>("/api/export");
     },
 
-    render(format: string): Promise<ExportResponse> {
-      return request<ExportResponse>(`/api/export/${encodeURIComponent(format)}`);
+    /** No tables means the whole schema. */
+    render(format: string, tables: string[] = []): Promise<ExportResponse> {
+      const query = tables.length ? `?${new URLSearchParams(tables.map((t) => ["tables", t]))}` : "";
+      return request<ExportResponse>(`/api/export/${encodeURIComponent(format)}${query}`);
     },
   },
 } as const;

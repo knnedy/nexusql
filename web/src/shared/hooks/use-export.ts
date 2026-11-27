@@ -9,10 +9,10 @@ export const exportFormatsQueryOptions = () =>
     staleTime: Infinity,
   });
 
-export const exportQueryOptions = (format: string | null, enabled: boolean) =>
+export const exportQueryOptions = (format: string | null, enabled: boolean, tables: string[] = []) =>
   queryOptions({
-    queryKey: queryKeys.export(format),
-    queryFn: () => api.export.render(format ?? ""),
+    queryKey: queryKeys.export(format, tables),
+    queryFn: () => api.export.render(format ?? "", tables),
     enabled: enabled && !!format,
     staleTime: Infinity,
   });

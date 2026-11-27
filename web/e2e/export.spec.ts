@@ -13,6 +13,28 @@ test("lists the server's export formats and renders the chosen one", async ({ pa
   expect((await download).suggestedFilename()).toBe("schema.ts");
 });
 
+test("exports just the chosen table, or it and its linked tables", async ({ page }) => {
+  await connectSqlite(
+    page,
+    "CREATE TABLE owners (id INTEGER PRIMARY KEY); CREATE TABLE vets (id INTEGER PRIMARY KEY); CREATE TABLE pets (id INTEGER PRIMARY KEY, owner_id INTEGER REFERENCES owners (id)); CREATE TABLE visits (id INTEGER PRIMARY KEY, pet_id INTEGER REFERENCES pets (id), vet_id INTEGER REFERENCES vets (id))",
+  );
+  await page.goto("/studio/?view=export&format=sql&table=pets");
+  const code = page.getByRole("region", { name: "SQL DDL" });
+  await expect(code.getByText(/CREATE TABLE "vets"/)).toBeVisible();
+
+  const include = page.getByRole("group", { name: "Include" });
+  await include.getByRole("button", { name: "pets and its 2 linked tables" }).click();
+  await expect(code.getByText(/CREATE TABLE "visits"/)).toBeVisible();
+  await expect(code.getByText(/CREATE TABLE "vets"/)).toHaveCount(0);
+  await expect(code.getByText(/REFERENCES "vets"/)).toHaveCount(0);
+  await expect(code.getByText("3 tables", { exact: false })).toBeVisible();
+
+  await include.getByRole("button", { name: "pets only" }).click();
+  await expect(code.getByText(/CREATE TABLE "owners"/)).toHaveCount(0);
+  await page.reload();
+  await expect(include.getByRole("button", { name: "pets only" })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("the details card shows the server's DDL for the selected table", async ({ page }) => {
   await connectSqlite(page, "CREATE TABLE pets (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL)");
   await page.reload();

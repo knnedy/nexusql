@@ -20,7 +20,7 @@ export const queryKeys = {
   tableDdl: (table: string) => [...scope(), "schema", "ddl", table] as const,
   rows: () => [...scope(), "rows"] as const,
   tableRows: (table: string) => [...scope(), "rows", table] as const,
-  export: (target: string | null) => [...scope(), "export", target] as const,
+  export: (target: string | null, tables: readonly string[] = []) => [...scope(), "export", target, ...tables] as const,
   readOnly: () => [...scope(), "read-only"] as const,
 };
 

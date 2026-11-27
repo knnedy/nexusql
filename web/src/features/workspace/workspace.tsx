@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { FileCode2, ListTree, Network, PanelRight, Sprout, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
 import { SqlDock } from "@/features/console";
-import { ExportView } from "@/features/export";
+import { ExportView, parseInclude } from "@/features/export";
 import { SeedDataModal } from "@/features/seed";
 import { useSchema } from "@/shared/hooks/use-schema";
 import { cx } from "@/shared/lib/cx";
@@ -173,7 +173,16 @@ function WorkspaceInner() {
             hrefFor={(name) => `/studio/?${nextSearch(params, selectTableUpdates(name))}`}
           />
         )}
-        {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
+        {view === "export" && (
+          <ExportView
+            format={params.get("format")}
+            onFormatChange={(f) => go({ format: f })}
+            schema={schema}
+            table={table}
+            include={parseInclude(params.get("include"))}
+            onIncludeChange={(i) => go({ include: i === "all" ? null : i })}
+          />
+        )}
       </TabPanel>
       <SqlDock open={dockOpen} onOpenChange={setDockOpen} tables={tableNames} />
       <SeedDataModal open={seedOpen} onClose={() => setSeedOpen(false)} />

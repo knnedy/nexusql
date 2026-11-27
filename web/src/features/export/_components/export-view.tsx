@@ -1,17 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTheme } from "next-themes";
 import { codeToHtml } from "shiki";
-import { AlertTriangle, Check, Copy, Download } from "lucide-react";
+import { AlertTriangle, Check, Copy, Download, WrapText } from "lucide-react";
 import { exportFormatsQueryOptions, exportQueryOptions } from "@/shared/hooks/use-export";
 import { studioSession } from "@/shared/lib/session-storage";
 import { cx } from "@/shared/lib/cx";
 import { Button } from "@/shared/ui/button";
 import { Skeleton } from "@/shared/ui/surface";
 import { useToast } from "@/shared/ui/toast";
+import type { SchemaResponse } from "@/shared/types/schema";
 import { groupFormats } from "../lib/format-groups";
+import { exportTables, linkedTables, type Include } from "../lib/scope";
 import { FormatIcon, formatTint } from "./format-icon";
 
 // Mermaid's default maxTextSize and maxEdges: past either, renderers refuse the diagram.
@@ -28,7 +30,11 @@ function mermaidTooLarge(text: string): boolean {
   return false;
 }
 
-function Code({ code, lang }: { code: string; lang: string }) {
+// Line numbers count shiki's line spans; wrapped lines keep one number.
+const NUMBERED =
+  "[&_code]:[counter-reset:line] [&_.line]:before:mr-4 [&_.line]:before:inline-block [&_.line]:before:w-8 [&_.line]:before:text-right [&_.line]:before:text-fg-subtle [&_.line]:before:content-[counter(line)] [&_.line]:before:[counter-increment:line] [&_.line]:before:select-none";
+
+function Code({ code, lang, wrap }: { code: string; lang: string; wrap: boolean }) {
   const [html, setHtml] = useState("");
   const { resolvedTheme } = useTheme();
   useEffect(() => {
@@ -37,11 +43,11 @@ function Code({ code, lang }: { code: string; lang: string }) {
     codeToHtml(code, { lang, theme }).then(setHtml, () => setHtml(""));
   }, [code, lang, resolvedTheme]);
 
-  const frame = "min-h-0 flex-1 overflow-auto rounded-card border border-line bg-sunk font-mono text-label leading-relaxed select-text";
-  if (!html) return <pre className={cx(frame, "p-4 whitespace-pre text-fg")}>{code}</pre>;
+  const frame = "min-h-0 flex-1 overflow-auto bg-sunk font-mono text-label leading-relaxed select-text";
+  if (!html) return <pre className={cx(frame, "p-4 text-fg", wrap ? "whitespace-pre-wrap break-words" : "whitespace-pre")}>{code}</pre>;
   return (
     <div
-      className={cx(frame, "[&>pre]:min-h-full [&>pre]:p-4 [&>pre]:bg-transparent!")}
+      className={cx(frame, NUMBERED, "[&>pre]:min-h-full [&>pre]:p-4 [&>pre]:bg-transparent!", wrap && "[&>pre]:whitespace-pre-wrap [&>pre]:break-words")}
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -58,15 +64,40 @@ function download(text: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+const plural = (n: number, one: string) => `${n.toLocaleString("en")} ${one}${n === 1 ? "" : "s"}`;
+
+interface ExportViewProps {
+  format: string | null;
+  onFormatChange: (id: string) => void;
+  schema: SchemaResponse | undefined;
+  /** The table chosen in the workspace; Include can narrow to it. */
+  table: string | null;
+  include: Include;
+  onIncludeChange: (include: Include) => void;
+}
+
 /** The schema as code: pick a format on the left, read, copy or save it on the right. */
-export function ExportView({ format, onFormatChange }: { format: string | null; onFormatChange: (id: string) => void }) {
+export function ExportView({ format, onFormatChange, schema, table, include, onIncludeChange }: ExportViewProps) {
   const toast = useToast();
   const provider = studioSession.provider() ?? "postgres";
   const { data: formats = [] } = useQuery(exportFormatsQueryOptions());
   const chosen = formats.find((f) => f.id === format) ?? formats[0];
-  const { data, isLoading, isError } = useQuery(exportQueryOptions(chosen?.id ?? null, !!chosen));
+  const relations = useMemo(() => schema?.relations ?? [], [schema]);
+  const known = !!table && !!schema?.tables.some((t) => t.name === table);
+  const scope = known ? include : "all";
+  const tables = useMemo(() => exportTables(scope, table, relations), [scope, table, relations]);
+  const { data, isLoading, isError } = useQuery(exportQueryOptions(chosen?.id ?? null, !!chosen, tables));
   const [copied, setCopied] = useState(false);
+  const [wrap, setWrap] = useState(false);
   const text = data?.schema ?? "";
+  const lines = text ? text.replace(/\n$/, "").split("\n").length : 0;
+  const tableCount = tables.length || (schema?.tables.length ?? 0);
+  const linked = table ? linkedTables(table, relations).length : 0;
+  const options: [Include, string][] = [
+    ["all", `All ${plural(schema?.tables.length ?? 0, "table")}`],
+    ["table", `${table} only`],
+    ["linked", `${table} and its ${plural(linked, "linked table")}`],
+  ];
 
   async function copy() {
     await navigator.clipboard.writeText(text);
@@ -103,13 +134,18 @@ export function ExportView({ format, onFormatChange }: { format: string | null; 
         ))}
       </nav>
 
-      <section aria-label={chosen?.label ?? "Export"} className="flex min-h-0 flex-col gap-3 p-4">
+      <section aria-label={chosen?.label ?? "Export"} className="flex min-h-0 flex-col">
         {chosen && (
-          <header className="flex items-center gap-3">
-            <div className="min-w-0 flex-1">
-              <h2 className="truncate text-title font-semibold text-fg">{chosen.label}</h2>
-              <p className="truncate font-mono text-caption text-fg-subtle">{chosen.filename}</p>
-            </div>
+          <header className="flex items-center gap-3 border-b border-line px-4 py-2.5">
+            <h2 className="min-w-0 truncate font-mono text-body font-medium text-fg" translate="no">{chosen.filename}</h2>
+            <p className="mr-auto shrink-0 text-caption text-fg-subtle tabular-nums">
+              {plural(tableCount, "table")}
+              {text && ` · ${plural(lines, "line")}`}
+            </p>
+            <Button size="sm" variant="ghost" aria-pressed={wrap} className="aria-pressed:bg-sunk aria-pressed:text-fg" onClick={() => setWrap((w) => !w)}>
+              <WrapText aria-hidden />
+              Wrap lines
+            </Button>
             <Button size="sm" variant="ghost" onClick={copy} disabled={!text}>
               {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
               {copied ? "Copied" : "Copy"}
@@ -118,19 +154,40 @@ export function ExportView({ format, onFormatChange }: { format: string | null; 
               size="sm"
               variant="primary"
               disabled={!text}
-              aria-label={`Download ${chosen.filename}`}
               onClick={() => {
                 download(text, chosen.filename);
                 toast({ title: `Saved ${chosen.filename}`, tone: "success" });
               }}>
               <Download aria-hidden />
-              Download
+              Download {chosen.filename}
             </Button>
           </header>
         )}
 
+        {known && (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2 text-label text-fg-muted">
+            <span id="export-include">Include</span>
+            <div role="group" aria-labelledby="export-include" className="inline-flex h-7.5 overflow-hidden rounded-control border border-line-strong">
+              {options.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-pressed={scope === id}
+                  onClick={() => onIncludeChange(id)}
+                  className={cx(
+                    "h-full cursor-pointer px-2.5 whitespace-nowrap transition-colors duration-150",
+                    scope === id ? "bg-sunk font-medium text-fg" : "text-fg-muted hover:text-fg",
+                  )}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {scope !== "all" && <span className="ml-auto text-caption text-fg-subtle">Keys to tables left out become plain columns</span>}
+          </div>
+        )}
+
         {chosen?.id === "mermaid" && mermaidTooLarge(text) && (
-          <p role="note" className="flex items-start gap-2 rounded-control border border-warn/40 bg-warn-tint px-3 py-2 text-label text-fg">
+          <p role="note" className="mx-4 mt-3 flex items-start gap-2 rounded-control border border-warn/40 bg-warn-tint px-3 py-2 text-label text-fg">
             <AlertTriangle className="mt-px size-3.5 shrink-0 text-warn" aria-hidden />
             This diagram is too large for most Mermaid renderers (over {MERMAID_MAX_EDGES} relationships or{" "}
             {MERMAID_MAX_TEXT.toLocaleString("en")} characters). Use DBML, or save the diagram as a PNG, instead.
@@ -138,11 +195,11 @@ export function ExportView({ format, onFormatChange }: { format: string | null; 
         )}
 
         {isLoading ? (
-          <Skeleton className="flex-1" />
+          <Skeleton className="m-4 flex-1" />
         ) : isError ? (
-          <p className="text-body text-danger">The server could not render this format.</p>
+          <p className="p-4 text-body text-danger">The server could not render this format.</p>
         ) : (
-          chosen && <Code code={text} lang={chosen.language} />
+          chosen && <Code code={text} lang={chosen.language} wrap={wrap} />
         )}
       </section>
     </div>

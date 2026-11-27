@@ -1,10 +1,12 @@
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { expect, it, vi } from "vitest";
 import { exportFormatsQueryOptions, exportQueryOptions } from "@/shared/hooks/use-export";
 import { withClient } from "@/test/connection-cache";
 import { ToastProvider } from "@/shared/ui/toast";
+import type { SchemaResponse } from "@/shared/types/schema";
+import type { Include } from "../lib/scope";
 import { ExportView } from "./export-view";
 
 vi.mock("next-themes", () => ({ useTheme: () => ({ resolvedTheme: "dark" }) }));
@@ -15,15 +17,36 @@ const FORMATS = [
   { id: "dbml", label: "DBML", description: "dbdiagram.io", language: "text", filename: "schema.dbml" },
 ];
 
-function renderExport(format: string, schema: string, onFormatChange = () => {}) {
+const SCHEMA = {
+  tables: ["owners", "pets", "vets"].map((name) => ({ name, schema: "", fields: [] })),
+  relations: [{ sourceTable: "pets", targetTable: "owners" }],
+  enums: [],
+} as unknown as SchemaResponse;
+
+interface Opts {
+  onFormatChange?: (id: string) => void;
+  onIncludeChange?: (include: Include) => void;
+  table?: string | null;
+  include?: Include;
+  tables?: string[];
+}
+
+function renderExport(format: string, schema: string, opts: Opts = {}) {
   const client = new QueryClient();
   client.setQueryData(exportFormatsQueryOptions().queryKey, FORMATS);
-  client.setQueryData(exportQueryOptions(format, true).queryKey, { format, schema });
+  client.setQueryData(exportQueryOptions(format, true, opts.tables).queryKey, { format, schema });
   const Wrapper = withClient(client);
   render(
     <Wrapper>
       <ToastProvider>
-        <ExportView format={format} onFormatChange={onFormatChange} />
+        <ExportView
+          format={format}
+          onFormatChange={opts.onFormatChange ?? (() => {})}
+          schema={SCHEMA}
+          table={opts.table ?? null}
+          include={opts.include ?? "all"}
+          onIncludeChange={opts.onIncludeChange ?? (() => {})}
+        />
       </ToastProvider>
     </Wrapper>,
   );
@@ -31,7 +54,7 @@ function renderExport(format: string, schema: string, onFormatChange = () => {})
 
 it("lists the formats in groups and reports the chosen one", async () => {
   const onFormatChange = vi.fn();
-  renderExport("sql", "CREATE TABLE pets ();", onFormatChange);
+  renderExport("sql", "CREATE TABLE pets ();", { onFormatChange });
   expect(screen.getByRole("group", { name: "Diagrams" })).toHaveTextContent("DBML");
   await userEvent.click(screen.getByRole("button", { name: /DBML/ }));
   expect(onFormatChange).toHaveBeenCalledWith("dbml");
@@ -69,4 +92,31 @@ it("does not warn for Mermaid within the limits", () => {
 it("does not warn for a large export in another format", () => {
   renderExport("dbml", "x".repeat(60_000));
   expect(screen.queryByText(TOO_BIG)).toBeNull();
+});
+
+it("offers the whole schema only, until a table is chosen", () => {
+  renderExport("sql", "CREATE TABLE pets ();\nCREATE TABLE owners ();\n");
+  expect(screen.queryByRole("group", { name: "Include" })).not.toBeInTheDocument();
+  expect(screen.getByText("3 tables · 2 lines")).toBeInTheDocument();
+});
+
+it("narrows the export to the chosen table, or it and its linked tables", async () => {
+  const onIncludeChange = vi.fn();
+  renderExport("sql", "CREATE TABLE pets ();", { table: "pets", include: "linked", tables: ["owners", "pets"], onIncludeChange });
+  const include = screen.getByRole("group", { name: "Include" });
+  expect(within(include).getByRole("button", { name: "pets and its 1 linked table" })).toHaveAttribute("aria-pressed", "true");
+  expect(screen.getByText("2 tables · 1 line")).toBeInTheDocument();
+  expect(screen.getByText(/Keys to tables left out become plain columns/)).toBeInTheDocument();
+  await userEvent.click(within(include).getByRole("button", { name: "pets only" }));
+  expect(onIncludeChange).toHaveBeenCalledWith("table");
+  await userEvent.click(within(include).getByRole("button", { name: "All 3 tables" }));
+  expect(onIncludeChange).toHaveBeenCalledWith("all");
+});
+
+it("wraps long lines on request", async () => {
+  renderExport("sql", "CREATE TABLE pets ();");
+  const wrap = screen.getByRole("button", { name: "Wrap lines" });
+  expect(wrap).toHaveAttribute("aria-pressed", "false");
+  await userEvent.click(wrap);
+  expect(wrap).toHaveAttribute("aria-pressed", "true");
 });
