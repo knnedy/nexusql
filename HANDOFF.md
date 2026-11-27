@@ -136,6 +136,13 @@ Plan:
   kept below the toolbar. Above 50 it fits whole (map). Runs once, replaces fitView prop.
   Checked on the user's Quizify schema (SQLite copy): opens on users; groups users 10,
   quizzes 6, questions 4.
+  Columns capped at 3 tables per layer (ELK COFFMAN_GRAHAM layerBound 3): a table many
+  point at (Quizify users, 9 children) made a 608x2332 tower; now 1232x1034.
+  Opening view (user: "can't see most of the architecture" at 100% on one table): the
+  farthest full-card zoom (0.75) framing the largest group: the whole group if it fits,
+  else its top-left corner when the main table shows whole from there, else centred on
+  that table; never pans past the schema's edges. React Flow attribution kept (they ask
+  non-Pro users to), top centre, styled as a quiet caption, excluded from PNG.
   8c done: a table chosen elsewhere is centred left of the details card at full detail
   (overview.ts centreBeside, CARD_SPACE 328, reduced motion = no animation). Card focus
   from the focus store (cardFocus: selected coral ring, linked relation border, faded

@@ -113,3 +113,19 @@ describe("groups", () => {
     expect(apart).toBe(true);
   }, 30_000);
 });
+
+describe("a table many others point at", () => {
+  it("has them in a few columns, not one tower taller than wide", async () => {
+    const s = generateSchema(10);
+    const id = s.tables[0].fields.find((f) => f.isPrimaryKey)!;
+    s.tables = s.tables.map((t, i) => ({
+      ...t,
+      name: i ? `leaf${i}` : "hub",
+      fields: i ? [id, { ...id, name: "hub_id", isPrimaryKey: false, isForeignKey: true }, ...t.fields.filter((f) => !f.isPrimaryKey && !f.isForeignKey)] : t.fields.filter((f) => !f.isForeignKey),
+    }));
+    s.relations = s.tables.slice(1).map((t) => ({ ...(s.relations[0] ?? {}), constraintName: `${t.name}_hub`, sourceTable: t.name, sourceField: "hub_id", targetTable: "hub", targetField: id.name, sourceFields: ["hub_id"], targetFields: [id.name], onDelete: "NO ACTION", onUpdate: "NO ACTION" }));
+    const { groups } = await buildCanvasGraph(s, "postgres");
+    const region = groups.find((g) => g.data.name === "hub")!;
+    expect(region.height!).toBeLessThan(region.width! * 1.2);
+  });
+});

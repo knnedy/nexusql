@@ -24,6 +24,10 @@ const GROUP_PAD = 28;
 const GROUP_OPTIONS = {
   "elk.algorithm": "layered",
   "elk.direction": "LEFT",
+  // At most three tables per column: a table many others point at would otherwise
+  // stand at the head of one tall column, far taller than any screen.
+  "elk.layered.layering.strategy": "COFFMAN_GRAHAM",
+  "elk.layered.layering.coffmanGraham.layerBound": "3",
   "elk.layered.spacing.nodeNodeBetweenLayers": "72",
   "elk.spacing.nodeNode": "40",
   "elk.spacing.componentComponent": "56",
