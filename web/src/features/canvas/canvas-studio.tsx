@@ -155,8 +155,11 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     // A group is named after its most-linked table: open on the largest group's.
     const largest = overview.groups.filter((g) => !g.data.unlinked).sort((x, y) => y.data.count - x.data.count)[0];
     const hub = largest && getNodes().find((n): n is Node<TableNodeData> => n.id === largest.data.name && n.type === "tableNode");
-    const anchor = hub && { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) };
-    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, anchor || undefined));
+    const start = hub && {
+      group: { x: largest.position.x, y: largest.position.y, w: largest.width ?? 0, h: largest.height ?? 0 },
+      hub: { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) },
+    };
+    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, start || undefined));
   }, [graphReady, overview, getNodes, getNodesBounds, setViewport]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);

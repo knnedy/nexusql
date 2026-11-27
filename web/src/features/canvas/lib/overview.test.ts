@@ -118,26 +118,47 @@ describe("first view", () => {
     expect(v.y).toBeCloseTo(124);
   });
 
-  // The most-linked table of the largest group, 240 wide.
+  // The largest group's region, and its most-linked table (240 wide).
   const hub = { x: 500, y: 300, w: 240, h: 400 };
+  const start = (group: { x: number; y: number; w: number; h: number }, h = hub) => ({ group, hub: h });
 
-  it("opens a schema of up to 50 tables at 100% on its most-linked table when it does not fit with full cards", () => {
-    // Fits only at 0.6: keys cards, not columns. Centre the hub at 100% instead.
-    const v = firstView({ x: 0, y: 0, w: 1530, h: 1000 }, pane, 22, hub);
-    expect(v).toEqual({ zoom: 1, x: 500 - 620, y: 400 - 500 });
+  it("frames the largest group when the whole schema does not fit with full cards", () => {
+    // Schema fits only at 0.3; the group fits at 0.92 with every column readable.
+    const v = firstView({ x: 0, y: 0, w: 3000, h: 2400 }, pane, 22, start({ x: 0, y: 0, w: 1000, h: 700 }));
+    expect(v.zoom).toBeCloseTo(0.92);
+    expect(v.x).toBeCloseTo(40);
+    expect(v.y).toBeCloseTo(32); // the group tops the schema: no empty canvas above it
   });
 
-  it("keeps a tall table's header below the canvas toolbar", () => {
-    const tall = { ...hub, h: 900 };
-    expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 22, tall, 64).y).toBe(64 - 300);
+  it("opens at the farthest full-card zoom on its group's corner when its group is too big too", () => {
+    // From the corner the main table is fully in view (it ends at 595, 557), and so is the group's name.
+    const v = firstView({ x: 0, y: 0, w: 6000, h: 4000 }, pane, 22, start({ x: 0, y: 0, w: 3000, h: 2000 }));
+    expect(v).toEqual({ zoom: 0.75, x: 40, y: 32 });
   });
 
-  it("fits the whole schema when there is no table to start on", () => {
+  it("centres on the main table when the group's corner would leave it partly out of view", () => {
+    const far = { ...hub, x: 1500, y: 300 };
+    const v = firstView({ x: 0, y: 0, w: 6000, h: 4000 }, pane, 22, start({ x: 0, y: 0, w: 3000, h: 2000 }, far));
+    expect(v).toEqual({ zoom: 0.75, x: 500 - 1620 * 0.75, y: 400 - 500 * 0.75 });
+  });
+
+  it("does not pan past the schema's edge to centre a table that sits on it", () => {
+    const edge = { ...hub, x: 0, y: 0 };
+    const v = firstView({ x: 0, y: 0, w: 6000, h: 4000 }, pane, 22, start({ x: 0, y: 0, w: 3000, h: 2000 }, edge));
+    expect(v).toEqual({ zoom: 0.75, x: 40, y: 32 });
+  });
+
+  it("keeps a tall table's header in view", () => {
+    const v = firstView({ x: 0, y: 0, w: 6000, h: 4000 }, pane, 22, start({ x: 0, y: 0, w: 3000, h: 2000 }, { ...hub, h: 1400 }));
+    expect(v.y).toBe(32 - 300 * 0.75);
+  });
+
+  it("fits the whole schema when there is no group to start on", () => {
     expect(firstView({ x: 0, y: 0, w: 4000, h: 3000 }, pane, 22).zoom).toBeCloseTo(0.23);
   });
 
   it("fits a larger schema whole, however small", () => {
-    expect(firstView({ x: 0, y: 0, w: 9200, h: 7360 }, pane, 51, hub).zoom).toBeCloseTo(0.1);
+    expect(firstView({ x: 0, y: 0, w: 9200, h: 7360 }, pane, 51, start({ x: 0, y: 0, w: 1000, h: 700 })).zoom).toBeCloseTo(0.1);
   });
 
   it("does not blow a tiny schema up past 100%", () => {

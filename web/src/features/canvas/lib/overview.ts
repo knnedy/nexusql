@@ -92,28 +92,40 @@ const FULL_ZOOM = KEYS_BELOW;
 // The margin around the schema, as a share of the pane on each side.
 const PAD = 0.04;
 
-/** Where the diagram opens: the whole schema if its columns read, else 100% on the given table. */
+/** Where the diagram opens: as much of the schema as shows every column, never less than full cards. */
 export function firstView(
   bounds: Box,
   pane: { w: number; h: number },
   tables: number,
-  /** The table to open on: the most-linked of the largest group. */
-  anchor?: Box,
+  /** The largest group's region and its most-linked table. */
+  start?: { group: Box; hub: Box },
   /** Pixels kept clear above, for controls floating there. */
   top = 0,
 ): { x: number; y: number; zoom: number } {
   const [padX, padY] = [pane.w * PAD, pane.h * PAD];
-  const fit = Math.min(1, (pane.w - 2 * padX) / bounds.w, (pane.h - 2 * padY) / bounds.h);
-  if (fit < FULL_ZOOM && tables <= FIT_ALL_ABOVE && anchor) {
-    // Centred, unless that would tuck its header under the controls.
-    const y = Math.max(pane.h / 2 - (anchor.y + anchor.h / 2), Math.max(padY, top) - anchor.y);
-    return { zoom: 1, x: pane.w / 2 - (anchor.x + anchor.w / 2), y };
-  }
-  return {
-    zoom: fit,
-    x: (pane.w - bounds.w * fit) / 2 - bounds.x * fit,
-    y: (pane.h - bounds.h * fit) / 2 - bounds.y * fit,
+  const fitOf = (b: Box) => Math.min(1, (pane.w - 2 * padX) / b.w, (pane.h - 2 * padY) / b.h);
+  const topPad = Math.max(padY, top);
+  const centre = (b: Box, zoom: number) => {
+    let x = pane.w / 2 - (b.x + b.w / 2) * zoom;
+    // Centred, unless that would push its top under the controls.
+    let y = Math.max(pane.h / 2 - (b.y + b.h / 2) * zoom, topPad - b.y * zoom);
+    // A schema bigger than the pane never shows empty canvas beyond its edges.
+    const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
+    if (bounds.w * zoom > pane.w - 2 * padX) x = clamp(x, pane.w - padX - (bounds.x + bounds.w) * zoom, padX - bounds.x * zoom);
+    if (bounds.h * zoom > pane.h - topPad - padY) y = clamp(y, pane.h - padY - (bounds.y + bounds.h) * zoom, topPad - bounds.y * zoom);
+    return { zoom, x, y };
   };
+  const fit = fitOf(bounds);
+  if (fit >= FULL_ZOOM || tables > FIT_ALL_ABOVE || !start) return centre(bounds, fit);
+  // The whole schema would need keys-only cards: frame its largest group, else its main table.
+  const groupFit = fitOf(start.group);
+  if (groupFit >= FULL_ZOOM) return centre(start.group, groupFit);
+  // Too big too: its top-left corner, name and all, if the main table shows whole from there.
+  const z = FULL_ZOOM;
+  const corner = { zoom: z, x: padX - start.group.x * z, y: topPad - start.group.y * z };
+  const { hub } = start;
+  const hubShows = corner.x + (hub.x + hub.w) * z <= pane.w - padX && corner.y + (hub.y + hub.h) * z <= pane.h - padY;
+  return hubShows ? corner : centre(hub, z);
 }
 
 /** A view on a chosen table: full cards, centred in the pane left of the details card. */
