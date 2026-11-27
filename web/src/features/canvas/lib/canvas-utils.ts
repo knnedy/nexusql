@@ -130,7 +130,7 @@ export function findHubs(schema: SchemaResponse): Set<string> {
 
 function groupData(groups: TableGroup[], id: string): GroupNodeData {
   const g = groups.find((x) => groupNodeId(x.name) === id)!;
-  return { name: g.name, count: g.tables.length, unlinked: g.unlinked };
+  return { name: g.name, count: g.tables.length, tables: g.tables, unlinked: g.unlinked };
 }
 
 /** The schema's groups; lines into hub tables would pull everything into one. */

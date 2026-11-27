@@ -115,3 +115,12 @@ export function firstView(
     y: (pane.h - bounds.h * fit) / 2 - bounds.y * fit,
   };
 }
+
+/** A view on a chosen table: full cards, centred in the pane left of the details card. */
+export function centreBeside(table: Box, pane: { w: number; h: number }, card: number, zoom: number): { x: number; y: number; zoom: number } {
+  const z = zoom < FULL_ZOOM ? 1 : zoom;
+  const x = (pane.w - card) / 2 - (table.x + table.w / 2) * z;
+  // Centred, unless that would push its header off the top.
+  const y = Math.max(pane.h / 2 - (table.y + table.h / 2) * z, pane.h * PAD - table.y * z);
+  return { x, y, zoom: z };
+}

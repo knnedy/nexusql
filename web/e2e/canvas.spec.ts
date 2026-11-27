@@ -42,6 +42,20 @@ test("edges follow the layout's routes, and a dragged table falls back until re-
   await expect(page.locator('[data-routed="true"]')).toHaveCount(6);
 });
 
+test("choosing a table lights the tables it links to and fades the rest", async ({ page }) => {
+  // Every table stays on screen around the chosen one at 100%.
+  await page.setViewportSize({ width: 2560, height: 1600 });
+  await connectSqlite(page, SHOP);
+  await page.reload();
+  const focus = (t: string) => page.locator(`.react-flow__node[data-id="${t}"] [data-focus]`);
+  await expect(focus("items")).toHaveAttribute("data-focus", "none");
+
+  await page.getByRole("complementary", { name: "Tables" }).getByRole("button", { name: /^items/ }).click();
+  await expect(focus("items")).toHaveAttribute("data-focus", "selected");
+  for (const t of ["orders", "products", "refunds"]) await expect(focus(t)).toHaveAttribute("data-focus", "linked");
+  for (const t of ["users", "reviews"]) await expect(focus(t)).toHaveAttribute("data-focus", "faded");
+});
+
 test("zoomed out, a card keeps only its keys; zoomed in, every column", async ({ page }) => {
   await connectSqlite(page, SHOP);
   await page.reload();

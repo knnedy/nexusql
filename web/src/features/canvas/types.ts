@@ -16,6 +16,7 @@ export interface TableNodeData extends Record<string, unknown> {
 export interface GroupNodeData extends Record<string, unknown> {
   name: string;
   count: number;
+  tables: string[];
   unlinked?: true;
 }
 

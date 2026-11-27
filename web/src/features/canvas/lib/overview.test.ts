@@ -5,7 +5,7 @@ import type { RelationEdgeData } from "@/features/canvas/types";
 import { generateSchema } from "@/test/schema-gen";
 import { buildCanvasGraph } from "./canvas-utils";
 import { getNodeHeight, keyFields, keysCardHeight, NODE_WIDTH, tableBoxHeight } from "./card";
-import { connector, detailAt, firstView, groupLinks, routeLinks } from "./overview";
+import { centreBeside, connector, detailAt, firstView, groupLinks, routeLinks } from "./overview";
 
 const f = (name: string, key: "PK" | "FK" | "" = ""): Field =>
   ({ name, type: "integer", nullable: false, isPrimaryKey: key === "PK", isForeignKey: key === "FK" }) as Field;
@@ -142,5 +142,29 @@ describe("first view", () => {
 
   it("does not blow a tiny schema up past 100%", () => {
     expect(firstView({ x: 0, y: 0, w: 200, h: 100 }, pane, 2).zoom).toBe(1);
+  });
+});
+
+describe("centring a chosen table", () => {
+  const pane = { w: 1200, h: 800 };
+  const t = { x: 1000, y: 500, w: 240, h: 300 };
+
+  it("puts the table in the middle of the space left of the details card", () => {
+    // 1200 - 328 of card = 872 free: the table's centre lands at x 436.
+    const v = centreBeside(t, pane, 328, 1);
+    expect(v).toEqual({ zoom: 1, x: 436 - 1120, y: 400 - 650 });
+  });
+
+  it("uses the whole pane when the card is closed", () => {
+    expect(centreBeside(t, pane, 0, 1).x).toBe(600 - 1120);
+  });
+
+  it("zooms in to full cards, never out", () => {
+    expect(centreBeside(t, pane, 0, 0.3).zoom).toBe(1);
+    expect(centreBeside(t, pane, 0, 1.5).zoom).toBe(1.5);
+  });
+
+  it("keeps a tall table's header in view", () => {
+    expect(centreBeside({ ...t, h: 1200 }, pane, 0, 1).y).toBe(32 - 500);
   });
 });

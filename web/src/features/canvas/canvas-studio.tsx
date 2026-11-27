@@ -17,6 +17,7 @@ import {
   useNodesState,
   useEdgesState,
   useReactFlow,
+  useViewportStore,
   type NodeTypes,
   type EdgeTypes,
   type Node,
@@ -25,16 +26,16 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useTheme } from "next-themes";
 import { toPng } from "html-to-image";
-import { ImageDown, LayoutGrid, Loader2, TriangleAlert } from "lucide-react";
+import { Loader2, TriangleAlert } from "lucide-react";
 import { EmptyState } from "@/shared/ui/empty-state";
 import { buildCanvasGraph, getNodeHeight, NODE_WIDTH, reapplyLayout } from "@/features/canvas/lib/canvas-utils";
-import { IconButton } from "@/shared/ui/button";
+import { Button } from "@/shared/ui/button";
 import { useToast } from "@/shared/ui/toast";
 import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import GroupNode from "@/features/canvas/_components/group-node";
 import { GroupOverlay } from "@/features/canvas/_components/group-overlay";
-import { firstView, type GroupLink } from "@/features/canvas/lib/overview";
+import { centreBeside, firstView, type GroupLink } from "@/features/canvas/lib/overview";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
 import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
@@ -44,8 +45,25 @@ import { studioSession } from "@/shared/lib/session-storage";
 import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
 
 const nodeTypes: NodeTypes = { tableNode: TableNode, groupNode: GroupNode };
-// The floating toolbar's bottom edge, from the top of the canvas.
-const TOOLBAR_CLEARANCE = 64;
+// The details card's width plus its margin and a gap: the stage left of it is what shows.
+const CARD_SPACE = 304 + 12 + 12;
+const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Zoom level, fit, layout and image: one row beside the minimap. */
+function CanvasControls({ onFit, onAutoLayout, onSavePng, savingPng }: { onFit: () => void; onAutoLayout: () => void; onSavePng: () => void; savingPng: boolean }) {
+  const zoom = useViewportStore((s) => s.transform[2]);
+  return (
+    <div data-export-exclude="true" className="absolute bottom-4 left-50 z-10 flex items-center gap-1.5">
+      <span className="inline-flex h-7.5 min-w-14 items-center justify-center rounded-control border border-line-strong bg-panel px-2.5 text-label text-fg-muted tabular-nums shadow-card">
+        <span className="sr-only">Zoom </span>
+        {Math.round(zoom * 100)}%
+      </span>
+      <Button size="sm" className="shadow-card" onClick={onFit}>Fit schema</Button>
+      <Button size="sm" className="shadow-card" onClick={onAutoLayout}>Auto-layout</Button>
+      <Button size="sm" className="shadow-card" onClick={onSavePng} disabled={savingPng}>Save as PNG</Button>
+    </div>
+  );
+}
 type CanvasNode = Node<TableNodeData> | Node<GroupNodeData>;
 
 // Regions sit behind their tables and let clicks and drags through to the canvas.
@@ -138,18 +156,32 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
     const largest = overview.groups.filter((g) => !g.data.unlinked).sort((x, y) => y.data.count - x.data.count)[0];
     const hub = largest && getNodes().find((n): n is Node<TableNodeData> => n.id === largest.data.name && n.type === "tableNode");
     const anchor = hub && { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) };
-    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, anchor || undefined, TOOLBAR_CLEARANCE));
+    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, anchor || undefined));
   }, [graphReady, overview, getNodes, getNodesBounds, setViewport]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
 
-  // A table chosen elsewhere (sidebar, links) is brought into view.
   useEffect(() => {
-    if (!graphReady || !selectedName) return;
+    const near: Record<string, string[]> = {};
+    for (const r of schema?.relations ?? []) {
+      if (r.sourceTable === r.targetTable) continue;
+      (near[r.sourceTable] ??= []).push(r.targetTable);
+      (near[r.targetTable] ??= []).push(r.sourceTable);
+    }
+    useCanvasFocus.getState().setNeighbours(near);
+  }, [schema]);
+
+  // A table chosen elsewhere (sidebar, links) is brought into view beside the details card.
+  useEffect(() => {
+    const pane = canvasWrapperRef.current;
+    if (!graphReady || !selectedName || !pane) return;
     if (clickedRef.current === selectedName) return;
-    if (!getNodes().some((n) => n.id === selectedName)) return;
-    fitView({ nodes: [{ id: selectedName }], duration: 300, maxZoom: Math.max(getViewport().zoom, 0.8) });
-  }, [graphReady, selectedName, fitView, getNodes, getViewport]);
+    const node = getNodes().find((n): n is Node<TableNodeData> => n.id === selectedName && n.type === "tableNode");
+    if (!node) return;
+    const box = { x: node.position.x, y: node.position.y, w: NODE_WIDTH, h: getNodeHeight(node.data.table.fields.length) };
+    const room = { w: pane.clientWidth, h: pane.clientHeight };
+    setViewport(centreBeside(box, room, detailsOpen ? CARD_SPACE : 0, getViewport().zoom), { duration: reducedMotion() ? 0 : 300 });
+  }, [graphReady, selectedName, detailsOpen, getNodes, getViewport, setViewport]);
 
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: CanvasNode) => {
@@ -284,14 +316,12 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
 
   return (
     <div className="relative w-full h-full overflow-hidden">
-      <div data-export-exclude="true" className="absolute top-3 left-3 z-10 flex gap-0.5 rounded-card border border-line bg-panel p-0.5 shadow-card">
-        <IconButton label="Auto-layout" onClick={handleAutoLayout}>
-          <LayoutGrid aria-hidden />
-        </IconButton>
-        <IconButton label="Save as PNG" onClick={handleGeneratePng} disabled={isGeneratingPng}>
-          <ImageDown aria-hidden />
-        </IconButton>
-      </div>
+      <CanvasControls
+        onFit={() => fitView({ padding: "4%", duration: reducedMotion() ? 0 : 300 })}
+        onAutoLayout={handleAutoLayout}
+        onSavePng={handleGeneratePng}
+        savingPng={isGeneratingPng}
+      />
 
       {detailsOpen && (
         <DetailsCard
@@ -330,7 +360,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
           <Background variant={BackgroundVariant.Dots} gap={18} size={1} color="var(--nx-grid-dot)" bgColor="var(--nx-ground)" />
           <MiniMap
             position="bottom-left"
-            nodeColor={(n) => (n.type === "groupNode" ? "var(--nx-sunk)" : "var(--nx-line-strong)")}
+            nodeColor={(n) => (n.type === "groupNode" ? "var(--nx-sunk)" : n.id === selectedName ? "var(--nx-accent)" : "var(--nx-line-strong)")}
             nodeBorderRadius={4}
             maskColor="color-mix(in srgb, var(--nx-ground) 70%, transparent)"
             style={{ background: "var(--nx-panel)", border: "1px solid var(--nx-line-strong)", borderRadius: "var(--radius-card)", width: 168, height: 104 }}

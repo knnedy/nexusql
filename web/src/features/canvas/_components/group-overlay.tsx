@@ -61,6 +61,7 @@ export function GroupOverlay({ groups, links }: { groups: Node<GroupNodeData>[];
               transform: `scale(${nameScale})`,
               maxWidth: Math.max(room, MIN_NAME) / (nameScale * zoom),
             }}
+            translate="no"
             className="pointer-events-none absolute origin-top-left">
             <p style={{ height: LABEL_H }} className={`${PILL} max-w-full items-center px-2.5`}>
               <span className="truncate text-title font-semibold text-fg">{g.data.name}</span>

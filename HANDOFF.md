@@ -136,7 +136,14 @@ Plan:
   kept below the toolbar. Above 50 it fits whole (map). Runs once, replaces fitView prop.
   Checked on the user's Quizify schema (SQLite copy): opens on users; groups users 10,
   quizzes 6, questions 4.
-  8c: centre the selected table
+  8c done: a table chosen elsewhere is centred left of the details card at full detail
+  (overview.ts centreBeside, CARD_SPACE 328, reduced motion = no animation). Card focus
+  from the focus store (cardFocus: selected coral ring, linked relation border, faded
+  50%; regions with no lit table fade); data-focus on the card frame for tests. Controls
+  are one row beside the minimap: zoom %, Fit schema, Auto-layout, Save as PNG (top-left
+  icon toolbar removed); minimap marks the selection in accent. Guidelines review fixes:
+  chip focus ring, zoom readout not live, translate="no" on names, reduced-motion fades.
+  Old 8c plan line follows for reference: centre the selected table
   left of the details card, light neighbours and dim the rest, restyle minimap/controls
   (zoom %, Fit schema), then web-design-guidelines review of the diagram.
   fix(studio): migration-tool tables (db.IsUserTable: goose_db_version, schema_migrations,
@@ -801,10 +808,9 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Step 8c: selection centring beside the details card, neighbour highlight, minimap and
-   controls restyle (zoom %, Fit schema); web-design-guidelines review of the diagram.
-2. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first.
-3. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
+1. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first.
+2. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
+3. After group C: stop and summarize for the user.
 
 ## Stage 3 export formats (user decision 2026-11-21, revised 2026-11-22)
 

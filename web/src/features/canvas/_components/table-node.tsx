@@ -2,7 +2,7 @@
 
 import { memo, useEffect, useRef } from "react";
 import { Handle, Position, useReactFlow, useUpdateNodeInternals, type NodeProps, type Node } from "@xyflow/react";
-import { useCanvasFocus } from "@/features/canvas/lib/focus-store";
+import { useCanvasFocus, useCardFocus, type CardFocus } from "@/features/canvas/lib/focus-store";
 import {
   getNodeHeight,
   keyFields,
@@ -41,7 +41,7 @@ function HubChip({ target }: { target: string }) {
           duration: 300,
         });
       }}
-      className="nodrag nopan inline-flex max-w-24 shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-relation-tint px-1.5 font-mono text-caption text-relation hover:underline">
+      className="nodrag nopan inline-flex max-w-24 shrink-0 cursor-pointer items-center gap-0.5 rounded-full bg-relation-tint px-1.5 font-mono text-caption text-relation outline-accent hover:underline focus-visible:outline-2">
       <span aria-hidden>→</span>
       <span className="truncate">{target}</span>
     </button>
@@ -76,14 +76,16 @@ function FieldRow({ field, tableId, referenced, hubTarget }: { field: Field; tab
   );
 }
 
-const cardFrame = (selected: boolean | undefined) =>
+// Picked out in coral, linked tables in the relation colour, the rest faded behind.
+const cardFrame = (focus: CardFocus) =>
   cx(
-    "group/card overflow-hidden rounded-card border bg-panel shadow-card transition-[border-color,box-shadow] duration-150",
-    selected ? "border-accent ring-3 ring-accent-tint" : "border-line-strong",
+    "group/card overflow-hidden rounded-card border bg-panel shadow-card transition-[border-color,box-shadow,opacity] duration-150 motion-reduce:transition-none",
+    focus === "selected" ? "border-accent ring-3 ring-accent-tint" : focus === "linked" ? "border-relation-line" : "border-line-strong",
+    focus === "faded" && "opacity-50",
   );
 
 /** Zoomed out: only the keys, larger, so names and links stay readable. Blocks drop the text too. */
-function KeysCard({ data, selected, blank }: { data: TableNodeData; selected?: boolean; blank: boolean }) {
+function KeysCard({ data, focus, blank }: { data: TableNodeData; focus: CardFocus; blank: boolean }) {
   const { table } = data;
   const keys = keyFields(table.fields, data.referenced);
   const rest = table.fields.length - keys.length;
@@ -92,7 +94,9 @@ function KeysCard({ data, selected, blank }: { data: TableNodeData; selected?: b
     <div style={{ width: NODE_WIDTH, height: keysCardHeight(table.fields, data.referenced) }}>
       <div
         style={{ width: KEYS_WIDTH, transform: `scale(${KEYS_SCALE})`, transformOrigin: "0 0" }}
-        className={cx(cardFrame(selected), selected && "ring-2")}>
+        data-focus={focus}
+        translate="no"
+        className={cx(cardFrame(focus), focus === "selected" && "ring-2")}>
         <div style={{ height: KEYS_HEADER }} className="flex items-center border-b border-line bg-sunk px-2.5">
           <span className={cx("min-w-0 truncate text-body font-semibold text-fg", text)}>{table.name}</span>
         </div>
@@ -120,6 +124,8 @@ function TableNode({ id, data, selected }: NodeProps<Node<TableNodeData>>) {
   const { table } = data;
   const detail = useDetail();
   const full = detail === "full";
+  const chosen = useCardFocus(id);
+  const focus: CardFocus = selected && chosen === "none" ? "selected" : chosen;
   // Handles move with the card's rows: re-measure them when the card switches.
   const updateNodeInternals = useUpdateNodeInternals();
   const shown = useRef(full);
@@ -129,13 +135,15 @@ function TableNode({ id, data, selected }: NodeProps<Node<TableNodeData>>) {
     updateNodeInternals(id);
   }, [full, id, updateNodeInternals]);
 
-  if (!full) return <KeysCard data={data} selected={selected} blank={detail === "blocks"} />;
+  if (!full) return <KeysCard data={data} focus={focus} blank={detail === "blocks"} />;
   const name = table.schema && table.schema !== "public" ? `${table.schema}.${table.name}` : table.name;
   return (
     <div
       // Exact size: the layout routes lines to these rows.
       style={{ width: NODE_WIDTH, height: getNodeHeight(table.fields.length) }}
-      className={cardFrame(selected)}>
+      data-focus={focus}
+      translate="no"
+      className={cardFrame(focus)}>
       <div style={{ height: NODE_HEADER }} className="flex items-center gap-2 border-b border-line bg-sunk px-3">
         <span className="min-w-0 flex-1 truncate text-body font-semibold text-fg">{name}</span>
         <span className="shrink-0 text-caption text-fg-subtle tabular-nums">
