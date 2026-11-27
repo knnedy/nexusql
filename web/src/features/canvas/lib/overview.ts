@@ -89,10 +89,12 @@ function cuts(p: { x: number; y: number }, q: { x: number; y: number }, r: Box):
 export const FIT_ALL_ABOVE = 50;
 // Full cards, with every column, show from here (see detailAt).
 const FULL_ZOOM = KEYS_BELOW;
+// The diagram never opens below this: every card still shows its name and keys.
+const OPEN_FLOOR = BLOCKS_BELOW;
 // The margin around the schema, as a share of the pane on each side.
 const PAD = 0.04;
 
-/** Where the diagram opens: as much of the schema as shows every column, never less than full cards. */
+/** Where the diagram opens: the whole schema, unless that leaves cards too small to name. */
 export function firstView(
   bounds: Box,
   pane: { w: number; h: number },
@@ -116,12 +118,12 @@ export function firstView(
     return { zoom, x, y };
   };
   const fit = fitOf(bounds);
-  if (fit >= FULL_ZOOM || tables > FIT_ALL_ABOVE || !start) return centre(bounds, fit);
-  // The whole schema would need keys-only cards: frame its largest group, else its main table.
+  if (fit >= OPEN_FLOOR || tables > FIT_ALL_ABOVE || !start) return centre(bounds, fit);
+  // The whole schema would show bare blocks: frame its largest group, else its main table.
   const groupFit = fitOf(start.group);
-  if (groupFit >= FULL_ZOOM) return centre(start.group, groupFit);
+  if (groupFit >= OPEN_FLOOR) return centre(start.group, groupFit);
   // Too big too: its top-left corner, name and all, if the main table shows whole from there.
-  const z = FULL_ZOOM;
+  const z = OPEN_FLOOR;
   const corner = { zoom: z, x: padX - start.group.x * z, y: topPad - start.group.y * z };
   const { hub } = start;
   const hubShows = corner.x + (hub.x + hub.w) * z <= pane.w - padX && corner.y + (hub.y + hub.h) * z <= pane.h - padY;
@@ -135,4 +137,9 @@ export function centreBeside(table: Box, pane: { w: number; h: number }, card: n
   // Centred, unless that would push its header off the top.
   const y = Math.max(pane.h / 2 - (table.y + table.h / 2) * z, pane.h * PAD - table.y * z);
   return { x, y, zoom: z };
+}
+
+/** Zoom as people read it: the opening view is 100%. */
+export function zoomLabel(zoom: number, base: number): string {
+  return `${Math.round((zoom / base) * 100)}%`;
 }

@@ -35,7 +35,7 @@ import { useSchema } from "@/shared/hooks/use-schema";
 import TableNode from "@/features/canvas/_components/table-node";
 import GroupNode from "@/features/canvas/_components/group-node";
 import { GroupOverlay } from "@/features/canvas/_components/group-overlay";
-import { centreBeside, firstView, type GroupLink } from "@/features/canvas/lib/overview";
+import { centreBeside, firstView, zoomLabel, type GroupLink } from "@/features/canvas/lib/overview";
 import RelationEdge from "@/features/canvas/_components/relation-edge";
 import { DetailsCard } from "@/features/canvas/_components/details-card";
 import type { GroupNodeData, RelationEdgeData, TableNodeData } from "@/features/canvas/types";
@@ -50,13 +50,13 @@ const CARD_SPACE = 304 + 12 + 12;
 const reducedMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 /** Zoom level, fit, layout and image: one row beside the minimap. */
-function CanvasControls({ onFit, onAutoLayout, onSavePng, savingPng }: { onFit: () => void; onAutoLayout: () => void; onSavePng: () => void; savingPng: boolean }) {
+function CanvasControls({ base, onFit, onAutoLayout, onSavePng, savingPng }: { base: number; onFit: () => void; onAutoLayout: () => void; onSavePng: () => void; savingPng: boolean }) {
   const zoom = useViewportStore((s) => s.transform[2]);
   return (
     <div data-export-exclude="true" className="absolute bottom-4 left-50 z-10 flex items-center gap-1.5">
       <span className="inline-flex h-7.5 min-w-14 items-center justify-center rounded-control border border-line-strong bg-panel px-2.5 text-label text-fg-muted tabular-nums shadow-card">
         <span className="sr-only">Zoom </span>
-        {Math.round(zoom * 100)}%
+        {zoomLabel(zoom, base)}
       </span>
       <Button size="sm" className="shadow-card" onClick={onFit}>Fit schema</Button>
       <Button size="sm" className="shadow-card" onClick={onAutoLayout}>Auto-layout</Button>
@@ -115,6 +115,8 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   // Set when the selection came from a click here, so the view does not jump.
   const clickedRef = useRef<string | null>(null);
   const viewSetRef = useRef(false);
+  // The opening zoom, which the readout calls 100%.
+  const [baseZoom, setBaseZoom] = useState(1);
   const { resolvedTheme } = useTheme();
 
   const { data: schema, isLoading, isError } = useSchema();
@@ -159,7 +161,9 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
       group: { x: largest.position.x, y: largest.position.y, w: largest.width ?? 0, h: largest.height ?? 0 },
       hub: { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) },
     };
-    setViewport(firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, start || undefined));
+    const view = firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, start || undefined);
+    setViewport(view);
+    setBaseZoom(view.zoom);
   }, [graphReady, overview, getNodes, getNodesBounds, setViewport]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
@@ -320,6 +324,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   return (
     <div className="relative w-full h-full overflow-hidden">
       <CanvasControls
+        base={baseZoom}
         onFit={() => fitView({ padding: "4%", duration: reducedMotion() ? 0 : 300 })}
         onAutoLayout={handleAutoLayout}
         onSavePng={handleGeneratePng}
