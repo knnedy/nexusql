@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
-import { FileCode2, Network, PanelRight, Sprout, Table2 } from "lucide-react";
+import { FileCode2, ListTree, Network, PanelRight, Sprout, Table2 } from "lucide-react";
 import { CanvasStudio } from "@/features/canvas";
 import { SqlDock } from "@/features/console";
 import { ExportView } from "@/features/export";
@@ -17,6 +17,7 @@ import { TooltipProvider } from "@/shared/ui/tooltip";
 import { DataView } from "./_components/data-view";
 import { RelationshipTrail } from "./_components/relationship-trail";
 import { SearchPanel } from "./_components/search-panel";
+import { StructureView } from "./_components/structure-view";
 import { TablesSidebar } from "./_components/tables-sidebar";
 import { TopBar } from "./_components/top-bar";
 import type { SearchItem } from "./lib/search";
@@ -27,6 +28,7 @@ import { nextSearch, parseView, selectTableUpdates, type Updates } from "./lib/w
 const VIEW_TABS = [
   { id: "diagram", label: "Diagram", icon: <Network aria-hidden /> },
   { id: "data", label: "Data", icon: <Table2 aria-hidden /> },
+  { id: "structure", label: "Structure", icon: <ListTree aria-hidden /> },
   { id: "export", label: "Export", icon: <FileCode2 aria-hidden /> },
 ];
 const TABS_ID = "workspace-view";
@@ -160,6 +162,16 @@ function WorkspaceInner() {
           />
         )}
         {view === "data" && <DataView table={table} />}
+        {view === "structure" && (
+          <StructureView
+            table={table}
+            tables={schema?.tables ?? []}
+            relations={relations}
+            onSelectTable={selectTable}
+            onOpenData={(name) => go({ ...selectTableUpdates(name), view: "data" })}
+            hrefFor={(name) => `/studio/?${nextSearch(params, selectTableUpdates(name))}`}
+          />
+        )}
         {view === "export" && <ExportView format={params.get("format")} onFormatChange={(f) => go({ format: f })} />}
       </TabPanel>
       <SqlDock open={dockOpen} onOpenChange={setDockOpen} />

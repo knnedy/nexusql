@@ -1,15 +1,14 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useTheme } from "next-themes";
-import { codeToHtml } from "shiki";
 import { ArrowRight, Check, Code2, Copy, Key, Link2, Table2, X } from "lucide-react";
 import { tableDdlQueryOptions } from "@/shared/hooks/use-export";
 import { linkedTables, type LinkedTable } from "@/shared/lib/linked-tables";
 import { cx } from "@/shared/lib/cx";
 import type { Relation, Table } from "@/shared/types/schema";
 import { Button, IconButton } from "@/shared/ui/button";
+import { SqlCode } from "@/shared/ui/sql-code";
 import { tableKeys, type KeyKind } from "../lib/table-keys";
 
 export interface DetailsCardProps {
@@ -177,15 +176,7 @@ function TableDetails({ table, relations, onSelectTable, onOpenData }: DetailsCa
 
 function Ddl({ table }: { table: string }) {
   const ddl = useQuery(tableDdlQueryOptions(table, true));
-  const { resolvedTheme } = useTheme();
-  const [html, setHtml] = useState("");
   const [copied, setCopied] = useState(false);
-  useEffect(() => {
-    if (!ddl.data) return;
-    const theme = resolvedTheme === "dark" ? "github-dark-default" : "github-light-default";
-    codeToHtml(ddl.data, { lang: "sql", theme }).then(setHtml, () => setHtml(""));
-  }, [ddl.data, resolvedTheme]);
-
   return (
     <Section title="DDL">
       {ddl.data ? (
@@ -201,14 +192,7 @@ function Ddl({ table }: { table: string }) {
             }}>
             {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
           </IconButton>
-          {html ? (
-            <div
-              className="overflow-x-auto rounded-control border border-line text-label select-text [&>pre]:bg-sunk! [&>pre]:p-3"
-              dangerouslySetInnerHTML={{ __html: html }}
-            />
-          ) : (
-            <pre className="overflow-x-auto rounded-control border border-line bg-sunk p-3 font-mono text-label text-fg">{ddl.data}</pre>
-          )}
+          <SqlCode sql={ddl.data} className="rounded-control border border-line" />
         </div>
       ) : (
         <p className="font-mono text-label text-fg-subtle">{ddl.error ? ddl.error.message : "Loading…"}</p>

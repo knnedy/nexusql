@@ -824,7 +824,12 @@ shrunken full tables; judge on realistic schemas side by side with the user.
 
 ## Next 3 steps
 
-1. Group C steps 10-13 (structure, SQL dock, export, seed), each comp first.
+1. Group C steps 11-13 (SQL dock, export, seed), each comp first. Step 10 structure done
+   (comp .impeccable/mocks/workspace-structure.html approved 2026-11-28): Structure tab
+   (view=structure), StructureView in features/workspace/_components; lib/structure.ts
+   (columnRules, deleteEffect, tableOverview) unit-tested; SqlCode in shared/ui shared with
+   the details card; no Group/Rows columns until groups move out of the canvas and row
+   counts land. Guidelines review done (links with hrefs, translate="no", live "Copied").
 2. Pending: row-count estimates (own commit), guidelines review of the workspace screens.
 3. After group C: stop and summarize for the user.
 

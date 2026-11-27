@@ -6,6 +6,7 @@ describe("parseView", () => {
     expect(parseView(null)).toBe("diagram");
     expect(parseView("data")).toBe("data");
     expect(parseView("export")).toBe("export");
+    expect(parseView("structure")).toBe("structure");
     expect(parseView("nonsense")).toBe("diagram");
   });
 });
