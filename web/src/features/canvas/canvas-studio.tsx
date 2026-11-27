@@ -111,12 +111,13 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   const [isGeneratingPng, setIsGeneratingPng] = useState(false);
 
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
-  const { getViewport, setViewport, getNodes, getNodesBounds, fitView } = useReactFlow();
+  const { getViewport, setViewport, getNodes, getNodesBounds, fitView, viewportInitialized } = useReactFlow();
   // Set when the selection came from a click here, so the view does not jump.
   const clickedRef = useRef<string | null>(null);
   const viewSetRef = useRef(false);
   // The opening zoom, which the readout calls 100%.
   const [baseZoom, setBaseZoom] = useState(1);
+  const [viewTries, setViewTries] = useState(0);
   // A table already chosen when the diagram opens is lit, not flown to.
   const openedOnRef = useRef<string | null>(null);
   const { resolvedTheme } = useTheme();
@@ -151,7 +152,7 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
   // The opening view, once. Regions cover every table, so their bounds need no measuring.
   useEffect(() => {
     const pane = canvasWrapperRef.current;
-    if (!graphReady || viewSetRef.current || !pane || !overview.groups.length) return;
+    if (!graphReady || !viewportInitialized || viewSetRef.current || !pane || !overview.groups.length) return;
     viewSetRef.current = true;
     const b = getNodesBounds(overview.groups);
     const tables = overview.groups.reduce((n, g) => n + g.data.count, 0);
@@ -164,10 +165,14 @@ function CanvasInner({ selectedTable: selectedName, onSelectTable, detailsOpen, 
       hub: { x: hub.position.x, y: hub.position.y, w: NODE_WIDTH, h: getNodeHeight(hub.data.table.fields.length) },
     };
     const view = firstView({ x: b.x, y: b.y, w: b.width, h: b.height }, room, tables, start || undefined);
-    setViewport(view);
-    setBaseZoom(view.zoom);
     openedOnRef.current = selectedName;
-  }, [graphReady, overview, getNodes, getNodesBounds, setViewport, selectedName]);
+    // Dropped while React Flow remounts its zoom handler (dev StrictMode): try again.
+    void setViewport(view).then((applied) => {
+      if (applied) return setBaseZoom(view.zoom);
+      viewSetRef.current = false;
+      if (viewTries < 5) setTimeout(() => setViewTries((n) => n + 1), 50);
+    });
+  }, [graphReady, viewportInitialized, viewTries, overview, getNodes, getNodesBounds, setViewport, selectedName]);
 
   useEffect(() => setFocusSelected(selectedName), [selectedName, setFocusSelected]);
 
